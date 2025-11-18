@@ -16,6 +16,7 @@ import LoginScreen from "@/screens/LoginScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { StreamAuthProvider, useStreamAuth } from "@/utils/streamAuth";
 import EmergencyModal from "@/components/EmergencyModal";
+import { useTheme } from "@/hooks/useTheme";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,6 +33,7 @@ const Stack = createNativeStackNavigator();
 
 function AppContent() {
   const { user, chatClient, isLoading } = useStreamAuth();
+  const { theme, isDark } = useTheme();
 
   useEffect(() => {
     if (!isLoading) {
@@ -57,7 +59,15 @@ function AppContent() {
 
   // Show main app with Stream Chat provider
   return (
-    <OverlayProvider>
+    <OverlayProvider
+      value={{
+        style: {
+          colors: {
+            background: theme.backgroundRoot,
+          },
+        },
+      }}
+    >
       <Chat client={chatClient}>
         <NavigationContainer>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
