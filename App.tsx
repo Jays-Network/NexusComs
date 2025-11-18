@@ -15,6 +15,7 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { StreamAuthProvider, useStreamAuth } from "@/utils/streamAuth";
+import EmergencyModal from "@/components/EmergencyModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -64,6 +65,7 @@ function AppContent() {
           </Stack.Navigator>
           <StatusBar style="auto" />
         </NavigationContainer>
+        <EmergencyModal />
       </Chat>
     </OverlayProvider>
   );

@@ -1,49 +1,24 @@
 import { useState, useEffect } from 'react';
-import { View, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useAuth } from '@/utils/auth';
-import { decryptMessage } from '@/utils/socket';
+import { useStreamAuth } from '@/utils/streamAuth';
+import type { MessageResponse } from 'stream-chat';
 
-interface EmergencyMessage {
-  id: string;
-  subgroupId: string;
-  senderId: string;
-  encryptedContent: string;
-  createdAt: string;
-  users: {
-    displayName: string;
-  };
-  emergency_acknowledgments: Array<{
-    userId: string;
-    acknowledgedAt: string;
-  }>;
-}
-
-function EmergencyCard({ message, onAcknowledge }: { message: EmergencyMessage; onAcknowledge: (id: string) => void }) {
-  const [decryptedContent, setDecryptedContent] = useState('[Decrypting...]');
-  const { colors } = useTheme();
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (message.senderId) {
-      decryptMessage(message.encryptedContent, message.senderId).then(setDecryptedContent);
-    }
-  }, [message.encryptedContent, message.senderId]);
-
-  const acknowledged = message.emergency_acknowledgments.some(ack => ack.userId === user?.id);
+function EmergencyCard({ message }: { message: MessageResponse }) {
+  const { theme } = useTheme();
 
   return (
     <View
       style={[
         styles.messageCard,
         {
-          backgroundColor: acknowledged ? colors.surface : Colors.light.emergencyLight,
-          borderColor: colors.emergency,
-          borderWidth: acknowledged ? 0 : 2
+          backgroundColor: theme.backgroundSecondary,
+          borderColor: theme.emergency,
+          borderWidth: 2
         }
       ]}
     >
@@ -51,123 +26,115 @@ function EmergencyCard({ message, onAcknowledge }: { message: EmergencyMessage; 
         <Feather
           name="alert-octagon"
           size={24}
-          color={colors.emergency}
+          color={theme.emergency}
         />
-        <ThemedText style={[styles.senderName, { color: colors.emergency }]}>
-          {message.users.displayName}
+        <ThemedText style={[styles.senderName, { color: theme.emergency }]}>
+          {message.user?.name || message.user?.id || 'Unknown'}
         </ThemedText>
       </View>
 
       <ThemedText style={styles.messageContent}>
-        {decryptedContent}
+        {message.text || 'Emergency alert'}
       </ThemedText>
 
       <ThemedText style={styles.timestamp}>
-        {new Date(message.createdAt).toLocaleString()}
+        {message.created_at ? new Date(message.created_at).toLocaleString() : ''}
       </ThemedText>
-
-      {!acknowledged ? (
-        <Pressable
-          onPress={() => onAcknowledge(message.id)}
-          style={[styles.acknowledgeButton, { backgroundColor: colors.emergency }]}
-        >
-          <ThemedText style={styles.acknowledgeButtonText}>
-            Acknowledge
-          </ThemedText>
-        </Pressable>
-      ) : (
-        <View style={[styles.acknowledgedBadge, { backgroundColor: colors.success }]}>
-          <Feather name="check" size={16} color="#FFFFFF" />
-          <ThemedText style={styles.acknowledgedText}>Acknowledged</ThemedText>
-        </View>
-      )}
     </View>
   );
 }
 
 export default function EmergencyListScreen() {
-  const [messages, setMessages] = useState<EmergencyMessage[]>([]);
+  const [messages, setMessages] = useState<MessageResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { colors } = useTheme();
-  const { token, user } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+  const { theme } = useTheme();
+  const { chatClient } = useStreamAuth();
 
   useEffect(() => {
     loadEmergencyMessages();
-  }, []);
+  }, [chatClient]);
 
   async function loadEmergencyMessages() {
+    if (!chatClient) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-      
-      const response = await fetch(`${API_URL}/api/emergency/all`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      // Query all channels the user is a member of
+      const channels = await chatClient.queryChannels({
+        members: { $in: [chatClient.userID!] }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data);
+      // Collect all emergency messages from all channels
+      const emergencyMessages: MessageResponse[] = [];
+      
+      for (const channel of channels) {
+        try {
+          // Search for messages with emergency = true in this channel
+          const response = await channel.query({
+            messages: { limit: 100 }
+          });
+
+          const channelEmergencies = response.messages.filter(
+            (msg: any) => msg.emergency === true
+          );
+
+          emergencyMessages.push(...channelEmergencies);
+        } catch (error) {
+          console.warn('Failed to query channel:', error);
+        }
       }
+
+      // Sort by most recent first
+      emergencyMessages.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setMessages(emergencyMessages);
     } catch (error) {
       console.error('Load emergency messages error:', error);
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   }
 
-  async function acknowledgeMessage(messageId: string) {
-    try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${API_URL}/api/emergency/${messageId}/acknowledge`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        setMessages(prev => prev.map(msg => {
-          if (msg.id === messageId) {
-            return {
-              ...msg,
-              emergency_acknowledgments: [
-                ...msg.emergency_acknowledgments,
-                { userId: user?.id || '', acknowledgedAt: new Date().toISOString() }
-              ]
-            };
-          }
-          return msg;
-        }));
-      }
-    } catch (error) {
-      console.error('Acknowledge error:', error);
-      Alert.alert('Error', 'Failed to acknowledge message');
-    }
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadEmergencyMessages();
   }
 
   if (isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.backgroundRoot }]}>
-        <ActivityIndicator size="large" color={colors.emergency} />
+      <View style={[styles.centered, { backgroundColor: theme.backgroundRoot }]}>
+        <ActivityIndicator size="large" color={theme.emergency} />
       </View>
     );
   }
 
   return (
-    <ScreenScrollView style={{ backgroundColor: colors.backgroundRoot }}>
+    <ScreenScrollView 
+      style={{ backgroundColor: theme.backgroundRoot }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
       {messages.length === 0 ? (
         <View style={styles.emptyState}>
-          <Feather name="alert-octagon" size={64} color={colors.emergency} />
+          <Feather name="alert-octagon" size={64} color={theme.emergency} />
           <ThemedText style={styles.emptyText}>No Emergency Alerts</ThemedText>
           <ThemedText style={styles.emptySubtext}>
-            Emergency alerts from your groups will appear here
+            Emergency alerts from your channels will appear here
           </ThemedText>
         </View>
       ) : (
         <View style={styles.messagesContainer}>
           {messages.map((message) => (
-            <EmergencyCard key={message.id} message={message} onAcknowledge={acknowledgeMessage} />
+            <EmergencyCard key={message.id} message={message} />
           ))}
         </View>
       )}
@@ -227,29 +194,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     opacity: 0.6
   },
-  acknowledgeButton: {
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-    marginTop: Spacing.sm
-  },
-  acknowledgeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600'
-  },
-  acknowledgedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.sm,
-    gap: Spacing.xs
-  },
-  acknowledgedText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600'
-  }
 });

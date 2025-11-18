@@ -6,13 +6,11 @@ import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useAuth } from '@/utils/auth';
-import { disconnectSocket } from '@/utils/socket';
-import { clearCache } from '@/utils/storage';
+import { useStreamAuth } from '@/utils/streamAuth';
 
 export default function SettingsScreen() {
-  const { colors } = useTheme();
-  const { user, logout } = useAuth();
+  const { theme } = useTheme();
+  const { user, logout } = useStreamAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
@@ -27,8 +25,6 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              disconnectSocket();
-              await clearCache();
               await logout();
             } catch (error) {
               console.error('Logout error:', error);
@@ -40,26 +36,21 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScreenScrollView style={{ backgroundColor: colors.backgroundRoot }}>
+    <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>
       <View style={styles.container}>
         {/* Profile Section */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Profile</ThemedText>
           
-          <View style={[styles.profileCard, { backgroundColor: colors.surface }]}>
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+          <View style={[styles.profileCard, { backgroundColor: theme.surface }]}>
+            <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
               <ThemedText style={styles.avatarText}>
-                {user?.displayName?.[0]?.toUpperCase() || 'U'}
+                {user?.name?.[0]?.toUpperCase() || user?.id?.[0]?.toUpperCase() || 'U'}
               </ThemedText>
             </View>
             <View style={styles.profileInfo}>
-              <ThemedText style={styles.displayName}>{user?.displayName}</ThemedText>
-              <ThemedText style={styles.username}>@{user?.username}</ThemedText>
-              {user?.isAdmin ? (
-                <View style={[styles.adminBadge, { backgroundColor: colors.primary }]}>
-                  <ThemedText style={styles.adminBadgeText}>Admin</ThemedText>
-                </View>
-              ) : null}
+              <ThemedText style={styles.displayName}>{user?.name || 'User'}</ThemedText>
+              <ThemedText style={styles.username}>@{user?.id}</ThemedText>
             </View>
           </View>
         </View>
@@ -68,64 +59,43 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Notifications</ThemedText>
           
-          <View style={[styles.settingCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Feather name="bell" size={20} color={colors.text} />
+                <Feather name="bell" size={20} color={theme.text} />
                 <ThemedText style={styles.settingLabel}>Push Notifications</ThemedText>
               </View>
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
-                trackColor={{ false: Colors.light.textDisabled, true: colors.primary }}
+                trackColor={{ false: Colors.light.textDisabled, true: theme.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
-                <Feather name="volume-2" size={20} color={colors.text} />
+                <Feather name="volume-2" size={20} color={theme.text} />
                 <ThemedText style={styles.settingLabel}>Notification Sounds</ThemedText>
               </View>
               <Switch
                 value={soundEnabled}
                 onValueChange={setSoundEnabled}
-                trackColor={{ false: Colors.light.textDisabled, true: colors.primary }}
+                trackColor={{ false: Colors.light.textDisabled, true: theme.primary }}
                 thumbColor="#FFFFFF"
               />
             </View>
           </View>
         </View>
 
-        {/* Location Section */}
-        {user?.locationTrackingEnabled ? (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Location</ThemedText>
-            
-            <View style={[styles.settingCard, { backgroundColor: colors.surface }]}>
-              <View style={styles.settingRow}>
-                <View style={styles.settingInfo}>
-                  <Feather name="map-pin" size={20} color={colors.warning} />
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={styles.settingLabel}>Location Sharing</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      Enabled by administrator
-                    </ThemedText>
-                  </View>
-                </View>
-                <Feather name="shield" size={20} color={colors.warning} />
-              </View>
-            </View>
-          </View>
-        ) : null}
 
         {/* About Section */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>About</ThemedText>
           
-          <View style={[styles.settingCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
             <View style={styles.settingRow}>
               <ThemedText style={styles.settingLabel}>Version</ThemedText>
               <ThemedText style={styles.settingValue}>
@@ -133,7 +103,7 @@ export default function SettingsScreen() {
               </ThemedText>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
             <View style={styles.settingRow}>
               <ThemedText style={styles.settingLabel}>Platform</ThemedText>
@@ -141,13 +111,20 @@ export default function SettingsScreen() {
                 {Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : 'Web'}
               </ThemedText>
             </View>
+
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.settingRow}>
+              <ThemedText style={styles.settingLabel}>Powered by</ThemedText>
+              <ThemedText style={styles.settingValue}>Stream</ThemedText>
+            </View>
           </View>
         </View>
 
         {/* Logout Button */}
         <Pressable
           onPress={handleLogout}
-          style={[styles.logoutButton, { backgroundColor: colors.emergency }]}
+          style={[styles.logoutButton, { backgroundColor: theme.emergency }]}
         >
           <Feather name="log-out" size={20} color="#FFFFFF" />
           <ThemedText style={styles.logoutButtonText}>Log Out</ThemedText>
