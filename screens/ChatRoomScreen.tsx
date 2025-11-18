@@ -88,8 +88,11 @@ export default function ChatRoomScreen() {
     socket.emit('join_room', subgroupId);
 
     socket.on('new_message', (message: CachedMessage) => {
-      setMessages(prev => [...prev, message]);
-      cacheMessages(subgroupId, [...messages, message]);
+      setMessages(prev => {
+        const updated = [...prev, message];
+        cacheMessages(subgroupId, updated);
+        return updated;
+      });
     });
 
     socket.on('message_error', (error: any) => {
@@ -99,14 +102,14 @@ export default function ChatRoomScreen() {
   }
 
   async function sendMessage() {
-    if (!inputText.trim() || isSending) return;
+    if (!inputText.trim() || isSending || !user) return;
 
     setIsSending(true);
     const messageText = inputText.trim();
     setInputText('');
 
     try {
-      const encryptedContent = encryptMessage(messageText);
+      const encryptedContent = await encryptMessage(messageText, user.id);
       const socket = getSocket();
 
       socket.emit('send_message', {
@@ -193,6 +196,8 @@ export default function ChatRoomScreen() {
   }
 
   async function uploadFile(uri: string, filename: string) {
+    if (!user) return;
+    
     try {
       setIsSending(true);
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
@@ -217,7 +222,7 @@ export default function ChatRoomScreen() {
       }
 
       const uploadData = await uploadResponse.json();
-      const encryptedContent = encryptMessage(`File: ${uploadData.filename}`);
+      const encryptedContent = await encryptMessage(`File: ${uploadData.filename}`, user.id);
       const socket = getSocket();
 
       socket.emit('send_message', {
@@ -237,9 +242,15 @@ export default function ChatRoomScreen() {
     }
   }
 
-  function renderMessage({ item }: { item: CachedMessage }) {
+  function MessageBubble({ item }: { item: CachedMessage }) {
+    const [decryptedContent, setDecryptedContent] = useState('[Decrypting...]');
     const isOwnMessage = item.userId === user?.id;
-    const decryptedContent = decryptMessage(item.encryptedContent);
+
+    useEffect(() => {
+      if (item.userId) {
+        decryptMessage(item.encryptedContent, item.userId).then(setDecryptedContent);
+      }
+    }, [item.encryptedContent, item.userId]);
 
     return (
       <View
@@ -301,7 +312,7 @@ export default function ChatRoomScreen() {
       <FlatList
         ref={flatListRef}
         data={messages}
-        renderItem={renderMessage}
+        renderItem={({ item }) => <MessageBubble item={item} />}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
         inverted={false}

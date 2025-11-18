@@ -29,9 +29,16 @@ interface EmergencyAlert {
 export default function EmergencyModal() {
   const [visible, setVisible] = useState(false);
   const [alert, setAlert] = useState<EmergencyAlert | null>(null);
+  const [decryptedContent, setDecryptedContent] = useState('');
   const [pulseAnim] = useState(new Animated.Value(1));
   const { colors } = useTheme();
   const { token, user } = useAuth();
+
+  useEffect(() => {
+    if (alert && alert.senderId) {
+      decryptMessage(alert.encryptedContent, alert.senderId).then(setDecryptedContent);
+    }
+  }, [alert]);
 
   useEffect(() => {
     const socket = getSocket();
@@ -133,8 +140,6 @@ export default function EmergencyModal() {
   }
 
   if (!alert) return null;
-
-  const decryptedContent = decryptMessage(alert.encryptedContent);
 
   return (
     <Modal

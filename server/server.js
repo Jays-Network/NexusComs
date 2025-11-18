@@ -21,8 +21,20 @@ const io = new Server(server, {
 });
 
 const expo = new Expo();
-const JWT_SECRET = process.env.SESSION_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.SESSION_SECRET;
 const PORT = process.env.PORT || 3000;
+
+// Validate required environment variables
+if (!JWT_SECRET) {
+  console.error('FATAL: SESSION_SECRET environment variable is not set');
+  console.error('Please set SESSION_SECRET in your environment variables');
+  process.exit(1);
+}
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error('FATAL: SUPABASE_URL and SUPABASE_ANON_KEY must be set');
+  process.exit(1);
+}
 
 // Middleware
 app.use(cors());
@@ -235,7 +247,26 @@ app.get('/api/messages/:subgroupId', authenticateToken, async (req, res) => {
 
     if (error) throw error;
 
-    res.json(messages.reverse());
+    // Transform snake_case to camelCase for client
+    const transformedMessages = (messages || []).map(msg => ({
+      id: msg.id,
+      userId: msg.user_id,
+      subgroupId: msg.subgroup_id,
+      encryptedContent: msg.encrypted_content,
+      messageType: msg.message_type,
+      fileUrl: msg.file_url,
+      fileName: msg.file_name,
+      fileSize: msg.file_size,
+      createdAt: msg.created_at,
+      user: msg.users ? {
+        id: msg.users.id,
+        username: msg.users.username,
+        displayName: msg.users.display_name,
+        avatarUrl: msg.users.avatar_url
+      } : null
+    })).reverse();
+
+    res.json(transformedMessages);
   } catch (error) {
     console.error('Get messages error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -265,7 +296,59 @@ app.post('/api/upload', authenticateToken, upload.single('file'), (req, res) => 
 
 // ==================== EMERGENCY ROUTES ====================
 
-// Get emergency messages
+// Get all emergency messages for user's subgroups
+app.get('/api/emergency/all', authenticateToken, async (req, res) => {
+  try {
+    // Get all subgroups the user is a member of
+    const { data: memberships, error: memberError } = await supabase
+      .from('group_members')
+      .select('subgroup_id')
+      .eq('user_id', req.user.id);
+
+    if (memberError) throw memberError;
+
+    const subgroupIds = memberships.map(m => m.subgroup_id);
+
+    // Get all emergency messages from those subgroups
+    const { data: messages, error } = await supabase
+      .from('emergency_messages')
+      .select(`
+        *,
+        users!emergency_messages_sender_id_fkey(id, username, display_name, avatar_url),
+        emergency_acknowledgments(user_id, acknowledged_at)
+      `)
+      .in('subgroup_id', subgroupIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform snake_case to camelCase for client
+    const transformedMessages = (messages || []).map(msg => ({
+      id: msg.id,
+      subgroupId: msg.subgroup_id,
+      senderId: msg.sender_id,
+      encryptedContent: msg.encrypted_content,
+      createdAt: msg.created_at,
+      users: {
+        id: msg.users.id,
+        username: msg.users.username,
+        displayName: msg.users.display_name,
+        avatarUrl: msg.users.avatar_url
+      },
+      emergency_acknowledgments: (msg.emergency_acknowledgments || []).map(ack => ({
+        userId: ack.user_id,
+        acknowledgedAt: ack.acknowledged_at
+      }))
+    }));
+
+    res.json(transformedMessages);
+  } catch (error) {
+    console.error('Get all emergency messages error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get emergency messages for a specific subgroup
 app.get('/api/emergency/:subgroupId', authenticateToken, async (req, res) => {
   try {
     const { data: messages, error } = await supabase

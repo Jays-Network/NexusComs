@@ -23,6 +23,68 @@ interface EmergencyMessage {
   }>;
 }
 
+function EmergencyCard({ message, onAcknowledge }: { message: EmergencyMessage; onAcknowledge: (id: string) => void }) {
+  const [decryptedContent, setDecryptedContent] = useState('[Decrypting...]');
+  const { colors } = useTheme();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (message.senderId) {
+      decryptMessage(message.encryptedContent, message.senderId).then(setDecryptedContent);
+    }
+  }, [message.encryptedContent, message.senderId]);
+
+  const acknowledged = message.emergency_acknowledgments.some(ack => ack.userId === user?.id);
+
+  return (
+    <View
+      style={[
+        styles.messageCard,
+        {
+          backgroundColor: acknowledged ? colors.surface : Colors.light.emergencyLight,
+          borderColor: colors.emergency,
+          borderWidth: acknowledged ? 0 : 2
+        }
+      ]}
+    >
+      <View style={styles.messageHeader}>
+        <Feather
+          name="alert-octagon"
+          size={24}
+          color={colors.emergency}
+        />
+        <ThemedText style={[styles.senderName, { color: colors.emergency }]}>
+          {message.users.displayName}
+        </ThemedText>
+      </View>
+
+      <ThemedText style={styles.messageContent}>
+        {decryptedContent}
+      </ThemedText>
+
+      <ThemedText style={styles.timestamp}>
+        {new Date(message.createdAt).toLocaleString()}
+      </ThemedText>
+
+      {!acknowledged ? (
+        <Pressable
+          onPress={() => onAcknowledge(message.id)}
+          style={[styles.acknowledgeButton, { backgroundColor: colors.emergency }]}
+        >
+          <ThemedText style={styles.acknowledgeButtonText}>
+            Acknowledge
+          </ThemedText>
+        </Pressable>
+      ) : (
+        <View style={[styles.acknowledgedBadge, { backgroundColor: colors.success }]}>
+          <Feather name="check" size={16} color="#FFFFFF" />
+          <ThemedText style={styles.acknowledgedText}>Acknowledged</ThemedText>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function EmergencyListScreen() {
   const [messages, setMessages] = useState<EmergencyMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,12 +97,18 @@ export default function EmergencyListScreen() {
 
   async function loadEmergencyMessages() {
     try {
-      // For demo, we'll show a sample structure
-      // In production, this would fetch from all subgroups the user is part of
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
       
-      // This is a simplified version - in production, fetch from multiple subgroups
-      setMessages([]);
+      const response = await fetch(`${API_URL}/api/emergency/all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data);
+      }
     } catch (error) {
       console.error('Load emergency messages error:', error);
     } finally {
@@ -59,7 +127,6 @@ export default function EmergencyListScreen() {
       });
 
       if (response.ok) {
-        // Update local state
         setMessages(prev => prev.map(msg => {
           if (msg.id === messageId) {
             return {
@@ -77,10 +144,6 @@ export default function EmergencyListScreen() {
       console.error('Acknowledge error:', error);
       Alert.alert('Error', 'Failed to acknowledge message');
     }
-  }
-
-  function isAcknowledged(message: EmergencyMessage): boolean {
-    return message.emergency_acknowledgments.some(ack => ack.userId === user?.id);
   }
 
   if (isLoading) {
@@ -103,59 +166,9 @@ export default function EmergencyListScreen() {
         </View>
       ) : (
         <View style={styles.messagesContainer}>
-          {messages.map((message) => {
-            const acknowledged = isAcknowledged(message);
-            const decryptedContent = decryptMessage(message.encryptedContent);
-
-            return (
-              <View
-                key={message.id}
-                style={[
-                  styles.messageCard,
-                  {
-                    backgroundColor: acknowledged ? colors.surface : Colors.light.emergencyLight,
-                    borderColor: colors.emergency,
-                    borderWidth: acknowledged ? 0 : 2
-                  }
-                ]}
-              >
-                <View style={styles.messageHeader}>
-                  <Feather
-                    name="alert-octagon"
-                    size={24}
-                    color={colors.emergency}
-                  />
-                  <ThemedText style={[styles.senderName, { color: colors.emergency }]}>
-                    {message.users.displayName}
-                  </ThemedText>
-                </View>
-
-                <ThemedText style={styles.messageContent}>
-                  {decryptedContent}
-                </ThemedText>
-
-                <ThemedText style={styles.timestamp}>
-                  {new Date(message.createdAt).toLocaleString()}
-                </ThemedText>
-
-                {!acknowledged ? (
-                  <Pressable
-                    onPress={() => acknowledgeMessage(message.id)}
-                    style={[styles.acknowledgeButton, { backgroundColor: colors.emergency }]}
-                  >
-                    <ThemedText style={styles.acknowledgeButtonText}>
-                      Acknowledge
-                    </ThemedText>
-                  </Pressable>
-                ) : (
-                  <View style={[styles.acknowledgedBadge, { backgroundColor: colors.success }]}>
-                    <Feather name="check" size={16} color="#FFFFFF" />
-                    <ThemedText style={styles.acknowledgedText}>Acknowledged</ThemedText>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+          {messages.map((message) => (
+            <EmergencyCard key={message.id} message={message} onAcknowledge={acknowledgeMessage} />
+          ))}
         </View>
       )}
     </ScreenScrollView>
