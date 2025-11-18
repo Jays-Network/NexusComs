@@ -6,15 +6,15 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Chat, OverlayProvider } from "stream-chat-expo";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
-import EmergencyModal from "@/components/EmergencyModal";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AuthProvider, useAuth } from "@/utils/auth";
+import { StreamAuthProvider, useStreamAuth } from "@/utils/streamAuth";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,7 +30,7 @@ Notifications.setNotificationHandler({
 const Stack = createNativeStackNavigator();
 
 function AppContent() {
-  const { user, isLoading } = useAuth();
+  const { user, chatClient, isLoading } = useStreamAuth();
 
   useEffect(() => {
     if (!isLoading) {
@@ -42,18 +42,30 @@ function AppContent() {
     return null;
   }
 
-  return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user ? (
-          <Stack.Screen name="Main" component={MainTabNavigator} />
-        ) : (
+  // Show login screen if no user
+  if (!user || !chatClient) {
+    return (
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Login" component={LoginScreen} />
-        )}
-      </Stack.Navigator>
-      <EmergencyModal />
-      <StatusBar style="auto" />
-    </NavigationContainer>
+        </Stack.Navigator>
+        <StatusBar style="auto" />
+      </NavigationContainer>
+    );
+  }
+
+  // Show main app with Stream Chat provider
+  return (
+    <OverlayProvider>
+      <Chat client={chatClient}>
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+          </Stack.Navigator>
+          <StatusBar style="auto" />
+        </NavigationContainer>
+      </Chat>
+    </OverlayProvider>
   );
 }
 
@@ -63,9 +75,9 @@ export default function App() {
       <SafeAreaProvider>
         <GestureHandlerRootView style={styles.root}>
           <KeyboardProvider>
-            <AuthProvider>
+            <StreamAuthProvider>
               <AppContent />
-            </AuthProvider>
+            </StreamAuthProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>

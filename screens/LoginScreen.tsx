@@ -1,41 +1,35 @@
 import { useState } from 'react';
 import { View, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Notifications from 'expo-notifications';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useAuth } from '@/utils/auth';
+import { useStreamAuth } from '@/utils/streamAuth';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login } = useStreamAuth();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
 
   async function handleLogin() {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both username and password');
+    if (!username.trim()) {
+      Alert.alert('Error', 'Please enter a username');
       return;
     }
 
+    const finalDisplayName = displayName.trim() || username.trim();
+
     setIsLoading(true);
     try {
-      // Get push token
-      const { status } = await Notifications.requestPermissionsAsync();
-      let pushToken: string | undefined;
+      // Create a unique user ID (in production, this might come from your backend)
+      const userId = username.toLowerCase().replace(/[^a-z0-9]/g, '_');
       
-      if (status === 'granted') {
-        const token = await Notifications.getExpoPushTokenAsync();
-        pushToken = token.data;
-      }
-
-      await login(username, password, pushToken);
+      await login(userId, finalDisplayName);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      Alert.alert('Login Failed', error.message || 'Failed to connect to Stream');
     } finally {
       setIsLoading(false);
     }
@@ -52,7 +46,7 @@ export default function LoginScreen() {
     ]}>
       <View style={styles.content}>
         <ThemedText style={styles.title}>SecureChat</ThemedText>
-        <ThemedText style={styles.subtitle}>Mission-Critical Communication</ThemedText>
+        <ThemedText style={styles.subtitle}>Powered by Stream</ThemedText>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
@@ -65,50 +59,44 @@ export default function LoginScreen() {
               }]}
               value={username}
               onChangeText={setUsername}
-              placeholder="Enter username"
+              placeholder="Enter username (e.g., john_doe)"
               placeholderTextColor={Colors.light.textDisabled}
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
             />
+            <ThemedText style={styles.hint}>
+              Lowercase letters and numbers only
+            </ThemedText>
           </View>
 
           <View style={styles.inputContainer}>
-            <ThemedText style={styles.label}>Password</ThemedText>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={[styles.input, styles.passwordInput, { 
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  color: colors.text
-                }]}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter password"
-                placeholderTextColor={Colors.light.textDisabled}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.showPasswordButton}
-              >
-                <ThemedText style={styles.showPasswordText}>
-                  {showPassword ? 'Hide' : 'Show'}
-                </ThemedText>
-              </Pressable>
-            </View>
+            <ThemedText style={styles.label}>Display Name (Optional)</ThemedText>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="Enter display name (e.g., John Doe)"
+              placeholderTextColor={Colors.light.textDisabled}
+              autoCorrect={false}
+              editable={!isLoading}
+            />
+            <ThemedText style={styles.hint}>
+              Leave blank to use username
+            </ThemedText>
           </View>
 
           <Pressable
             onPress={handleLogin}
-            disabled={isLoading || !username.trim() || !password.trim()}
+            disabled={isLoading || !username.trim()}
             style={[
               styles.loginButton,
               {
-                backgroundColor: (!username.trim() || !password.trim()) 
+                backgroundColor: !username.trim() 
                   ? Colors.light.textDisabled 
                   : colors.primary
               }
@@ -117,9 +105,13 @@ export default function LoginScreen() {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <ThemedText style={styles.loginButtonText}>Log In</ThemedText>
+              <ThemedText style={styles.loginButtonText}>Continue</ThemedText>
             )}
           </Pressable>
+          
+          <ThemedText style={styles.info}>
+            This demo uses Stream's development tokens. In production, tokens should be generated securely on your backend server.
+          </ThemedText>
         </View>
       </View>
     </View>
@@ -164,23 +156,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     fontSize: 17
   },
-  passwordContainer: {
-    position: 'relative'
-  },
-  passwordInput: {
-    paddingRight: 70
-  },
-  showPasswordButton: {
-    position: 'absolute',
-    right: Spacing.lg,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center'
-  },
-  showPasswordText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.light.primary
+  hint: {
+    fontSize: 13,
+    opacity: 0.6,
+    marginTop: -4
   },
   loginButton: {
     height: Spacing.buttonHeight,
@@ -193,5 +172,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF'
+  },
+  info: {
+    fontSize: 13,
+    opacity: 0.5,
+    textAlign: 'center',
+    lineHeight: 18
   }
 });
