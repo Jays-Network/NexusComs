@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Pressable } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useTheme } from '@/hooks/useTheme';
@@ -23,6 +22,23 @@ interface UserLocation {
     display_name: string;
     avatar_url?: string;
   };
+}
+
+// Conditionally import MapView components
+let MapView: any = null;
+let Marker: any = null;
+let PROVIDER_GOOGLE: any = null;
+let mapsAvailable = false;
+
+try {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Marker = maps.Marker;
+  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+  mapsAvailable = true;
+} catch (error) {
+  // Maps not available (e.g., in Expo Go)
+  console.log('react-native-maps not available - showing fallback UI');
 }
 
 export default function GroupMapScreen() {
@@ -83,6 +99,60 @@ export default function GroupMapScreen() {
     );
   }
 
+  // Show fallback UI if maps are not available
+  if (!mapsAvailable) {
+    return (
+      <View style={[styles.centered, { backgroundColor: colors.backgroundRoot }]}>
+        <Feather name="map" size={64} color={colors.textDisabled} />
+        <Text style={[styles.fallbackTitle, { color: colors.text }]}>
+          Maps Not Available
+        </Text>
+        <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>
+          The map feature requires a custom development build.
+        </Text>
+        <Text style={[styles.fallbackText, { color: colors.textSecondary }]}>
+          It's not available in Expo Go.
+        </Text>
+        
+        {locations.length > 0 ? (
+          <View style={styles.locationList}>
+            <Text style={[styles.locationListTitle, { color: colors.text }]}>
+              Member Locations:
+            </Text>
+            {locations.map((location) => (
+              <View key={location.id} style={[styles.locationItem, { backgroundColor: colors.backgroundSecondary }]}>
+                <Feather name="map-pin" size={16} color={colors.primary} />
+                <View style={styles.locationDetails}>
+                  <Text style={[styles.locationName, { color: colors.text }]}>
+                    {location.users.display_name}
+                  </Text>
+                  <Text style={[styles.locationCoords, { color: colors.textSecondary }]}>
+                    {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                  </Text>
+                  <Text style={[styles.locationTime, { color: colors.textDisabled }]}>
+                    {new Date(location.created_at).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={[styles.fallbackText, { color: colors.textDisabled, marginTop: Spacing.xl }]}>
+            No member locations available
+          </Text>
+        )}
+        
+        <Pressable
+          onPress={loadLocations}
+          style={[styles.refreshButtonFallback, { backgroundColor: colors.primary }]}
+        >
+          <Feather name="refresh-cw" size={20} color="#FFFFFF" />
+          <Text style={styles.refreshButtonText}>Refresh</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   const initialRegion = currentLocation
     ? {
         latitude: currentLocation.coords.latitude,
@@ -137,9 +207,9 @@ export default function GroupMapScreen() {
       {locations.length === 0 ? (
         <View style={[styles.emptyOverlay, { backgroundColor: colors.backgroundRoot }]}>
           <Feather name="map-pin" size={48} color={Colors.light.textDisabled} />
-          <View style={styles.emptyText}>
+          <Text style={styles.emptyText}>
             No member locations available
-          </View>
+          </Text>
         </View>
       ) : null}
     </View>
@@ -153,7 +223,8 @@ const styles = StyleSheet.create({
   centered: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    padding: Spacing.xl
   },
   map: {
     flex: 1
@@ -191,5 +262,64 @@ const styles = StyleSheet.create({
     fontSize: 15,
     opacity: 0.6,
     marginTop: Spacing.md
+  },
+  fallbackTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginTop: Spacing.lg,
+    textAlign: 'center'
+  },
+  fallbackText: {
+    fontSize: 16,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl
+  },
+  locationList: {
+    marginTop: Spacing['2xl'],
+    width: '100%',
+    paddingHorizontal: Spacing.lg
+  },
+  locationListTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: Spacing.md
+  },
+  locationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: Spacing.md,
+    borderRadius: Spacing.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm
+  },
+  locationDetails: {
+    flex: 1
+  },
+  locationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4
+  },
+  locationCoords: {
+    fontSize: 14,
+    marginBottom: 2
+  },
+  locationTime: {
+    fontSize: 12
+  },
+  refreshButtonFallback: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Spacing.lg,
+    marginTop: Spacing['2xl'],
+    gap: Spacing.sm
+  },
+  refreshButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600'
   }
 });
