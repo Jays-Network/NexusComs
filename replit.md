@@ -9,6 +9,10 @@ Production-ready mobile chat application built with Expo React Native, using Str
   - iOS silent mode bypass for emergency audio
   - Comprehensive resource cleanup (sound, animation, timeouts)
   - **Note**: Requires actual emergency.wav file in `assets/sounds/` directory
+- ✅ **Critical Fix**: Disabled Stream Video SDK to prevent Android crashes in Expo Go
+  - WebRTC import was causing device crashes (7000+ frame drops)
+  - Video features now safely disabled until building with EAS
+  - Chat functionality remains fully operational
 
 ## Project Architecture
 
@@ -55,10 +59,17 @@ Production-ready mobile chat application built with Expo React Native, using Str
   - Use proper user authentication flow
 
 ## Known Limitations
-1. WebRTC (video calling) doesn't work in Expo Go - graceful fallback implemented
+1. **WebRTC (video calling) DISABLED for Expo Go** - Import commented out to prevent Android crashes
+   - To enable: Build with EAS, then uncomment import in `utils/streamClient.ts`
 2. react-native-maps doesn't work in Expo Go - graceful fallback implemented
 3. emergency.wav audio file needs to be added to assets/sounds/ directory
 4. expo-av is deprecated - migration to expo-audio recommended for SDK 54+
+
+## Important: Video Features
+Stream Video SDK is currently **disabled** because it causes severe crashes on Android devices when running in Expo Go (WebRTC incompatibility). To enable video features:
+1. Build the app using EAS (see EAS setup section)
+2. Uncomment the StreamVideoClient import in `utils/streamClient.ts`
+3. The app will then support video calling on physical devices
 
 ## Testing
 - User has Expo account for physical device testing via QR code

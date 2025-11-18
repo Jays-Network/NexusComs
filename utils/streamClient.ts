@@ -1,5 +1,8 @@
 import { StreamChat } from 'stream-chat';
-import { StreamVideoClient } from '@stream-io/video-react-native-sdk';
+// NOTE: Stream Video SDK is disabled for Expo Go compatibility
+// It requires WebRTC which causes crashes on Android in Expo Go
+// Uncomment this import only when building with EAS or custom development build
+// import { StreamVideoClient } from '@stream-io/video-react-native-sdk';
 
 const STREAM_API_KEY = process.env.EXPO_PUBLIC_STREAM_API_KEY || '';
 
@@ -9,7 +12,8 @@ if (!STREAM_API_KEY) {
 
 // Singleton instances
 let chatClient: StreamChat | null = null;
-let videoClient: StreamVideoClient | null = null;
+// Video client disabled for Expo Go
+// let videoClient: StreamVideoClient | null = null;
 
 export const getChatClient = () => {
   if (!chatClient) {
@@ -19,19 +23,11 @@ export const getChatClient = () => {
 };
 
 export const getVideoClient = () => {
-  // Video client requires WebRTC which is not available in Expo Go
-  // Only initialize if we have a custom development build
-  try {
-    if (!videoClient && STREAM_API_KEY) {
-      videoClient = new StreamVideoClient({
-        apiKey: STREAM_API_KEY,
-      });
-    }
-    return videoClient;
-  } catch (error) {
-    console.warn('Stream Video SDK not available (Expo Go limitation):', error);
-    return null;
-  }
+  // Video client disabled for Expo Go compatibility
+  // WebRTC causes Android crashes in Expo Go
+  // To enable: build with EAS or custom development build, then uncomment the import above
+  console.warn('Stream Video SDK is disabled in Expo Go. Build with EAS to enable video features.');
+  return null;
 };
 
 export const connectStreamUser = async (
@@ -65,27 +61,9 @@ export const connectVideoUser = async (
   userName: string,
   userToken: string
 ) => {
-  const client = getVideoClient();
-  
-  if (!client) {
-    throw new Error('Video client not initialized');
-  }
-  
-  try {
-    await client.connectUser(
-      {
-        id: userId,
-        name: userName,
-      },
-      userToken
-    );
-    
-    console.log('Stream video user connected:', userId);
-    return client;
-  } catch (error) {
-    console.error('Failed to connect Stream video user:', error);
-    throw error;
-  }
+  // Video features disabled for Expo Go
+  console.warn('Video features are not available in Expo Go. Build with EAS to enable.');
+  return null;
 };
 
 export const disconnectStreamUser = async () => {
@@ -100,14 +78,8 @@ export const disconnectStreamUser = async () => {
 };
 
 export const disconnectVideoUser = async () => {
-  if (videoClient) {
-    try {
-      await videoClient.disconnectUser();
-      console.log('Stream video user disconnected');
-    } catch (error) {
-      console.error('Failed to disconnect Stream video user:', error);
-    }
-  }
+  // Video features disabled for Expo Go
+  console.log('Video disconnect skipped (Expo Go mode)');
 };
 
 // Generate user token for development/testing
