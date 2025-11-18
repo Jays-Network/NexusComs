@@ -1,0 +1,148 @@
+Comprehensive Prompt for Replit Agent (Expo/React Native Version)
+
+Copy and paste the following text directly into the Replit Agent chat:
+
+Role: Act as a Senior Mobile Engineer specializing in React Native and Node.js.
+Goal: Build a production-ready mobile chat application using Expo (React Native) and a Node.js backend. The app must support hierarchical groups, video calling, admin-controlled location tracking, high-level security, structured messaging, file sharing, and a high-priority Emergency Alert System.
+
+Architecture:
+
+Backend (Replit Hosted): Node.js/Express server with Socket.io and PostgreSQL/SQLite.
+
+Frontend (Mobile): Expo (React Native) using Expo Router.
+
+Tech Stack:
+
+Mobile Framework: Expo (React Native).
+
+Navigation: Expo Router (file-based routing).
+
+Styling: NativeWind (Tailwind CSS for React Native).
+
+Backend: Node.js, Express, Socket.io.
+
+Database: PostgreSQL (preferred) or SQLite (Prisma ORM).
+
+Maps: react-native-maps (Mobile) and react-leaflet (Admin Web Dashboard).
+
+Location: expo-location (specifically startLocationUpdatesAsync for background tracking).
+
+Security: bcrypt (hashing), jsonwebtoken (auth), crypto-js (encryption).
+
+Storage/Files: AsyncStorage (Offline), expo-file-system, expo-document-picker, expo-sharing.
+
+Haptics: expo-haptics (For Emergency Vibrations).
+
+Notifications: expo-notifications (Client), expo-server-sdk (Backend).
+
+Core Features & Requirements
+
+1. Authentication & Credential Management
+
+Login: Users login via Username and Password.
+
+Admin-Controlled Access: Registration is closed. Only Admin can create accounts.
+
+Security: Store passwords using bcrypt; expo-secure-store for JWT.
+
+Token Registration: On login, the mobile app must generate an ExpoPushToken and send it to the backend to be saved in the Users table.
+
+2. Hierarchical Group Structure & Template Enforcement
+
+Structure: Main Group -> Subgroups.
+
+Template Logic: Admin can "Lock" a subgroup to force Form-Only messaging.
+
+UI Navigation: Bottom Tabs -> [Chats, Emergency, Settings].
+
+3. Chat Functionality & File Sharing
+
+Socket Rooms (Critical): When entering a chat, the socket must emit('join_room', subgroup_id). Backend must broadcast messages only to that room.
+
+Offline Support: Use AsyncStorage to cache messages.
+
+E2EE: Encrypt all text payloads using crypto-js.
+
+File Sharing: Paperclip menu for Camera/Gallery/Documents.
+
+Upload Config: Backend must increase body-parser limits to 50MB to handle large PDFs/Videos.
+
+Standard Push Notifications:
+
+Backend must trigger an Expo Push Notification for every new message sent to a subgroup.
+
+Logic: Filter out the sender, target all other users in the subgroup.
+
+Payload: title: {Group Name}, body: {Sender Name}: {Message Snippet}, sound: 'default', priority: 'normal'.
+
+4. Emergency Alert System (High Priority)
+
+Dedicated Tab: An "Emergency" tab mirroring the hierarchy.
+
+Priority Behavior (The "Wake Up" Logic):
+
+App Open (Socket): If app is open, trigger Full Screen Modal + Haptics immediately via Socket event.
+
+App Closed (Critical Push Notification):
+
+Backend must send a specific high-priority Expo Push Notification.
+
+Payload: title: "EMERGENCY ALERT", body: {Message}, sound: 'emergency.wav', priority: 'high', channelId: 'emergency-alerts'.
+
+Android Channel: Create a distinct Android Notification Channel with importance: Notifications.AndroidImportance.MAX and bypassDnd: true (if permissions allow).
+
+Un-mutable: The app must play a sound even if the phone is on silent (using expo-av to play a custom alert sound file).
+
+Persistence: On app launch, check for any "Unacknowledged" emergency messages in the DB. If found, trigger the modal immediately.
+
+5. Video & Audio Calling
+
+Implementation: Create a "Call Room" that opens a WebView pointing to a backend URL (e.g., /call/:roomId).
+
+6. Advanced Location Tracking & Sharing
+
+Background Tracking: Use Location.startLocationUpdatesAsync.
+
+User-to-User Sharing: Group Map showing pins for all members.
+
+CMS Control: Admin can remotely disable tracking per user.
+
+7. Admin CMS (Web Dashboard)
+
+The backend must serve a standard HTML/React web page at the /admin route.
+
+Features:
+
+User Management: Create/Revoke users.
+
+Spy Map: Real-time global tracking.
+
+Template Builder: Define reporting forms.
+
+Emergency Console: Interface to broadcast alerts.
+
+Implementation Steps for Replit Agent
+
+Project Structure: Monorepo setup.
+
+Backend Security: Setup Express, JWT, and uploads serving. Increase payload limits.
+
+Database: Add EmergencyMessages table and PushTokens column to Users.
+
+CMS: Build Admin Dashboard + Template Builder.
+
+Expo Setup: Initialize Expo app with expo-router.
+
+Notifications: Configure expo-notifications with two channels: "default" (for chat) and "emergency" (high priority).
+
+Emergency Logic: Implement Socket Listener, Haptics, Push Notification Handler, and Modal.
+
+Tracking: Implement background location logic.
+
+CRITICAL CONFIGURATION (Do not skip):
+
+Tunneling: Configure package.json start script: npx expo start --tunnel
+
+Console Logs: Ensure strict error logging.
+
+QR Code: Explicitly tell the user to "Check the Replit Console for the QR Code".
