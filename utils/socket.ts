@@ -5,6 +5,11 @@ let ENCRYPTION_KEY: string | null = null;
 let CURRENT_USER_ID: string | null = null;
 
 async function getEncryptionKey(userId: string): Promise<string> {
+  // Validate userId to prevent crashes
+  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    throw new Error('Invalid userId: userId must be a non-empty string');
+  }
+  
   if (ENCRYPTION_KEY && CURRENT_USER_ID === userId) {
     return ENCRYPTION_KEY;
   }
@@ -23,12 +28,27 @@ async function getEncryptionKey(userId: string): Promise<string> {
 }
 
 export async function encryptMessage(message: string, userId: string): Promise<string> {
-  const key = await getEncryptionKey(userId);
-  return CryptoJS.AES.encrypt(message, key).toString();
+  try {
+    if (!userId) {
+      throw new Error('userId is required for encryption');
+    }
+    const key = await getEncryptionKey(userId);
+    return CryptoJS.AES.encrypt(message, key).toString();
+  } catch (error) {
+    console.error('Encryption error:', error);
+    throw error; // Re-throw to let caller handle it
+  }
 }
 
 export async function decryptMessage(encryptedMessage: string, userId: string): Promise<string> {
   try {
+    if (!userId) {
+      console.warn('Decryption skipped: userId is missing');
+      return '[User ID missing]';
+    }
+    if (!encryptedMessage) {
+      return '[No content]';
+    }
     const key = await getEncryptionKey(userId);
     const bytes = CryptoJS.AES.decrypt(encryptedMessage, key);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
