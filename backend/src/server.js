@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const { StreamChat } = require('stream-chat');
 
 dotenv.config();
@@ -10,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
 const serverClient = StreamChat.getInstance(
   process.env.STREAM_API_KEY,
@@ -49,8 +51,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
+  console.log(`Web UI available at http://localhost:${PORT}`);
   console.log(`Stream API Key: ${process.env.STREAM_API_KEY ? 'Configured' : 'Missing'}`);
   console.log(`Stream API Secret: ${process.env.STREAM_API_SECRET ? 'Configured' : 'Missing'}`);
 });

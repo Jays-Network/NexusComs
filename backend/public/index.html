@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Risk - Authentication Backend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .status-badge.online {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.offline {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-box {
+            margin-top: 24px;
+            padding: 16px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .response-box.show {
+            display: block;
+        }
+
+        .response-box.error {
+            background-color: #fff5f5;
+            border-left-color: #e53e3e;
+        }
+
+        .response-box.success {
+            background-color: #f0fff4;
+            border-left-color: #38a169;
+        }
+
+        .response-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .response-content {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            overflow-x: auto;
+            word-break: break-all;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 32px 0;
+        }
+
+        .info-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 24px;
+        }
+
+        .info-section h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .info-section p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .endpoint {
+            background-color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #667eea;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>World Risk Backend</h1>
+            <p>Authentication Service</p>
+            <div class="status-badge online" id="statusBadge">Server Online</div>
+        </div>
+
+        <form id="tokenForm">
+            <div class="form-group">
+                <label for="userId">User ID</label>
+                <input 
+                    type="text" 
+                    id="userId" 
+                    name="userId" 
+                    placeholder="e.g., john_doe" 
+                    required
+                    pattern="[a-zA-Z0-9_-]+"
+                    title="Only letters, numbers, hyphens, and underscores allowed"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="userName">User Name</label>
+                <input 
+                    type="text" 
+                    id="userName" 
+                    name="userName" 
+                    placeholder="e.g., John Doe" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="userImage">Profile Image URL (optional)</label>
+                <input 
+                    type="url" 
+                    id="userImage" 
+                    name="userImage" 
+                    placeholder="https://example.com/avatar.jpg"
+                >
+            </div>
+
+            <button type="submit" id="submitBtn">Generate Stream Token</button>
+        </form>
+
+        <div class="response-box" id="responseBox">
+            <div class="response-title" id="responseTitle">Response</div>
+            <div class="response-content" id="responseContent"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="info-section">
+            <h3>API Endpoints</h3>
+            <p><strong>Generate Token:</strong></p>
+            <div class="endpoint">POST /api/auth/stream-token</div>
+            <p style="margin-top: 16px;"><strong>Health Check:</strong></p>
+            <div class="endpoint">GET /health</div>
+        </div>
+
+        <div class="info-section" style="margin-top: 16px;">
+            <h3>About</h3>
+            <p>This backend service securely generates Stream authentication tokens for the World Risk mobile application. The Stream API Secret is protected and never exposed to clients.</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('tokenForm');
+        const responseBox = document.getElementById('responseBox');
+        const responseTitle = document.getElementById('responseTitle');
+        const responseContent = document.getElementById('responseContent');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusBadge = document.getElementById('statusBadge');
+
+        // Check server health on load
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    statusBadge.textContent = 'Server Online';
+                    statusBadge.className = 'status-badge online';
+                }
+            } catch (error) {
+                statusBadge.textContent = 'Server Offline';
+                statusBadge.className = 'status-badge offline';
+            }
+        }
+
+        checkHealth();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Generating...';
+            
+            const userId = document.getElementById('userId').value;
+            const userName = document.getElementById('userName').value;
+            const userImage = document.getElementById('userImage').value;
+
+            const requestBody = {
+                userId,
+                userName
+            };
+
+            if (userImage) {
+                requestBody.userImage = userImage;
+            }
+
+            try {
+                const response = await fetch('/api/auth/stream-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseBox.className = 'response-box success show';
+                    responseTitle.textContent = 'Success - Token Generated';
+                    responseContent.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    responseBox.className = 'response-box error show';
+                    responseTitle.textContent = 'Error';
+                    responseContent.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                responseBox.className = 'response-box error show';
+                responseTitle.textContent = 'Network Error';
+                responseContent.textContent = error.message;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generate Stream Token';
+            }
+        });
+    </script>
+</body>
+</html>

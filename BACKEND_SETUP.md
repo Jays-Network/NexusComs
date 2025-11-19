@@ -3,11 +3,20 @@
 ## Overview
 World Risk now uses a proper backend server to generate Stream tokens securely. This ensures the Stream API Secret is never exposed to the client.
 
+## Web UI
+The backend includes a user-friendly web interface for testing and generating tokens:
+- **Access**: Open http://localhost:3000 in your browser (when backend is running)
+- **Features**:
+  - Generate Stream tokens via web form
+  - Real-time server status indicator
+  - API endpoint documentation
+  - Formatted JSON responses
+  
 ## Architecture
 - **Frontend**: Expo app running on port 8081 (default Expo port)
-- **Backend**: Express server running on port 3000
+- **Backend**: Express server running on port 3000 with web UI
 - **Authentication Flow**: 
-  1. User enters credentials in the app
+  1. User enters credentials in the app (or web UI)
   2. App calls `/api/auth/stream-token` endpoint
   3. Backend securely generates Stream token using API Secret
   4. App receives token and connects to Stream services
@@ -18,7 +27,8 @@ World Risk now uses a proper backend server to generate Stream tokens securely. 
 1. Open a new Shell tab in Replit
 2. Run: `./start-backend.sh`
 3. Keep this shell open (backend server will run here)
-4. The main workflow runs the frontend automatically
+4. Access the web UI at http://localhost:3000
+5. The main workflow runs the frontend automatically
 
 ### Option 2: Using Concurrently (Automated)
 The `start-dev.sh` script runs both servers together:
@@ -26,12 +36,21 @@ The `start-dev.sh` script runs both servers together:
 ./start-dev.sh
 ```
 
+This will start:
+- Backend on port 3000 (with web UI at http://localhost:3000)
+- Frontend on port 8081 (Expo app)
+
 ## Environment Variables
 The following secrets are required (already configured):
 - `STREAM_API_KEY`: Your Stream API key (also exposed as EXPO_PUBLIC_STREAM_API_KEY for client)
 - `STREAM_API_SECRET`: Your Stream API secret (NEVER exposed to client)
 
 ## API Endpoints
+
+### GET /
+Serves the web UI for testing the authentication service.
+
+**Response:** HTML page with interactive form
 
 ### POST /api/auth/stream-token
 Generates a Stream authentication token for a user.
@@ -87,8 +106,9 @@ Health check endpoint.
 - Check the API_URL in `utils/streamApi.ts`
 - For Replit: backend should be accessible on the same domain
 
-## Files Modified
+## Files
 - `backend/src/server.js`: Express server with auth endpoints
+- `backend/public/index.html`: Web UI for testing authentication
 - `utils/streamApi.ts`: Client-side API calls to backend
 - `utils/streamAuth.tsx`: Updated to use backend tokens
 - `start-backend.sh`: Script to start backend server

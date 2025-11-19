@@ -18,7 +18,7 @@ Production-ready mobile chat application built with Expo React Native, using Str
 
 ### Core Components
 - **Frontend**: Expo React Native app (port 8081)
-- **Backend**: Express.js authentication server (port 3000)
+- **Backend**: Express.js authentication server (port 3000) with web UI
 
 ### Core Screens
 - **LoginScreen**: User authentication using secure backend-issued tokens
@@ -60,6 +60,7 @@ Production-ready mobile chat application built with Expo React Native, using Str
 
 ### Backend
 - `backend/src/server.js`: Express server with authentication endpoints
+- `backend/public/index.html`: Web UI for testing authentication
 - `start-backend.sh`: Backend server startup script
 - `start-dev.sh`: Run both frontend and backend concurrently
 
@@ -72,8 +73,9 @@ Production-ready mobile chat application built with Expo React Native, using Str
 ## Running the Application
 See `BACKEND_SETUP.md` for detailed instructions. Quick start:
 1. In a Shell tab, run: `./start-backend.sh` (backend on port 3000)
-2. Main workflow automatically runs frontend (Expo on port 8081)
-3. Or use `./start-dev.sh` to run both together
+2. Access backend web UI at http://localhost:3000 for testing
+3. Main workflow automatically runs frontend (Expo on port 8081)
+4. Or use `./start-dev.sh` to run both together
 
 ## Known Limitations
 1. **WebRTC (video calling) DISABLED for Expo Go** - Import commented out to prevent Android crashes
@@ -103,6 +105,11 @@ Stream Video SDK is currently **disabled** because it causes severe crashes on A
   - Endpoint: `POST /api/auth/stream-token`
   - Stream API secret kept secure on server-side only
   - User sanitization and validation
+- ✅ **Backend Web UI**: Professional web interface for testing authentication
+  - Access at http://localhost:3000 when backend is running
+  - Generate tokens via web form
+  - Real-time server status indicator
+  - Formatted JSON responses
 - ✅ **Updated Branding**: World Risk logo added to app icon, splash screen, and login screen
 - ✅ **Production-Ready Security**: No more client-side dev tokens
 
