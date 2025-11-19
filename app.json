@@ -1,31 +1,29 @@
 {
   "expo": {
-    "name": "SecureChat",
-    "slug": "securechat",
+    "name": "World Risk",
+    "slug": "worldrisk",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "securechat",
+    "icon": "./assets/images/world-risk-logo.png",
+    "scheme": "worldrisk",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.securechat.app",
+      "bundleIdentifier": "com.worldrisk.app",
       "infoPlist": {
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "SecureChat needs access to your location to share it with your group members.",
-        "NSLocationWhenInUseUsageDescription": "SecureChat needs access to your location to share it with your group members.",
-        "NSCameraUsageDescription": "SecureChat needs access to your camera to share photos and videos.",
-        "NSPhotoLibraryUsageDescription": "SecureChat needs access to your photo library to share photos and videos.",
-        "NSMicrophoneUsageDescription": "SecureChat needs access to your microphone for voice and video calls."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "World Risk needs access to your location to share it with your group members.",
+        "NSLocationWhenInUseUsageDescription": "World Risk needs access to your location to share it with your group members.",
+        "NSCameraUsageDescription": "World Risk needs access to your camera to share photos and videos.",
+        "NSPhotoLibraryUsageDescription": "World Risk needs access to your photo library to share photos and videos.",
+        "NSMicrophoneUsageDescription": "World Risk needs access to your microphone for voice and video calls."
       }
     },
     "android": {
-      "package": "com.securechat.app",
+      "package": "com.worldrisk.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1E40AF",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/images/world-risk-logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -47,10 +45,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/world-risk-logo.png",
+          "imageWidth": 300,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#000000",
           "dark": {
             "backgroundColor": "#000000"
           }
@@ -60,16 +58,16 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
-          "color": "#1E40AF",
+          "icon": "./assets/images/world-risk-logo.png",
+          "color": "#FFFFFF",
           "sounds": ["./assets/sounds/emergency.wav"]
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "SecureChat needs access to your location to share it with your group members.",
-          "locationWhenInUsePermission": "SecureChat needs access to your location to share it with your group members."
+          "locationAlwaysAndWhenInUsePermission": "World Risk needs access to your location to share it with your group members.",
+          "locationWhenInUsePermission": "World Risk needs access to your location to share it with your group members."
         }
       ]
     ],

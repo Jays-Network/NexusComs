@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
@@ -45,8 +45,11 @@ export default function LoginScreen() {
       }
     ]}>
       <View style={styles.content}>
-        <ThemedText style={styles.title}>SecureChat</ThemedText>
-        <ThemedText style={styles.subtitle}>Powered by Stream</ThemedText>
+        <Image
+          source={require('@/assets/images/world-risk-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
@@ -127,17 +130,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing['2xl']
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: Spacing.sm
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
-    marginBottom: Spacing['4xl']
+  logo: {
+    width: '100%',
+    height: 150,
+    marginBottom: Spacing['4xl'],
+    alignSelf: 'center'
   },
   form: {
     gap: Spacing.xl
