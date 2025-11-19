@@ -5,10 +5,10 @@ import {
   getChatClient, 
   connectStreamUser, 
   disconnectStreamUser,
-  generateUserToken,
   connectVideoUser,
   disconnectVideoUser
 } from './streamClient';
+import { getStreamToken } from './streamApi';
 
 interface User {
   id: string;
@@ -54,21 +54,21 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginUser = async (userId: string, userName: string, userImage?: string) => {
     try {
-      // Generate token (in production, fetch from your backend)
-      const token = generateUserToken(userId);
+      // Get token from backend
+      const { token, userId: sanitizedUserId } = await getStreamToken(userId, userName, userImage);
       
       // Connect to Stream Chat
-      const client = await connectStreamUser(userId, userName, token, userImage);
+      const client = await connectStreamUser(sanitizedUserId, userName, token, userImage);
       
       // Connect to Stream Video (optional, only works in custom dev builds)
       try {
-        await connectVideoUser(userId, userName, token);
+        await connectVideoUser(sanitizedUserId, userName, token);
       } catch (error) {
         console.warn('Video SDK not available (Expo Go limitation)');
       }
       
       const userData: User = {
-        id: userId,
+        id: sanitizedUserId,
         name: userName,
         image: userImage,
       };
