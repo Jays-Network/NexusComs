@@ -16,8 +16,12 @@ Production-ready mobile chat application built with Expo React Native, using Str
 
 ## Project Architecture
 
+### Core Components
+- **Frontend**: Expo React Native app (port 8081)
+- **Backend**: Express.js authentication server (port 3000)
+
 ### Core Screens
-- **LoginScreen**: User authentication using Stream dev tokens
+- **LoginScreen**: User authentication using secure backend-issued tokens
 - **GroupListScreen**: Hierarchical group messaging with channel listing
 - **ChatRoomScreen**: Real-time chat with emergency alert triggering
 - **EmergencyListScreen**: View emergency alert history
@@ -38,25 +42,38 @@ Production-ready mobile chat application built with Expo React Native, using Str
 
 ### Technology Stack
 - **Frontend**: Expo React Native, React Navigation 7+
+- **Backend**: Express.js, Stream Chat SDK (server-side)
 - **Chat/Messaging**: Stream Chat SDK
-- **Video**: Stream Video SDK
+- **Video**: Stream Video SDK (disabled in Expo Go)
 - **State Management**: React hooks, Stream context
-- **Storage**: expo-secure-store for auth tokens
+- **Storage**: AsyncStorage for user sessions
 - **Audio**: expo-av (deprecated, migration to expo-audio pending)
 
 ## Important Files
+### Frontend
 - `utils/streamClient.ts`: Stream client initialization
 - `utils/streamAuth.tsx`: Authentication context provider
+- `utils/streamApi.ts`: Backend API client for token generation
 - `components/EmergencyModal.tsx`: Emergency alert modal component
 - `screens/ChatRoomScreen.tsx`: Main chat interface
 - `App.tsx`: Root component with ErrorBoundary
 
+### Backend
+- `backend/src/server.js`: Express server with authentication endpoints
+- `start-backend.sh`: Backend server startup script
+- `start-dev.sh`: Run both frontend and backend concurrently
+
 ## Security Notes
-- **Development Mode**: Currently using client-side dev tokens
-- **Production Requirements**: 
-  - Implement backend server to issue JWT tokens
-  - Never expose Stream API secret in client code
-  - Use proper user authentication flow
+- ✅ **Production-Ready Authentication**: Backend server securely generates Stream tokens
+- ✅ **API Secret Protected**: Stream API secret NEVER exposed to client
+- ✅ **Secure Token Flow**: Tokens generated server-side and sent to clients
+- ℹ️ **Backend Required**: Must run backend server for authentication to work
+
+## Running the Application
+See `BACKEND_SETUP.md` for detailed instructions. Quick start:
+1. In a Shell tab, run: `./start-backend.sh` (backend on port 3000)
+2. Main workflow automatically runs frontend (Expo on port 8081)
+3. Or use `./start-dev.sh` to run both together
 
 ## Known Limitations
 1. **WebRTC (video calling) DISABLED for Expo Go** - Import commented out to prevent Android crashes
@@ -81,10 +98,18 @@ Stream Video SDK is currently **disabled** because it causes severe crashes on A
 - Design follows iOS 26 Liquid Glass interface guidelines
 - No emoji usage in the application
 
+## Recent Updates (November 19, 2025)
+- ✅ **Backend Authentication Server**: Implemented Express.js backend for secure token generation
+  - Endpoint: `POST /api/auth/stream-token`
+  - Stream API secret kept secure on server-side only
+  - User sanitization and validation
+- ✅ **Updated Branding**: World Risk logo added to app icon, splash screen, and login screen
+- ✅ **Production-Ready Security**: No more client-side dev tokens
+
 ## Next Steps (Future Enhancements)
 1. Add actual emergency.wav audio file
-2. Implement backend server for production JWT tokens
-3. Add location sharing functionality to chat
-4. Complete video calling setup with Stream Video SDK
-5. Migrate from expo-av to expo-audio (SDK 54 requirement)
-6. Implement push notification handlers
+2. Add location sharing functionality to chat
+3. Complete video calling setup with Stream Video SDK (requires EAS build)
+4. Migrate from expo-av to expo-audio (SDK 54 requirement)
+5. Implement push notification handlers
+6. Set up automated concurrent workflow execution
