@@ -47,7 +47,7 @@ export default function GroupMapScreen() {
   const [locations, setLocations] = useState<UserLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
-  const { colors } = useTheme();
+  const { theme: colors } = useTheme();
   const { token } = useAuth();
 
   useEffect(() => {

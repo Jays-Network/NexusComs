@@ -33,7 +33,7 @@ const Stack = createNativeStackNavigator();
 
 function AppContent() {
   const { user, chatClient, isLoading } = useStreamAuth();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!isLoading) {
@@ -41,7 +41,7 @@ function AppContent() {
     }
   }, [isLoading]);
 
-  if (isLoading) {
+  if (isLoading || !theme) {
     return null;
   }
 

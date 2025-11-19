@@ -11,7 +11,7 @@ type NavigationProp = NativeStackNavigationProp<ChatsStackParamList>;
 
 export default function GroupListScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useTheme();
+  const { theme } = useTheme();
   const { user } = useStreamAuth();
 
   const handleChannelSelect = (channel: Channel) => {
@@ -26,7 +26,7 @@ export default function GroupListScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
+    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <ChannelList
         filters={{
           members: { $in: [user.id] },

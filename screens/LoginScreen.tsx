@@ -12,7 +12,7 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useStreamAuth();
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { theme: colors } = useTheme();
 
   async function handleLogin() {
     if (!username.trim()) {
