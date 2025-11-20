@@ -1,4 +1,4 @@
-# World Risk - Frontend Mobile App
+# WorldRisk Nexus Coms - Frontend Mobile App
 
 Production-ready mobile chat application built with Expo React Native and Stream.io for real-time messaging, emergency alerts, and group communication.
 
@@ -172,4 +172,4 @@ For issues related to:
 
 ## License
 
-Proprietary - World Risk Application
+Proprietary - WorldRisk Nexus Coms Application

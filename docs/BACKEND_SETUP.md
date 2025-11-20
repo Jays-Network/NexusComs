@@ -1,7 +1,7 @@
 # Backend Authentication Setup
 
 ## Overview
-World Risk now uses a proper backend server to generate Stream tokens securely. This ensures the Stream API Secret is never exposed to the client.
+WorldRisk Nexus Coms now uses a proper backend server to generate Stream tokens securely. This ensures the Stream API Secret is never exposed to the client.
 
 ## Web UI
 The backend includes a user-friendly web interface for testing and generating tokens:

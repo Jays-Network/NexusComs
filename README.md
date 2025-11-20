@@ -1,12 +1,12 @@
-# World Risk
+# WorldRisk Nexus Coms
 
 Production-ready mobile chat application built with Expo React Native and Stream.io, featuring real-time group messaging, emergency alert system, and secure backend authentication.
 
-![World Risk](assets/images/world-risk-logo.png)
+![WorldRisk Nexus Coms](assets/images/world-risk-logo.png)
 
 ## Overview
 
-World Risk is an enterprise-grade mobile communication platform designed for teams that need reliable real-time messaging with emergency alert capabilities. Built with modern technologies and security best practices.
+WorldRisk Nexus Coms is an enterprise-grade mobile communication platform designed for teams that need reliable real-time messaging with emergency alert capabilities. Built with modern technologies and security best practices.
 
 ## Features
 
@@ -308,7 +308,7 @@ Secure authentication architecture:
 
 ## License
 
-Proprietary - World Risk Application
+Proprietary - WorldRisk Nexus Coms Application
 
 ## Support
 
@@ -321,4 +321,4 @@ For support and questions:
 
 **Version:** 1.0  
 **Last Updated:** November 20, 2025  
-**Maintainer:** World Risk Team
+**Maintainer:** WorldRisk Nexus Coms Team

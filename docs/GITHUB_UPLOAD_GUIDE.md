@@ -1,6 +1,6 @@
-# World Risk - GitHub Upload Guide
+# WorldRisk Nexus Coms - GitHub Upload Guide
 
-This guide explains how to upload your World Risk application to GitHub using the provided archive files.
+This guide explains how to upload your WorldRisk Nexus Coms application to GitHub using the provided archive files.
 
 ## Archive Files
 
@@ -55,10 +55,10 @@ This approach keeps frontend and backend separate, which is ideal for:
    # Initialize git
    git init
    git add .
-   git commit -m "Initial commit: World Risk mobile app"
+   git commit -m "Initial commit: WorldRisk Nexus Coms mobile app"
    
    # Create repository on GitHub and push
-   git remote add origin https://github.com/YOUR_USERNAME/world-risk-app.git
+   git remote add origin https://github.com/YOUR_USERNAME/worldrisk-nexus-coms-app.git
    git branch -M main
    git push -u origin main
    ```
@@ -72,10 +72,10 @@ This approach keeps frontend and backend separate, which is ideal for:
    # Initialize git
    git init
    git add .
-   git commit -m "Initial commit: World Risk authentication backend"
+   git commit -m "Initial commit: WorldRisk Nexus Coms authentication backend"
    
    # Create repository on GitHub and push
-   git remote add origin https://github.com/YOUR_USERNAME/world-risk-backend.git
+   git remote add origin https://github.com/YOUR_USERNAME/worldrisk-nexus-coms-backend.git
    git branch -M main
    git push -u origin main
    ```
@@ -103,7 +103,7 @@ mv world-risk-backend/BACKEND_README.md world-risk-backend/README.md
 
 # Create main README
 cat > README.md << 'EOF'
-# World Risk
+# WorldRisk Nexus Coms
 
 Production-ready mobile chat application with real-time messaging, emergency alerts, and secure authentication.
 
@@ -148,10 +148,10 @@ EOF
 # Initialize git
 git init
 git add .
-git commit -m "Initial commit: World Risk application"
+git commit -m "Initial commit: WorldRisk Nexus Coms application"
 
 # Create repository on GitHub and push
-git remote add origin https://github.com/YOUR_USERNAME/world-risk.git
+git remote add origin https://github.com/YOUR_USERNAME/worldrisk-nexus-coms.git
 git branch -M main
 git push -u origin main
 ```
@@ -308,4 +308,4 @@ Refer to the detailed README files in each archive for:
 
 **Created:** November 20, 2025  
 **Version:** 1.0  
-**App:** World Risk - Emergency Communication Platform
+**App:** WorldRisk Nexus Coms - Emergency Communication Platform

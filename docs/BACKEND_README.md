@@ -1,6 +1,6 @@
-# World Risk - Backend Authentication Service
+# WorldRisk Nexus Coms - Backend Authentication Service
 
-Express.js backend server that securely generates Stream authentication tokens for the World Risk mobile application. Includes a professional web UI for testing.
+Express.js backend server that securely generates Stream authentication tokens for the WorldRisk Nexus Coms mobile application. Includes a professional web UI for testing.
 
 ## Features
 
@@ -280,4 +280,4 @@ For issues related to:
 
 ## License
 
-Proprietary - World Risk Application
+Proprietary - WorldRisk Nexus Coms Application
