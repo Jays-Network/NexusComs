@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting World Risk development servers..."
+echo "Starting WorldRisk Nexus Coms development servers..."
 
 # Install backend dependencies if needed
 if [ ! -d "backend/node_modules" ]; then
