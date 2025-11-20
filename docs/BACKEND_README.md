@@ -26,15 +26,17 @@ Express.js backend server that securely generates Stream authentication tokens f
 
 ## Installation
 
-1. Extract the archive:
+1. Clone the repository:
    ```bash
-   tar -xzf world-risk-backend.tar.gz
-   cd world-risk-backend/backend
+   git clone https://github.com/YOUR_USERNAME/world-risk.git
+   cd world-risk
    ```
 
-2. Install dependencies:
+2. Install backend dependencies:
    ```bash
+   cd backend
    npm install
+   cd ..
    ```
 
 3. Set up environment variables:
@@ -45,9 +47,8 @@ Express.js backend server that securely generates Stream authentication tokens f
    PORT=3000
    ```
 
-4. Start the server:
+4. Start the server (from repository root):
    ```bash
-   cd ..
    ./start-backend.sh
    ```
 

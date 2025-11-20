@@ -1,344 +1,324 @@
-# SecureChat - Enterprise Group Messaging App
+# World Risk
 
-A production-ready mobile chat application built with Expo React Native, featuring hierarchical group messaging, end-to-end encryption, emergency alerts, real-time location tracking, and administrative controls.
+Production-ready mobile chat application built with Expo React Native and Stream.io, featuring real-time group messaging, emergency alert system, and secure backend authentication.
+
+![World Risk](assets/images/world-risk-logo.png)
+
+## Overview
+
+World Risk is an enterprise-grade mobile communication platform designed for teams that need reliable real-time messaging with emergency alert capabilities. Built with modern technologies and security best practices.
 
 ## Features
 
 ### Core Messaging
-- **Hierarchical Group Structure**: Main groups with sub-groups for organized communication
-- **End-to-End Encryption**: All messages encrypted with AES-256
-- **Real-time Chat**: Socket.IO powered instant messaging
-- **File Sharing**: Support for images, videos, and documents
-- **Offline Support**: AsyncStorage caching for offline message access
-- **Template-Locked Messages**: Enforce structured messaging for formal communications
+- **Real-time Chat**: Powered by Stream Chat SDK for instant messaging
+- **Hierarchical Groups**: Organized group structure with Stream channels
+- **File Sharing**: Share images, documents, and videos
+- **Message History**: Complete chat history with Stream's infrastructure
+- **Typing Indicators**: See when others are typing
+- **Read Receipts**: Track message delivery and read status
 
-### Emergency System
-- **Emergency Alerts**: Broadcast critical messages to all group members
-- **Full-Screen Modal**: Unmissable emergency notifications
-- **Haptic Feedback**: Heavy impact vibrations for emergency alerts
-- **Custom Sound**: Dedicated emergency alert sound
-- **Acknowledgment Tracking**: Track who has seen emergency messages
-- **Push Notifications**: Emergency and default notification channels
+### Emergency Alert System
+- **Critical Alerts**: Send emergency notifications to entire groups
+- **Audio Alerts**: Custom emergency sound with iOS silent mode bypass
+- **Haptic Feedback**: Triple heavy impact vibration pattern
+- **Full-Screen Modal**: Unmissable emergency notification display
+- **Visual Feedback**: Pulsing animation for urgent attention
+- **Alert History**: View all past emergency alerts
 
-### Location & Maps
-- **Real-time Location Tracking**: Background location updates (admin-controlled)
-- **Group Map View**: See all members' locations on an interactive map
-- **Location History**: Track location updates over time
-
-### Security & Administration
-- **JWT Authentication**: Secure token-based authentication
-- **Role-Based Access**: Admin and regular user roles
-- **Secure Storage**: Expo SecureStore for sensitive data
-- **Password Hashing**: bcrypt password protection
+### Security & Authentication
+- **Backend Token Generation**: Secure Stream tokens issued server-side
+- **Protected API Secrets**: Stream API secret never exposed to clients
+- **User Validation**: Sanitized user IDs and input validation
+- **Production Ready**: Proper authentication flow with JWT tokens
 
 ### User Experience
-- **iOS 26 Liquid Glass UI**: Modern, native-feeling interface
-- **Tab Navigation**: Easy access to Chats, Emergency, and Settings
-- **Responsive Design**: Optimized for mobile devices
-- **Safe Area Handling**: Proper insets for all device types
-- **Error Boundaries**: Graceful error handling and app restart
+- **iOS 26 Liquid Glass UI**: Modern, native-feeling interface design
+- **Responsive Layout**: Optimized for all mobile devices
+- **Error Boundaries**: Graceful error handling with app recovery
+- **Safe Area Support**: Proper insets for all device types
+- **Tab Navigation**: Easy access to Groups, Chats, Emergency, and Settings
 
 ## Tech Stack
 
-### Frontend
+### Frontend (`/` - Expo React Native)
 - **Expo SDK 54**: React Native framework
+- **Stream Chat SDK**: Real-time messaging infrastructure
 - **React Navigation 7**: Navigation system
-- **Socket.IO Client**: Real-time communication
-- **Expo Location**: GPS and location services
-- **React Native Maps**: Map visualization
-- **Expo Notifications**: Push notification support
-- **Expo Image Picker**: Photo and video selection
-- **Expo Document Picker**: File selection
+- **AsyncStorage**: Local data persistence
+- **Expo AV**: Audio/video playback for alert sounds
 - **Expo Haptics**: Vibration feedback
-- **Expo AV**: Audio playback for alerts
-- **Crypto-JS**: Client-side encryption
-- **Expo Secure Store**: Secure credential storage
-- **AsyncStorage**: Local data caching
+- **React Native Maps**: Map visualization
+- **React Native Gesture Handler**: Touch interactions
+- **React Native Reanimated**: Smooth animations
 
-### Backend
-- **Node.js + Express**: REST API server
-- **Socket.IO**: WebSocket server for real-time features
-- **Supabase (PostgreSQL)**: Cloud database
-- **JWT**: Token-based authentication
-- **bcrypt**: Password hashing
-- **Multer**: File upload handling
+### Backend (`/backend` - Node.js)
+- **Express.js**: REST API server
+- **Stream Chat Server SDK**: Secure token generation
 - **CORS**: Cross-origin resource sharing
-
-## Setup Instructions
-
-### Prerequisites
-- Node.js 18+ installed
-- Expo Go app on your mobile device (iOS or Android)
-- Supabase account (free tier works fine)
-
-### 1. Database Setup
-
-1. Create a Supabase project at [https://supabase.com](https://supabase.com)
-2. In your Supabase dashboard, go to the SQL Editor
-3. Copy the contents of `supabase-schema.sql` and run it in the SQL Editor
-4. This will create all necessary tables and seed demo data
-
-**Demo Credentials:**
-- Admin: `admin` / `admin123`
-- User 1: `user1` / `demo123`
-- User 2: `user2` / `demo123`
-
-### 2. Environment Configuration
-
-1. In Replit Secrets (lock icon in left sidebar), add the following:
-
-```
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SESSION_SECRET=your_random_secret_key
-```
-
-2. Get your Supabase URL and anon key from:
-   - Supabase Dashboard → Settings → API
-   - Copy "Project URL" and "anon/public" key
-
-3. For `SESSION_SECRET`, generate a random string (at least 32 characters)
-
-4. Create a `.env` file (optional, for local development):
-
-```bash
-cp .env.example .env
-# Edit .env with your values
-```
-
-### 3. Start the Backend Server
-
-The backend server needs to run separately from the Expo app. Open a new Shell tab and run:
-
-```bash
-node server/server.js
-```
-
-The server will start on port 3000. Keep this running.
-
-### 4. Start the Expo App
-
-In the main Shell tab (or use the "Start application" workflow button):
-
-```bash
-npm run dev
-```
-
-This will start the Expo development server and display a QR code.
-
-### 5. Test on Your Mobile Device
-
-1. Install **Expo Go** on your phone:
-   - iOS: [App Store](https://apps.apple.com/app/expo-go/id982107779)
-   - Android: [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
-
-2. Scan the QR code:
-   - iOS: Use the Camera app
-   - Android: Use the Expo Go app scanner
-
-3. The app will load on your device
-
-4. Login with demo credentials:
-   - Username: `admin`
-   - Password: `admin123`
+- **dotenv**: Environment configuration
+- **Web UI**: Professional testing interface
 
 ## Project Structure
 
 ```
-├── App.tsx                      # Main app component with auth flow
-├── navigation/                  # Navigation configuration
-│   ├── MainTabNavigator.tsx    # Bottom tab navigator
-│   ├── ChatsStackNavigator.tsx # Chats stack
-│   ├── EmergencyStackNavigator.tsx
-│   └── SettingsStackNavigator.tsx
-├── screens/                     # App screens
-│   ├── LoginScreen.tsx         # Authentication
-│   ├── GroupListScreen.tsx     # Main groups and subgroups
-│   ├── ChatRoomScreen.tsx      # Real-time chat
+world-risk/
+├── App.tsx                    # Root application component
+├── app.json                   # Expo configuration
+├── package.json               # Frontend dependencies
+│
+├── screens/                   # Application screens
+│   ├── LoginScreen.tsx       # User authentication
+│   ├── GroupListScreen.tsx   # Group/channel listing
+│   ├── ChatRoomScreen.tsx    # Main chat interface
 │   ├── EmergencyListScreen.tsx # Emergency alerts
-│   ├── SettingsScreen.tsx      # User settings
-│   └── GroupMapScreen.tsx      # Location tracking map
-├── components/                  # Reusable components
-│   ├── EmergencyModal.tsx      # Full-screen emergency alerts
-│   ├── ThemedText.tsx          # Themed text component
-│   ├── ThemedView.tsx          # Themed view component
-│   ├── ErrorBoundary.tsx       # Error handling
-│   └── Screen*.tsx             # Screen wrapper components
-├── utils/                       # Utility functions
-│   ├── auth.tsx                # Authentication context
-│   ├── socket.ts               # Socket.IO + encryption
-│   └── storage.ts              # AsyncStorage helpers
-├── server/                      # Backend server
-│   ├── server.js               # Express + Socket.IO server
-│   └── database.js             # Supabase client
-├── constants/                   # App constants
-│   └── theme.ts                # Colors, spacing, typography
-└── supabase-schema.sql         # Database schema
-
+│   └── SettingsScreen.tsx    # User settings
+│
+├── components/                # Reusable components
+│   ├── EmergencyModal.tsx    # Emergency alert modal
+│   ├── ErrorBoundary.tsx     # Error handling
+│   └── ...
+│
+├── navigation/                # Navigation configuration
+├── utils/                     # Utilities and helpers
+│   ├── streamClient.ts       # Stream SDK initialization
+│   ├── streamAuth.tsx        # Authentication context
+│   └── streamApi.ts          # Backend API client
+│
+├── backend/                   # Backend server
+│   ├── src/
+│   │   └── server.js         # Express server
+│   ├── public/
+│   │   └── index.html        # Web UI
+│   └── package.json          # Backend dependencies
+│
+├── docs/                      # Documentation
+│   ├── FRONTEND_README.md    # Frontend setup guide
+│   ├── BACKEND_README.md     # Backend setup guide
+│   └── BACKEND_SETUP.md      # Detailed backend docs
+│
+└── assets/                    # Images, sounds, fonts
+    ├── images/               # App icons and logos
+    └── sounds/               # Alert sounds
 ```
 
-## API Endpoints
+## Quick Start
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration (admin only)
+### Prerequisites
+- Node.js 18+ installed
+- Expo account (free)
+- Stream account with API credentials
+- Mobile device with Expo Go app installed
 
-### Groups
-- `GET /api/groups` - Get all groups with subgroups
-- `GET /api/groups/:subgroupId/members` - Get subgroup members
+### 1. Clone and Install
 
-### Messages
-- `GET /api/messages/:subgroupId` - Get messages for a subgroup
-- `POST /api/messages` - Send a message (use Socket.IO instead)
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/world-risk.git
+cd world-risk
 
-### Emergency
-- `GET /api/emergency` - Get all emergency messages
-- `POST /api/emergency/:messageId/acknowledge` - Acknowledge emergency
+# Install frontend dependencies
+npm install
 
-### Location
-- `GET /api/location/group/:subgroupId` - Get member locations
-- `POST /api/location` - Update user location
+# Install backend dependencies
+cd backend
+npm install
+cd ..
+```
 
-### File Upload
-- `POST /api/upload` - Upload file (multipart/form-data)
+### 2. Environment Setup
 
-## Socket.IO Events
+**Frontend `.env`:**
+```env
+EXPO_PUBLIC_STREAM_API_KEY=your_stream_api_key
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
 
-### Client → Server
-- `authenticate` - Authenticate socket connection
-- `join_room` - Join a subgroup room
-- `leave_room` - Leave a subgroup room
-- `send_message` - Send encrypted message
-- `update_location` - Update user location
+**Backend `backend/.env`:**
+```env
+STREAM_API_KEY=your_stream_api_key
+STREAM_API_SECRET=your_stream_api_secret
+PORT=3000
+```
 
-### Server → Client
-- `new_message` - New message received
-- `message_error` - Message send error
-- `emergency_alert` - Emergency alert broadcast
-- `location_update` - Member location updated
+> ⚠️ **Never commit `.env` files to git!**
 
-## Security Features
+### 3. Get Stream Credentials
 
-1. **End-to-End Encryption**:
-   - All messages encrypted with AES-256
-   - Encryption key stored securely
-   - Decrypt only on client side
+1. Create account at [getstream.io](https://getstream.io)
+2. Create a new app
+3. Copy API Key and API Secret from dashboard
+4. Add to environment files
 
-2. **Secure Authentication**:
-   - JWT tokens with expiration
-   - Passwords hashed with bcrypt (10 rounds)
-   - Tokens stored in Expo SecureStore
+### 4. Start the Application
 
-3. **Authorization**:
-   - JWT middleware on protected routes
-   - Role-based access control
-   - Admin-only features
+**Option 1: Start backend in separate terminal**
+```bash
+# Terminal 1 - Backend
+./start-backend.sh
 
-4. **Data Protection**:
-   - Environment variables for secrets
-   - No sensitive data in logs
-   - Secure WebSocket connections
+# Terminal 2 - Frontend
+npm run dev
+```
 
-## Development Notes
+**Option 2: Start both together**
+```bash
+./start-dev.sh
+```
 
-### Running Both Servers
+### 5. Access the Application
 
-You need to run TWO processes:
+- **Mobile App**: Scan QR code with Expo Go
+- **Backend Web UI**: http://localhost:3000
+- **Health Check**: http://localhost:3000/health
 
-1. **Backend Server** (Terminal 1):
-   ```bash
-   node server/server.js
-   ```
+## Development
 
-2. **Expo Dev Server** (Terminal 2):
-   ```bash
-   npm run dev
-   ```
+### Running on Device
 
-### Hot Module Reloading
+1. Install Expo Go on your iOS/Android device
+2. Start dev server: `npm run dev`
+3. Scan QR code with Expo Go (Android) or Camera app (iOS)
 
-The Expo app supports HMR - changes to React components will update automatically. However, you need to restart the backend server if you modify `server/server.js`.
+### Backend Web UI
 
-### Debugging
+Test authentication without the mobile app:
+1. Start backend: `./start-backend.sh`
+2. Open browser: http://localhost:3000
+3. Use web form to generate tokens and test API
 
-- **Backend logs**: Check Terminal 1 (server.js)
-- **App logs**: Check Expo dev tools or shake device → Debug Remote JS
-- **Network**: Use React Native Debugger or Flipper
+### Testing
 
-### Common Issues
+```bash
+# Run tests (when available)
+npm test
 
-**"Cannot connect to server"**:
-- Make sure the backend server is running
-- Check that `EXPO_PUBLIC_API_URL` is set correctly
-- Ensure Supabase credentials are configured
+# Type checking
+npx tsc --noEmit
+```
 
-**"WebSocket connection failed"**:
-- Backend server must be running
-- Check firewall settings
-- Verify Socket.IO version compatibility
+## Documentation
 
-**Maps not working on web**:
-- This is expected - react-native-maps doesn't support web
-- Use Expo Go on a physical device to test maps
+Detailed documentation available in the `/docs` folder:
 
-**Emergency sound not playing**:
-- Add a real WAV file to `assets/sounds/emergency.wav`
-- The placeholder file is just a text file
+- **[Frontend Setup Guide](docs/FRONTEND_README.md)** - Complete frontend documentation
+- **[Backend Setup Guide](docs/BACKEND_README.md)** - Backend API documentation
+- **[Backend Setup Details](docs/BACKEND_SETUP.md)** - Detailed backend configuration
 
-## Deployment
+## Building for Production
 
-### Publishing the App
+### Frontend (Mobile App)
 
-1. Build the app for production:
-   ```bash
-   npx expo build:android
-   npx expo build:ios
-   ```
+```bash
+# Install EAS CLI
+npm install -g eas-cli
 
-2. Deploy the backend:
-   - Use Replit deployments
-   - Or deploy to Heroku, Railway, or any Node.js hosting
+# Configure EAS
+eas build:configure
 
-3. Update environment variables:
-   - Set production Supabase credentials
-   - Update `EXPO_PUBLIC_API_URL` to production backend URL
-   - Generate new `SESSION_SECRET`
+# Build for iOS
+eas build --platform ios
 
-### Production Checklist
+# Build for Android
+eas build --platform android
 
-- [ ] Change all default passwords
-- [ ] Use production Supabase database
-- [ ] Enable SSL for backend API
-- [ ] Configure push notification credentials
-- [ ] Set up proper logging and monitoring
-- [ ] Configure file storage (not local filesystem)
-- [ ] Test emergency alerts thoroughly
-- [ ] Review and audit security settings
-- [ ] Set up database backups
-- [ ] Configure proper CORS origins
+# Submit to app stores
+eas submit
+```
 
-## Future Enhancements
+### Backend
 
-- Video calling integration (WebRTC or third-party service)
-- Web admin dashboard for user management
-- Message reactions and threading
-- Voice messages
-- Read receipts and typing indicators
-- Group creation and management by users
-- Enhanced search and filtering
-- Analytics and reporting
-- Multi-language support
-- Dark mode theme switching
-- Biometric authentication
+Deploy to your preferred platform:
+- Railway
+- Render
+- Heroku
+- AWS EC2/ECS
+- DigitalOcean
+
+Update frontend `EXPO_PUBLIC_API_URL` to your production backend URL.
+
+## Features in Detail
+
+### Emergency Alert System
+
+The emergency alert system provides critical communication capabilities:
+
+- **Audio**: Custom emergency.wav sound (bypass silent mode on iOS)
+- **Haptics**: 3x heavy impact vibration pattern
+- **Visual**: Full-screen modal with pulsing red animation
+- **Persistent**: Alerts remain until acknowledged
+- **History**: View all emergency alerts in dedicated screen
+
+### Stream Integration
+
+Using Stream provides enterprise-grade features:
+
+- **Scalability**: Cloud infrastructure handles millions of messages
+- **Real-time**: WebSocket connections for instant updates
+- **Reliability**: 99.99% uptime SLA
+- **Security**: End-to-end encryption available
+- **Features**: Reactions, threads, mentions, typing indicators
+
+### Backend Authentication
+
+Secure authentication architecture:
+
+- **Server-Side Tokens**: Stream tokens generated on backend only
+- **API Secret Protected**: Never exposed to client applications
+- **User Validation**: Input sanitization and validation
+- **Scalable**: Ready for production deployment
+
+## Known Limitations
+
+1. **Video Calling**: Stream Video SDK disabled in Expo Go (requires EAS build)
+2. **Maps**: react-native-maps has limited Expo Go support
+3. **Audio**: expo-av deprecated, migration to expo-audio recommended
+
+## Troubleshooting
+
+### Authentication Issues
+- Ensure backend is running on port 3000
+- Verify Stream API credentials are correct
+- Check `EXPO_PUBLIC_API_URL` points to backend
+
+### App Won't Start
+- Delete node_modules and reinstall: `rm -rf node_modules && npm install`
+- Clear Expo cache: `npx expo start -c`
+- Restart Metro bundler
+
+### Stream Connection Fails
+- Verify API key in environment
+- Check backend token generation works
+- Test with backend web UI first
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
+
+## Security
+
+- Never commit `.env` files or API secrets
+- Use environment variables for all sensitive data
+- Keep dependencies updated regularly
+- Review security advisories in GitHub
 
 ## License
 
-Private - Internal Use Only
+Proprietary - World Risk Application
 
 ## Support
 
-For issues and questions, contact your system administrator.
+For support and questions:
+- Review documentation in `/docs` folder
+- Check Stream documentation: [getstream.io/chat/docs](https://getstream.io/chat/docs/)
+- Review Expo documentation: [docs.expo.dev](https://docs.expo.dev/)
 
 ---
 
-**Important Security Notice**: This app handles sensitive communications and location data. Always follow security best practices, keep dependencies updated, and conduct regular security audits.
+**Version:** 1.0  
+**Last Updated:** November 20, 2025  
+**Maintainer:** World Risk Team

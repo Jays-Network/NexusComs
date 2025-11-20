@@ -41,3 +41,25 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Backend environment files
+backend/.env
+backend/.env.local
+
+# Archives (don't commit to git)
+*.tar.gz
+*.zip
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+/tmp/
+*.tmp

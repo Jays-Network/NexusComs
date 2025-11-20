@@ -14,13 +14,16 @@ Production-ready mobile chat application built with Expo React Native and Stream
 
 ## Tech Stack
 
-- **Framework**: Expo SDK 53
-- **UI**: React Native with NativeWind (Tailwind CSS)
+- **Framework**: Expo SDK 54
+- **UI**: React Native with custom StyleSheet components
+- **Styling**: NativeWind/Tailwind CSS (installed, currently unused)
 - **Navigation**: React Navigation 7+
 - **Chat**: Stream Chat React Native SDK
 - **State**: React hooks and context
 - **Storage**: AsyncStorage
 - **Design**: iOS 26 Liquid Glass interface
+
+> **Note**: While NativeWind is installed as a dependency, the current codebase uses React Native's StyleSheet API for styling. NativeWind can be utilized for future development if desired.
 
 ## Prerequisites
 
@@ -31,10 +34,10 @@ Production-ready mobile chat application built with Expo React Native and Stream
 
 ## Installation
 
-1. Extract the archive:
+1. Clone the repository:
    ```bash
-   tar -xzf world-risk-frontend.tar.gz
-   cd world-risk-frontend
+   git clone https://github.com/YOUR_USERNAME/world-risk.git
+   cd world-risk
    ```
 
 2. Install dependencies:
