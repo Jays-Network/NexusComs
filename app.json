@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "World Risk",
+    "name": "WorldRisk Nexus Coms",
     "slug": "worldrisk",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,11 +12,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.worldrisk.app",
       "infoPlist": {
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "World Risk needs access to your location to share it with your group members.",
-        "NSLocationWhenInUseUsageDescription": "World Risk needs access to your location to share it with your group members.",
-        "NSCameraUsageDescription": "World Risk needs access to your camera to share photos and videos.",
-        "NSPhotoLibraryUsageDescription": "World Risk needs access to your photo library to share photos and videos.",
-        "NSMicrophoneUsageDescription": "World Risk needs access to your microphone for voice and video calls."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "WorldRisk Nexus Coms needs access to your location to share it with your group members.",
+        "NSLocationWhenInUseUsageDescription": "WorldRisk Nexus Coms needs access to your location to share it with your group members.",
+        "NSCameraUsageDescription": "WorldRisk Nexus Coms needs access to your camera to share photos and videos.",
+        "NSPhotoLibraryUsageDescription": "WorldRisk Nexus Coms needs access to your photo library to share photos and videos.",
+        "NSMicrophoneUsageDescription": "WorldRisk Nexus Coms needs access to your microphone for voice and video calls."
       }
     },
     "android": {
@@ -66,8 +66,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "World Risk needs access to your location to share it with your group members.",
-          "locationWhenInUsePermission": "World Risk needs access to your location to share it with your group members."
+          "locationAlwaysAndWhenInUsePermission": "WorldRisk Nexus Coms needs access to your location to share it with your group members.",
+          "locationWhenInUsePermission": "WorldRisk Nexus Coms needs access to your location to share it with your group members."
         }
       ]
     ],
