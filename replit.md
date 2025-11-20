@@ -118,7 +118,7 @@ Stream Video SDK is currently **disabled** because it causes severe crashes on A
   - Generate tokens via web form
   - Real-time server status indicator
   - Formatted JSON responses
-- ✅ **Updated Branding**: World Risk logo added to app icon, splash screen, and login screen
+- ✅ **Updated Branding**: WorldRisk Nexus Coms logo added to app icon, splash screen, and login screen
 - ✅ **Production-Ready Security**: No more client-side dev tokens
 
 ## Next Steps (Future Enhancements)
