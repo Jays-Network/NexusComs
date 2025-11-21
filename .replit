@@ -21,10 +21,6 @@ localPort = 33495
 externalPort = 3002
 
 [[ports]]
-localPort = 36799
-externalPort = 3003
-
-[[ports]]
 localPort = 37793
 externalPort = 3001
 
@@ -90,8 +86,7 @@ waitForPort = 8081
 stack = "EXPO"
 
 [deployment]
-deploymentTarget = "cloudrun"
-publicDir = "static-build"
+deploymentTarget = "gce"
 build = ["node", "scripts/build.js"]
 run = ["sh", "-c", "node backend/src/server.js"]
 
