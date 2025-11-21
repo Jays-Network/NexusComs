@@ -39,9 +39,9 @@ WorldRisk Nexus Coms is an enterprise-grade mobile communication platform design
 - **Safe Area Support**: Proper insets for all device types
 - **Tab Navigation**: Easy access to Groups, Chats, Emergency, and Settings
 
-## Tech Stack
+## Tech Stack & Hosting
 
-### Frontend (`/` - Expo React Native)
+### Frontend (Expo.dev)
 - **Expo SDK 54**: React Native framework
 - **Stream Chat SDK**: Real-time messaging infrastructure
 - **React Navigation 7**: Navigation system
@@ -49,15 +49,16 @@ WorldRisk Nexus Coms is an enterprise-grade mobile communication platform design
 - **Expo AV**: Audio/video playback for alert sounds
 - **Expo Haptics**: Vibration feedback
 - **React Native Maps**: Map visualization
-- **React Native Gesture Handler**: Touch interactions
-- **React Native Reanimated**: Smooth animations
 
-### Backend (`/backend` - Node.js)
+### Backend (Replit)
 - **Express.js**: REST API server
 - **Stream Chat Server SDK**: Secure token generation
-- **CORS**: Cross-origin resource sharing
-- **dotenv**: Environment configuration
-- **Web UI**: Professional testing interface
+- **Node.js**: Runtime environment
+
+### Database (Supabase)
+- **PostgreSQL**: Relational database
+- **Supabase Client**: Database access layer
+- **Real-time subscriptions**: Live data updates
 
 ## Project Structure
 

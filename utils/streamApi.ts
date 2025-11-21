@@ -1,8 +1,16 @@
-// In Replit, both frontend and backend run on the same domain
-// Backend runs on port 3000, frontend uses the Replit proxy
-const API_URL = typeof window !== 'undefined' && window.location?.origin 
-  ? window.location.origin.replace(':8081', ':3000').replace(':5000', ':3000')
-  : process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// Backend hosted on Replit, frontend on Expo.dev
+// Get API URL from environment variable (set in Expo.dev build settings)
+// For local development, use localhost
+const getApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    // In web/browser environment, use environment variable
+    return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+  }
+  // In React Native environment
+  return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+};
+
+const API_URL = getApiUrl();
 
 export interface StreamTokenResponse {
   token: string;
