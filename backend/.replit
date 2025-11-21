@@ -1,0 +1,7 @@
+run = "node src/server.js"
+modules = ["nodejs-20"]
+
+[env]
+STREAM_API_KEY = ""
+STREAM_API_SECRET = ""
+PORT = "3000"

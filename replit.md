@@ -121,10 +121,47 @@ Stream Video SDK is currently **disabled** because it causes severe crashes on A
 - ✅ **Updated Branding**: WorldRisk Nexus Coms logo added to app icon, splash screen, and login screen
 - ✅ **Production-Ready Security**: No more client-side dev tokens
 
+## Deployment Architecture (November 21, 2025)
+- **Frontend**: Hosted on Expo.dev (React Native app for iOS/Android/Web)
+- **Backend**: Hosted on Replit (Express.js API server)
+- **Database**: Supabase PostgreSQL (production data)
+- **Authentication**: Stream Chat (real-time messaging)
+
+## Deployment Steps
+
+### Backend Deployment (Replit)
+1. Add secrets in Replit: STREAM_API_KEY, STREAM_API_SECRET
+2. Go to Publishing > Autoscale > Set up published app
+3. Configure machine power and publish
+4. Get your backend URL: https://[replit-name].replit.dev
+
+### Frontend Deployment (Expo.dev)
+1. Push code to GitHub
+2. Create Expo account (expo.dev)
+3. Run: eas init, eas build --platform web/ios/android
+4. Configure EXPO_PUBLIC_API_URL to your Replit backend
+5. Add Supabase credentials to build environment
+
+### Database (Supabase)
+1. Create project at supabase.com
+2. Get URL and API keys
+3. Add to Expo build environment variables
+
+## Environment Variables Required
+
+**For Backend (Replit Secrets):**
+- STREAM_API_KEY
+- STREAM_API_SECRET
+
+**For Frontend (Expo Build Settings):**
+- EXPO_PUBLIC_STREAM_API_KEY
+- EXPO_PUBLIC_API_URL (Replit backend URL)
+- EXPO_PUBLIC_SUPABASE_URL
+- EXPO_PUBLIC_SUPABASE_ANON_KEY
+
 ## Next Steps (Future Enhancements)
 1. Add actual emergency.wav audio file
 2. Add location sharing functionality to chat
 3. Complete video calling setup with Stream Video SDK (requires EAS build)
-4. Migrate from expo-av to expo-audio (SDK 54 requirement)
-5. Implement push notification handlers
-6. Set up automated concurrent workflow execution
+4. Implement push notification handlers
+5. Set up Supabase real-time synchronization

@@ -1,16 +1,6 @@
 // Backend hosted on Replit, frontend on Expo.dev
-// Get API URL from environment variable (set in Expo.dev build settings)
-// For local development, use localhost
-const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    // In web/browser environment, use environment variable
-    return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-  }
-  // In React Native environment
-  return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-};
-
-const API_URL = getApiUrl();
+// Safe API URL initialization that handles all environments
+const API_URL = process.env.EXPO_PUBLIC_API_URL ? String(process.env.EXPO_PUBLIC_API_URL).trim() : 'http://localhost:3000';
 
 export interface StreamTokenResponse {
   token: string;
