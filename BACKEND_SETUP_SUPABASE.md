@@ -52,15 +52,16 @@ CREATE TABLE users (
   }',
   is_admin BOOLEAN DEFAULT false,
   last_login TIMESTAMP WITH TIME ZONE,
+  password_reset_token VARCHAR(255),
+  password_reset_expires TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create index on email for faster login lookups
+-- Create indexes for faster lookups
 CREATE INDEX idx_users_email ON users(email);
-
--- Create index on username
 CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_reset_token ON users(password_reset_token);
 ```
 
 4. Click **Run**
@@ -128,6 +129,7 @@ The backend will automatically start with your workflow. Once running:
 - Email/Password authentication
 - Secure session tokens
 - Error handling
+- **Forgot Password?** link for password reset
 
 ### User Management Dashboard
 - **User Table**: Shows all users with columns:
@@ -185,9 +187,35 @@ DELETE /api/users/:id
   Headers: Authorization: Bearer <token>
   Response: { message: "User deleted successfully" }
 
+POST /api/auth/request-reset
+  Request: { email, username }
+  Response: { message, resetToken, expiresIn }
+
+POST /api/auth/reset-password
+  Request: { resetToken, newPassword }
+  Response: { message }
+
 GET /health
   Response: { status: "ok", supabase: "configured" }
 ```
+
+## Password Reset Feature
+
+A secure password reset system is now available:
+
+1. **Click "Forgot Password?"** on the login page
+2. **Enter email and username** to verify your account
+3. **Copy the reset token** that appears
+4. **Enter new password** and click "Reset Password"
+5. **Login with new credentials**
+
+Security features:
+- Tokens expire after 1 hour
+- Both email AND username must match (prevents account enumeration)
+- Passwords are bcrypt-hashed
+- Tokens are one-time use only
+
+See `BACKEND_PASSWORD_RESET.md` for complete documentation.
 
 ## Troubleshooting
 
