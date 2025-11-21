@@ -1,6 +1,9 @@
 // Backend hosted on Replit, frontend on Expo.dev
-// Safe API URL initialization that handles all environments
-const API_URL = process.env.EXPO_PUBLIC_API_URL ? String(process.env.EXPO_PUBLIC_API_URL).trim() : 'http://localhost:3000';
+// Safe API URL initialization - never parse undefined
+let API_URL = 'http://localhost:3000'; // Default fallback
+if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
+  API_URL = process.env.EXPO_PUBLIC_API_URL.trim();
+}
 
 export interface StreamTokenResponse {
   token: string;

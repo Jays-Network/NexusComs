@@ -121,41 +121,72 @@ Stream Video SDK is currently **disabled** because it causes severe crashes on A
 - ✅ **Updated Branding**: WorldRisk Nexus Coms logo added to app icon, splash screen, and login screen
 - ✅ **Production-Ready Security**: No more client-side dev tokens
 
-## Deployment Architecture (November 21, 2025)
+## November 21, 2025 - Complete Backend Overhaul
+
+✅ **Backend Completely Rebuilt** with Supabase integration:
+- Login page (Email/Password authentication)
+- User management dashboard (Wialon CMS-style table)
+- Tabbed edit interface (General, Access, Advanced tabs)
+- Full CRUD operations with Supabase sync
+- Role-based access control
+- Session management with JWT tokens
+
+✅ **New Database Schema**:
+- Users table with permissions (JSONB)
+- Billing plans and account management
+- Creator tracking and audit timestamps
+- Host mask configuration
+
+✅ **Security**:
+- Password hashing with bcrypt
+- Bearer token authentication on all API endpoints
+- Session expiration (7 days)
+- No credentials exposed in frontend
+
+## Deployment Architecture
 - **Frontend**: Hosted on Expo.dev (React Native app for iOS/Android/Web)
-- **Backend**: Hosted on Replit (Express.js API server)
+- **Backend**: Hosted on Replit (Express.js + Supabase)
 - **Database**: Supabase PostgreSQL (production data)
-- **Authentication**: Stream Chat (real-time messaging)
+- **Authentication**: Supabase Auth + JWT sessions
+- **Chat**: Stream Chat SDK (real-time messaging)
 
-## Deployment Steps
+## Backend Deployment (Replit)
 
-### Backend Deployment (Replit)
-1. Add secrets in Replit: STREAM_API_KEY, STREAM_API_SECRET
-2. Go to Publishing > Autoscale > Set up published app
-3. Configure machine power and publish
-4. Get your backend URL: https://[replit-name].replit.dev
+See `BACKEND_SETUP_SUPABASE.md` for complete setup instructions. Quick summary:
 
-### Frontend Deployment (Expo.dev)
+1. **Create Supabase Project** (supabase.com)
+2. **Set up Database Schema** (run SQL in Supabase SQL Editor)
+3. **Add Secrets** to Replit:
+   - SUPABASE_URL
+   - SUPABASE_SERVICE_ROLE_KEY
+   - SUPABASE_ANON_KEY
+   - SESSION_SECRET (already set)
+4. **Create Admin User** (SQL insert or registration)
+5. **Deploy via Publishing**:
+   - Go to Publishing > Autoscale > Set up published app
+   - Configure machine power and publish
+   - Get your backend URL: https://[replit-name].replit.dev
+
+## Frontend Deployment (Expo.dev)
 1. Push code to GitHub
 2. Create Expo account (expo.dev)
 3. Run: eas init, eas build --platform web/ios/android
 4. Configure EXPO_PUBLIC_API_URL to your Replit backend
 5. Add Supabase credentials to build environment
 
-### Database (Supabase)
-1. Create project at supabase.com
-2. Get URL and API keys
-3. Add to Expo build environment variables
-
-## Environment Variables Required
+## Required Environment Variables
 
 **For Backend (Replit Secrets):**
-- STREAM_API_KEY
-- STREAM_API_SECRET
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+- SUPABASE_ANON_KEY
+- SESSION_SECRET
+- STREAM_API_KEY (optional, for legacy endpoints)
+- STREAM_API_SECRET (optional, for legacy endpoints)
 
 **For Frontend (Expo Build Settings):**
-- EXPO_PUBLIC_STREAM_API_KEY
 - EXPO_PUBLIC_API_URL (Replit backend URL)
+- EXPO_PUBLIC_STREAM_API_KEY
 - EXPO_PUBLIC_SUPABASE_URL
 - EXPO_PUBLIC_SUPABASE_ANON_KEY
 
