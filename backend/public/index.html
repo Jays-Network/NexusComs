@@ -513,7 +513,7 @@
                 
                 <div id="resetStep1">
                     <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
-                        Enter your email and username to verify your account.
+                        Enter your email and username to verify your account. A reset link will be sent to your email.
                     </p>
                     <div class="form-group">
                         <label for="resetEmail">Email Address</label>
@@ -524,28 +524,16 @@
                         <input type="text" id="resetUsername" placeholder="admin">
                     </div>
                     <button onclick="requestPasswordReset()" style="width: 100%; padding: 12px; margin-top: 16px;">
-                        Request Reset
+                        Request Reset Link
                     </button>
                 </div>
 
                 <div id="resetStep2" style="display: none;">
                     <p style="color: #38a169; background: #f0fff4; padding: 12px; border-radius: 4px; margin-bottom: 20px; font-size: 14px;">
-                        A reset token has been generated. Copy it below and enter it with your new password.
+                        Check your email! A password reset link has been sent. Click the link in your email to reset your password. The link expires in 1 hour.
                     </p>
-                    <div class="form-group">
-                        <label>Reset Token</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="resetTokenDisplay" readonly style="flex: 1;">
-                            <button onclick="copyResetToken()" style="width: 80px; padding: 8px;">Copy</button>
-                        </div>
-                        <p style="font-size: 12px; color: #999; margin-top: 8px;">Token expires in 1 hour</p>
-                    </div>
-                    <div class="form-group">
-                        <label for="newPassword">New Password</label>
-                        <input type="password" id="newPassword" placeholder="New password (min 6 characters)">
-                    </div>
-                    <button onclick="completePasswordReset()" style="width: 100%; padding: 12px; margin-top: 16px;">
-                        Reset Password
+                    <button onclick="closeForgotPasswordModal()" style="width: 100%; padding: 12px; margin-top: 16px;">
+                        Close
                     </button>
                 </div>
             </div>
@@ -938,68 +926,10 @@
 
                 const data = await response.json();
 
-                if (!response.ok) {
-                    resetError.textContent = data.error || 'Failed to request password reset';
-                    resetError.style.display = 'block';
-                    return;
-                }
-
-                // Show token and password input
-                currentResetToken = data.resetToken;
-                document.getElementById('resetTokenDisplay').value = data.resetToken;
+                // Show success message regardless of response code
                 document.getElementById('resetStep1').style.display = 'none';
                 document.getElementById('resetStep2').style.display = 'block';
                 resetError.style.display = 'none';
-            } catch (error) {
-                resetError.textContent = 'Network error: ' + error.message;
-                resetError.style.display = 'block';
-            }
-        }
-
-        function copyResetToken() {
-            const tokenDisplay = document.getElementById('resetTokenDisplay');
-            tokenDisplay.select();
-            document.execCommand('copy');
-            alert('Token copied to clipboard!');
-        }
-
-        async function completePasswordReset() {
-            const newPassword = document.getElementById('newPassword').value;
-            const resetError = document.getElementById('resetError');
-
-            if (!currentResetToken || !newPassword) {
-                resetError.textContent = 'Reset token and password are required';
-                resetError.style.display = 'block';
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                resetError.textContent = 'Password must be at least 6 characters';
-                resetError.style.display = 'block';
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/auth/reset-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        resetToken: currentResetToken,
-                        newPassword: newPassword
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    resetError.textContent = data.error || 'Failed to reset password';
-                    resetError.style.display = 'block';
-                    return;
-                }
-
-                alert('Password reset successfully! You can now login with your new password.');
-                closeForgotPasswordModal();
-                document.getElementById('loginForm').reset();
             } catch (error) {
                 resetError.textContent = 'Network error: ' + error.message;
                 resetError.style.display = 'block';

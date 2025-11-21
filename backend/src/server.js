@@ -5,6 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 
 dotenv.config();
 
@@ -16,6 +17,29 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
+
+// Email transporter using Supabase email or SMTP
+const createEmailTransporter = () => {
+  // If using SMTP (Gmail, SendGrid, etc.)
+  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT || 587,
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+  }
+  // Default fallback transporter
+  return nodemailer.createTransport({
+    host: 'localhost',
+    port: 1025
+  });
+};
+
+const emailTransporter = createEmailTransporter();
 
 app.use(cors());
 app.use(express.json());
@@ -170,12 +194,34 @@ app.post('/api/auth/request-reset', async (req, res) => {
       return res.status(500).json({ error: 'Failed to process reset request' });
     }
 
-    // In production, you would send an email here with the reset link
-    // For now, return the token (in production: hide this and send via email)
+    // Send password reset email with link
+    const resetLink = `${process.env.BACKEND_URL || 'http://localhost:3000'}/reset-password.html?token=${resetToken}`;
+    
+    try {
+      await emailTransporter.sendMail({
+        from: process.env.EMAIL_FROM || 'noreply@nexuscoms.com',
+        to: users.email,
+        subject: 'NexusComs Password Reset',
+        html: `
+          <h2>Password Reset Request</h2>
+          <p>You requested a password reset for your NexusComs account.</p>
+          <p><strong>This link expires in 1 hour.</strong></p>
+          <p>
+            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
+              Reset Password
+            </a>
+          </p>
+          <p>Or copy this link: ${resetLink}</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Email send error:', emailError);
+      // Don't fail the request, just log the error
+    }
+
     res.json({
-      message: 'Password reset requested successfully',
-      resetToken, // In production, only send this via email, not in response
-      expiresIn: '1 hour'
+      message: 'If a matching account exists, a password reset link has been sent to the email address'
     });
   } catch (error) {
     console.error('Password reset request error:', error);
