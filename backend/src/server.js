@@ -228,7 +228,14 @@ app.post('/api/auth/request-reset', async (req, res) => {
       .eq('email', email)
       .single();
 
-    console.log(`Supabase query result - User found: ${users ? 'yes' : 'no'}, Error: ${userError ? userError.message : 'none'}`);
+    // --- DEBUG BLOCK ---
+    console.log("DEBUG: Reset Request Received");
+    console.log("Input Email:", email);
+    console.log("Database Result:", users);
+    console.log("Database Error:", userError);
+    console.log("BREVO_API_KEY present:", !!process.env.BREVO_API_KEY);
+    console.log("BACKEND_URL:", process.env.BACKEND_URL);
+    // -------------------
 
     if (userError || !users) {
       // Don't reveal if user exists (security best practice)
