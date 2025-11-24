@@ -5,7 +5,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
+const https = require('https');
 
 dotenv.config();
 
@@ -18,44 +18,85 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
-// Email transporter using Brevo SMTP
-const createEmailTransporter = () => {
-  console.log('Creating email transporter...');
-  console.log('EMAIL_HOST:', process.env.EMAIL_HOST ? 'SET' : 'MISSING');
-  console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'MISSING');
-  console.log('BREVO_SMTP_PASSWORD:', process.env.BREVO_SMTP_PASSWORD ? 'SET' : 'MISSING');
-  console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
-  console.log('EMAIL_FROM:', process.env.EMAIL_FROM ? 'SET' : 'MISSING');
-  
-  // Using Brevo SMTP
-  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.BREVO_SMTP_PASSWORD) {
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT) || 587,
-      secure: false, // Brevo uses STARTTLS on port 587
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.BREVO_SMTP_PASSWORD
-      }
-    });
+// Brevo API email sender using REST API
+const sendBrevoEmail = async (to, subject, html, from = 'noreply@worldrisk.co.za') => {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.BREVO_API_KEY;
     
-    // Test SMTP connection
-    transporter.verify((error, success) => {
-      if (error) {
-        console.error('✗ SMTP Connection Failed:', error.message);
-      } else {
-        console.log('✓ SMTP Connection Verified - Ready to send emails');
+    if (!apiKey) {
+      console.error('✗ BREVO_API_KEY not configured');
+      return reject(new Error('Brevo API key not configured'));
+    }
+
+    const emailData = {
+      to: [{ email: to }],
+      from: { email: from, name: 'NexusComs' },
+      subject: subject,
+      htmlContent: html
+    };
+
+    const postData = JSON.stringify(emailData);
+
+    const options = {
+      hostname: 'api.brevo.com',
+      path: '/v3/smtp/email',
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': apiKey,
+        'content-length': Buffer.byteLength(postData)
       }
+    };
+
+    console.log('Sending email via Brevo API...');
+    console.log('  To:', to);
+    console.log('  Subject:', subject);
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const response = JSON.parse(data);
+          
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log('✓✓✓ EMAIL SENT SUCCESSFULLY via Brevo API ✓✓✓');
+            console.log('  Message ID:', response.messageId);
+            resolve(response);
+          } else {
+            console.error('✗ Brevo API Error:', res.statusCode);
+            console.error('  Response:', data);
+            reject(new Error(`Brevo API error: ${res.statusCode} - ${data}`));
+          }
+        } catch (e) {
+          console.error('✗ Failed to parse Brevo response:', e.message);
+          reject(e);
+        }
+      });
     });
-    
-    return transporter;
-  }
-  // Default fallback transporter (for testing)
-  console.error('✗ Email transporter NOT configured - password reset emails will NOT be sent');
-  return null;
+
+    req.on('error', (error) => {
+      console.error('✗✗✗ EMAIL SEND FAILED ✗✗✗');
+      console.error('  Error:', error.message);
+      reject(error);
+    });
+
+    req.write(postData);
+    req.end();
+  });
 };
 
-const emailTransporter = createEmailTransporter();
+// Verify Brevo API key on startup
+if (process.env.BREVO_API_KEY) {
+  console.log('✓ Brevo API Key configured - Ready to send emails');
+} else {
+  console.error('✗ BREVO_API_KEY not set - Password reset emails will NOT be sent');
+}
 
 app.use(cors());
 app.use(express.json());
@@ -213,45 +254,29 @@ app.post('/api/auth/request-reset', async (req, res) => {
     // Send password reset email with link
     const resetLink = `${process.env.BACKEND_URL || 'http://localhost:3000'}/reset-password.html?token=${resetToken}`;
     
-    if (emailTransporter) {
-      try {
-        const fromEmail = process.env.EMAIL_FROM || 'noreply@worldrisk.co.za';
-        console.log('Attempting to send reset email...');
-        console.log('  From:', fromEmail);
-        console.log('  To:', users.email);
-        console.log('  Subject: NexusComs Password Reset');
-        
-        const mailResult = await emailTransporter.sendMail({
-          from: fromEmail,
-          to: users.email,
-          subject: 'NexusComs Password Reset',
-          html: `
-            <h2>Password Reset Request</h2>
-            <p>You requested a password reset for your NexusComs account.</p>
-            <p><strong>This link expires in 1 hour.</strong></p>
-            <p>
-              <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
-                Reset Password
-              </a>
-            </p>
-            <p>Or copy this link: ${resetLink}</p>
-            <p>If you didn't request this, please ignore this email.</p>
-          `
-        });
-        console.log('✓✓✓ PASSWORD RESET EMAIL SENT SUCCESSFULLY ✓✓✓');
-        console.log('  SMTP Response:', mailResult.response);
-        console.log('  Message ID:', mailResult.messageId);
-      } catch (emailError) {
-        console.error('✗✗✗ EMAIL SEND FAILED ✗✗✗');
-        console.error('  Error Type:', emailError.constructor.name);
-        console.error('  Error Message:', emailError.message);
-        console.error('  Error Code:', emailError.code);
-        console.error('  Response:', emailError.response);
-        console.error('  Command:', emailError.command);
-        console.error('  Full Error:', JSON.stringify(emailError, null, 2));
-      }
-    } else {
-      console.error('✗ EMAIL TRANSPORTER NOT CONFIGURED');
+    try {
+      const emailHtml = `
+        <h2>Password Reset Request</h2>
+        <p>You requested a password reset for your NexusComs account.</p>
+        <p><strong>This link expires in 1 hour.</strong></p>
+        <p>
+          <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
+            Reset Password
+          </a>
+        </p>
+        <p>Or copy this link: ${resetLink}</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `;
+      
+      await sendBrevoEmail(
+        users.email,
+        'NexusComs Password Reset',
+        emailHtml,
+        process.env.EMAIL_FROM || 'noreply@worldrisk.co.za'
+      );
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError.message);
+      // Don't fail the response - token is already saved
     }
 
     res.json({

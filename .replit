@@ -25,6 +25,10 @@ localPort = 37793
 externalPort = 3001
 
 [[ports]]
+localPort = 40609
+externalPort = 4200
+
+[[ports]]
 localPort = 42799
 externalPort = 5000
 
@@ -118,3 +122,4 @@ EMAIL_PORT = "587"
 EMAIL_USER = "9c30d0001@smtp-brevo.com"
 EMAIL_FROM = "noreply@worldrisk.co.za"
 BACKEND_URL = "http://localhost:3000"
+BREVO_API_KEY = "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"
