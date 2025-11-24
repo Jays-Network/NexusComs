@@ -205,7 +205,8 @@ app.post('/api/auth/request-reset', async (req, res) => {
     
     if (emailTransporter) {
       try {
-        await emailTransporter.sendMail({
+        console.log('Attempting to send reset email to:', users.email);
+        const mailResult = await emailTransporter.sendMail({
           from: process.env.EMAIL_FROM || 'noreply@nexuscoms.com',
           to: users.email,
           subject: 'NexusComs Password Reset',
@@ -222,13 +223,18 @@ app.post('/api/auth/request-reset', async (req, res) => {
             <p>If you didn't request this, please ignore this email.</p>
           `
         });
-        console.log('Password reset email sent to:', users.email);
+        console.log('✓ PASSWORD RESET EMAIL SENT SUCCESSFULLY');
+        console.log('  To:', users.email);
+        console.log('  Response:', mailResult.response);
       } catch (emailError) {
-        console.error('Email send error:', emailError);
+        console.error('✗ EMAIL SEND FAILED:');
+        console.error('  Error:', emailError.message);
+        console.error('  Code:', emailError.code);
+        console.error('  Details:', emailError);
         // Don't fail the request, just log the error
       }
     } else {
-      console.warn('Email transporter not configured, reset link: ' + resetLink);
+      console.error('✗ EMAIL TRANSPORTER NOT CONFIGURED - reset link: ' + resetLink);
     }
 
     res.json({
