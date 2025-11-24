@@ -900,19 +900,16 @@
             document.getElementById('forgotPasswordModal').classList.remove('active');
             document.getElementById('resetEmail').value = '';
             document.getElementById('resetUsername').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('resetTokenDisplay').value = '';
             document.getElementById('resetError').style.display = 'none';
             currentResetToken = null;
         }
 
         async function requestPasswordReset() {
             const email = document.getElementById('resetEmail').value;
-            const username = document.getElementById('resetUsername').value;
             const resetError = document.getElementById('resetError');
 
-            if (!email || !username) {
-                resetError.textContent = 'Email and username are required';
+            if (!email) {
+                resetError.textContent = 'Email is required';
                 resetError.style.display = 'block';
                 return;
             }
@@ -921,7 +918,7 @@
                 const response = await fetch('/api/auth/request-reset', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, username })
+                    body: JSON.stringify({ email })
                 });
 
                 const data = await response.json();

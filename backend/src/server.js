@@ -210,27 +210,31 @@ app.post('/api/auth/register', async (req, res) => {
 
 // ============= PASSWORD RESET ENDPOINTS =============
 
-// Request password reset (verify user by email and username)
+// Request password reset (verify user by email only)
 app.post('/api/auth/request-reset', async (req, res) => {
   try {
-    const { email, username } = req.body;
+    const { email } = req.body;
 
-    if (!email || !username) {
-      return res.status(400).json({ error: 'Email and username required' });
+    console.log(`Password reset requested for: ${email}`);
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email required' });
     }
 
-    // Find user by email AND username (double verification)
+    // Find user by email only
     const { data: users, error: userError } = await supabase
       .from('users')
       .select('id, email, username')
       .eq('email', email)
-      .eq('username', username)
       .single();
+
+    console.log(`Supabase query result - User found: ${users ? 'yes' : 'no'}, Error: ${userError ? userError.message : 'none'}`);
 
     if (userError || !users) {
       // Don't reveal if user exists (security best practice)
+      console.log('User not found, returning generic success message');
       return res.status(200).json({ 
-        message: 'If a matching account exists, a reset link will be sent' 
+        message: 'If an account exists with this email, a reset link has been sent' 
       });
     }
 
@@ -255,6 +259,8 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : 'http://localhost:3000';
     const resetLink = `${baseUrl}/reset-password.html?token=${resetToken}`;
     
+    console.log(`Email sending function called for user: ${users.email}`);
+    
     try {
       const emailHtml = `
         <h2>Password Reset Request</h2>
@@ -275,13 +281,14 @@ app.post('/api/auth/request-reset', async (req, res) => {
         emailHtml,
         process.env.EMAIL_FROM || 'noreply@worldrisk.co.za'
       );
+      console.log(`✓ Password reset email sent successfully to: ${users.email}`);
     } catch (emailError) {
       console.error('Failed to send reset email:', emailError.message);
       // Don't fail the response - token is already saved
     }
 
     res.json({
-      message: 'If a matching account exists, a password reset link has been sent to the email address'
+      message: 'If an account exists with this email, a reset link has been sent'
     });
   } catch (error) {
     console.error('Password reset request error:', error);
