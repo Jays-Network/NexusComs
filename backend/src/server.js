@@ -252,7 +252,8 @@ app.post('/api/auth/request-reset', async (req, res) => {
     }
 
     // Send password reset email with link
-    const resetLink = `${process.env.BACKEND_URL || 'http://localhost:3000'}/reset-password.html?token=${resetToken}`;
+    const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : 'http://localhost:3000';
+    const resetLink = `${baseUrl}/reset-password.html?token=${resetToken}`;
     
     try {
       const emailHtml = `
