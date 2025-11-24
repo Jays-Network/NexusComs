@@ -215,9 +215,14 @@ app.post('/api/auth/request-reset', async (req, res) => {
     
     if (emailTransporter) {
       try {
-        console.log('Attempting to send reset email to:', users.email);
+        const fromEmail = process.env.EMAIL_FROM || 'noreply@worldrisk.co.za';
+        console.log('Attempting to send reset email...');
+        console.log('  From:', fromEmail);
+        console.log('  To:', users.email);
+        console.log('  Subject: NexusComs Password Reset');
+        
         const mailResult = await emailTransporter.sendMail({
-          from: process.env.EMAIL_FROM || 'noreply@nexuscoms.com',
+          from: fromEmail,
           to: users.email,
           subject: 'NexusComs Password Reset',
           html: `
@@ -233,18 +238,20 @@ app.post('/api/auth/request-reset', async (req, res) => {
             <p>If you didn't request this, please ignore this email.</p>
           `
         });
-        console.log('✓ PASSWORD RESET EMAIL SENT SUCCESSFULLY');
-        console.log('  To:', users.email);
-        console.log('  Response:', mailResult.response);
+        console.log('✓✓✓ PASSWORD RESET EMAIL SENT SUCCESSFULLY ✓✓✓');
+        console.log('  SMTP Response:', mailResult.response);
+        console.log('  Message ID:', mailResult.messageId);
       } catch (emailError) {
-        console.error('✗ EMAIL SEND FAILED:');
-        console.error('  Error:', emailError.message);
-        console.error('  Code:', emailError.code);
-        console.error('  Details:', emailError);
-        // Don't fail the request, just log the error
+        console.error('✗✗✗ EMAIL SEND FAILED ✗✗✗');
+        console.error('  Error Type:', emailError.constructor.name);
+        console.error('  Error Message:', emailError.message);
+        console.error('  Error Code:', emailError.code);
+        console.error('  Response:', emailError.response);
+        console.error('  Command:', emailError.command);
+        console.error('  Full Error:', JSON.stringify(emailError, null, 2));
       }
     } else {
-      console.error('✗ EMAIL TRANSPORTER NOT CONFIGURED - reset link: ' + resetLink);
+      console.error('✗ EMAIL TRANSPORTER NOT CONFIGURED');
     }
 
     res.json({
