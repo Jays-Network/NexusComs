@@ -28,6 +28,10 @@ externalPort = 3001
 localPort = 42799
 externalPort = 5000
 
+[[ports]]
+localPort = 43909
+externalPort = 3003
+
 [workflows]
 runButton = "Project"
 
@@ -100,3 +104,12 @@ value = "1"
 path = "/*"
 name = "expo-sfv-version"
 value = "0"
+
+[userenv]
+
+[userenv.shared]
+EMAIL_HOST = "smtp-relay.brevo.com"
+EMAIL_PORT = "587"
+EMAIL_USER = "9c30d0001@smtp-brevo.com"
+EMAIL_FROM = "jullian@worldrisk.co.za"
+BACKEND_URL = "http://localhost:3000"

@@ -18,25 +18,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
-// Email transporter using Supabase email or SMTP
+// Email transporter using Brevo SMTP
 const createEmailTransporter = () => {
-  // If using SMTP (Gmail, SendGrid, etc.)
-  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  // Using Brevo SMTP
+  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.BREVO_SMTP_PASSWORD) {
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT || 587,
-      secure: process.env.EMAIL_SECURE === 'true',
+      port: parseInt(process.env.EMAIL_PORT) || 587,
+      secure: false, // Brevo uses STARTTLS on port 587
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        pass: process.env.BREVO_SMTP_PASSWORD
       }
     });
   }
-  // Default fallback transporter
-  return nodemailer.createTransport({
-    host: 'localhost',
-    port: 1025
-  });
+  // Default fallback transporter (for testing)
+  console.warn('Email transporter not configured - password reset emails will not be sent');
+  return null;
 };
 
 const emailTransporter = createEmailTransporter();
@@ -197,27 +195,32 @@ app.post('/api/auth/request-reset', async (req, res) => {
     // Send password reset email with link
     const resetLink = `${process.env.BACKEND_URL || 'http://localhost:3000'}/reset-password.html?token=${resetToken}`;
     
-    try {
-      await emailTransporter.sendMail({
-        from: process.env.EMAIL_FROM || 'noreply@nexuscoms.com',
-        to: users.email,
-        subject: 'NexusComs Password Reset',
-        html: `
-          <h2>Password Reset Request</h2>
-          <p>You requested a password reset for your NexusComs account.</p>
-          <p><strong>This link expires in 1 hour.</strong></p>
-          <p>
-            <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
-              Reset Password
-            </a>
-          </p>
-          <p>Or copy this link: ${resetLink}</p>
-          <p>If you didn't request this, please ignore this email.</p>
-        `
-      });
-    } catch (emailError) {
-      console.error('Email send error:', emailError);
-      // Don't fail the request, just log the error
+    if (emailTransporter) {
+      try {
+        await emailTransporter.sendMail({
+          from: process.env.EMAIL_FROM || 'noreply@nexuscoms.com',
+          to: users.email,
+          subject: 'NexusComs Password Reset',
+          html: `
+            <h2>Password Reset Request</h2>
+            <p>You requested a password reset for your NexusComs account.</p>
+            <p><strong>This link expires in 1 hour.</strong></p>
+            <p>
+              <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px;">
+                Reset Password
+              </a>
+            </p>
+            <p>Or copy this link: ${resetLink}</p>
+            <p>If you didn't request this, please ignore this email.</p>
+          `
+        });
+        console.log('Password reset email sent to:', users.email);
+      } catch (emailError) {
+        console.error('Email send error:', emailError);
+        // Don't fail the request, just log the error
+      }
+    } else {
+      console.warn('Email transporter not configured, reset link: ' + resetLink);
     }
 
     res.json({
