@@ -25,10 +25,6 @@ localPort = 37793
 externalPort = 3001
 
 [[ports]]
-localPort = 41203
-externalPort = 4200
-
-[[ports]]
 localPort = 42799
 externalPort = 5000
 
@@ -85,6 +81,15 @@ mode = "sequential"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 8081
+
+[[workflows.workflow]]
+name = "Backend Server"
+mode = "sequential"
+author = 48266707
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node backend/src/server.js"
 
 [agent]
 stack = "EXPO"
