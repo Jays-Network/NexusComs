@@ -18,75 +18,64 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
-// Brevo API email sender using REST API
-const sendBrevoEmail = async (to, subject, html, from = 'noreply@worldrisk.co.za') => {
+// Brevo API email sender using REST API with EXTREME DEBUGGING
+const sendBrevoEmail = async (to, subject, html) => {
+  console.log(">>> EXTREME DEBUG: Starting sendBrevoEmail function");
+  console.log(`>>> EXTREME DEBUG: Sending to ${to}`);
+  
   return new Promise((resolve, reject) => {
-    const apiKey = process.env.BREVO_API_KEY;
-    
-    if (!apiKey) {
-      console.error('✗ BREVO_API_KEY not configured');
-      return reject(new Error('Brevo API key not configured'));
-    }
-
-    const emailData = {
+    const postData = JSON.stringify({
+      sender: { name: "NexusComs", email: process.env.EMAIL_FROM || 'noreply@worldrisk.co.za' },
       to: [{ email: to }],
-      from: { email: from, name: 'NexusComs' },
       subject: subject,
       htmlContent: html
-    };
+    });
 
-    const postData = JSON.stringify(emailData);
+    console.log(">>> EXTREME DEBUG: POST data prepared, length:", Buffer.byteLength(postData));
+    console.log(">>> EXTREME DEBUG: API Key present:", !!process.env.BREVO_API_KEY);
 
     const options = {
       hostname: 'api.brevo.com',
+      port: 443,
       path: '/v3/smtp/email',
       method: 'POST',
       headers: {
         'accept': 'application/json',
         'content-type': 'application/json',
-        'api-key': apiKey,
+        'api-key': process.env.BREVO_API_KEY,
         'content-length': Buffer.byteLength(postData)
       }
     };
 
-    console.log('Sending email via Brevo API...');
-    console.log('  To:', to);
-    console.log('  Subject:', subject);
+    console.log(">>> EXTREME DEBUG: HTTPS request starting to api.brevo.com...");
 
     const req = https.request(options, (res) => {
+      console.log(`>>> EXTREME DEBUG: API Response Status: ${res.statusCode}`);
       let data = '';
-
       res.on('data', (chunk) => {
+        console.log(`>>> EXTREME DEBUG: Received chunk of ${chunk.length} bytes`);
         data += chunk;
       });
-
       res.on('end', () => {
-        try {
-          const response = JSON.parse(data);
-          
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log('✓✓✓ EMAIL SENT SUCCESSFULLY via Brevo API ✓✓✓');
-            console.log('  Message ID:', response.messageId);
-            resolve(response);
-          } else {
-            console.error('✗ Brevo API Error:', res.statusCode);
-            console.error('  Response:', data);
-            reject(new Error(`Brevo API error: ${res.statusCode} - ${data}`));
-          }
-        } catch (e) {
-          console.error('✗ Failed to parse Brevo response:', e.message);
-          reject(e);
+        console.log(`>>> EXTREME DEBUG: API Body: ${data}`);
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(">>> EXTREME DEBUG: SUCCESS - Email sent!");
+          resolve(JSON.parse(data));
+        } else {
+          console.error(`>>> EXTREME DEBUG: FAILED - Status ${res.statusCode}`);
+          reject(new Error(`API Error ${res.statusCode}: ${data}`));
         }
       });
     });
 
-    req.on('error', (error) => {
-      console.error('✗✗✗ EMAIL SEND FAILED ✗✗✗');
-      console.error('  Error:', error.message);
-      reject(error);
+    req.on('error', (e) => {
+      console.error(">>> EXTREME DEBUG: Network Error:", e);
+      reject(e);
     });
 
+    console.log(">>> EXTREME DEBUG: Writing POST data to request...");
     req.write(postData);
+    console.log(">>> EXTREME DEBUG: Ending request...");
     req.end();
   });
 };
@@ -215,41 +204,45 @@ app.post('/api/auth/request-reset', async (req, res) => {
   try {
     const { email } = req.body;
 
-    console.log(`Password reset requested for: ${email}`);
+    console.log("\n>>> EXTREME DEBUG: /api/auth/request-reset ENDPOINT START");
+    console.log(`>>> EXTREME DEBUG: Email from request: ${email}`);
+    console.log(`>>> EXTREME DEBUG: BACKEND_URL env var: ${process.env.BACKEND_URL}`);
+    console.log(`>>> EXTREME DEBUG: BREVO_API_KEY present: ${!!process.env.BREVO_API_KEY}`);
 
     if (!email) {
+      console.log(">>> EXTREME DEBUG: Email missing - returning 400");
       return res.status(400).json({ error: 'Email required' });
     }
 
     // Find user by email only
+    console.log(">>> EXTREME DEBUG: Querying Supabase for user with email...");
     const { data: users, error: userError } = await supabase
       .from('users')
       .select('id, email, username')
       .eq('email', email)
       .single();
 
-    // --- DEBUG BLOCK ---
-    console.log("DEBUG: Reset Request Received");
-    console.log("Input Email:", email);
-    console.log("Database Result:", users);
-    console.log("Database Error:", userError);
-    console.log("BREVO_API_KEY present:", !!process.env.BREVO_API_KEY);
-    console.log("BACKEND_URL:", process.env.BACKEND_URL);
-    // -------------------
+    console.log(">>> EXTREME DEBUG: Supabase query complete");
+    console.log(">>> EXTREME DEBUG: User found:", !!users);
+    console.log(">>> EXTREME DEBUG: User error:", userError ? userError.message : 'none');
+    console.log(">>> EXTREME DEBUG: User data:", users);
 
     if (userError || !users) {
-      // Don't reveal if user exists (security best practice)
-      console.log('User not found, returning generic success message');
+      console.log(">>> EXTREME DEBUG: User not found - returning generic success (security)");
       return res.status(200).json({ 
         message: 'If an account exists with this email, a reset link has been sent' 
       });
     }
 
     // Generate reset token (valid for 1 hour)
+    console.log(">>> EXTREME DEBUG: Generating reset token...");
     const resetToken = require('crypto').randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+    const resetExpires = new Date(Date.now() + 3600000).toISOString();
+    console.log(">>> EXTREME DEBUG: Reset token created:", resetToken.substring(0, 10) + "...");
+    console.log(">>> EXTREME DEBUG: Reset expires:", resetExpires);
 
     // Store reset token in database
+    console.log(">>> EXTREME DEBUG: Storing reset token in database...");
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -259,14 +252,17 @@ app.post('/api/auth/request-reset', async (req, res) => {
       .eq('id', users.id);
 
     if (updateError) {
+      console.error(">>> EXTREME DEBUG: Database update failed:", updateError.message);
       return res.status(500).json({ error: 'Failed to process reset request' });
     }
+    console.log(">>> EXTREME DEBUG: Database update successful");
 
     // Send password reset email with link
     const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : 'http://localhost:3000';
     const resetLink = `${baseUrl}/reset-password.html?token=${resetToken}`;
     
-    console.log(`Email sending function called for user: ${users.email}`);
+    console.log(`>>> EXTREME DEBUG: Base URL: ${baseUrl}`);
+    console.log(`>>> EXTREME DEBUG: Reset link: ${resetLink}`);
     
     try {
       const emailHtml = `
@@ -282,23 +278,24 @@ app.post('/api/auth/request-reset', async (req, res) => {
         <p>If you didn't request this, please ignore this email.</p>
       `;
       
+      console.log(`>>> EXTREME DEBUG: Calling sendBrevoEmail for: ${users.email}`);
       await sendBrevoEmail(
         users.email,
         'NexusComs Password Reset',
-        emailHtml,
-        process.env.EMAIL_FROM || 'noreply@worldrisk.co.za'
+        emailHtml
       );
-      console.log(`✓ Password reset email sent successfully to: ${users.email}`);
+      console.log(`>>> EXTREME DEBUG: Email sent successfully!`);
     } catch (emailError) {
-      console.error('Failed to send reset email:', emailError.message);
+      console.error('>>> EXTREME DEBUG: Email send failed:', emailError.message);
       // Don't fail the response - token is already saved
     }
 
+    console.log(">>> EXTREME DEBUG: /api/auth/request-reset ENDPOINT END\n");
     res.json({
       message: 'If an account exists with this email, a reset link has been sent'
     });
   } catch (error) {
-    console.error('Password reset request error:', error);
+    console.error('>>> EXTREME DEBUG: Password reset request error:', error);
     res.status(500).json({ error: 'Failed to request password reset' });
   }
 });

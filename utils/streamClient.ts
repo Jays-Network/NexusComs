@@ -7,7 +7,7 @@ import { StreamChat } from 'stream-chat';
 const STREAM_API_KEY = process.env.EXPO_PUBLIC_STREAM_API_KEY || '';
 
 if (!STREAM_API_KEY) {
-  console.warn('EXPO_PUBLIC_STREAM_API_KEY is not set. Stream features will not work.');
+  console.error('❌ CRITICAL: EXPO_PUBLIC_STREAM_API_KEY is not set. The app cannot function without this environment variable.');
 }
 
 // Singleton instances
@@ -16,6 +16,10 @@ let chatClient: StreamChat | null = null;
 // let videoClient: StreamVideoClient | null = null;
 
 export const getChatClient = () => {
+  if (!STREAM_API_KEY) {
+    console.error('❌ Cannot create StreamChat client: STREAM_API_KEY is empty');
+    return null;
+  }
   if (!chatClient) {
     chatClient = StreamChat.getInstance(STREAM_API_KEY);
   }
@@ -37,6 +41,10 @@ export const connectStreamUser = async (
   userImage?: string
 ) => {
   const client = getChatClient();
+  
+  if (!client) {
+    throw new Error('Stream client not initialized: EXPO_PUBLIC_STREAM_API_KEY is missing');
+  }
   
   try {
     await client.connectUser(
@@ -68,6 +76,11 @@ export const connectVideoUser = async (
 
 export const disconnectStreamUser = async () => {
   const client = getChatClient();
+  
+  if (!client) {
+    console.warn('Cannot disconnect: Stream client not initialized');
+    return;
+  }
   
   try {
     await client.disconnectUser();
