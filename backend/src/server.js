@@ -25,6 +25,7 @@ const createEmailTransporter = () => {
   console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'MISSING');
   console.log('BREVO_SMTP_PASSWORD:', process.env.BREVO_SMTP_PASSWORD ? 'SET' : 'MISSING');
   console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
+  console.log('EMAIL_FROM:', process.env.EMAIL_FROM ? 'SET' : 'MISSING');
   
   // Using Brevo SMTP
   if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.BREVO_SMTP_PASSWORD) {
@@ -37,7 +38,16 @@ const createEmailTransporter = () => {
         pass: process.env.BREVO_SMTP_PASSWORD
       }
     });
-    console.log('✓ Email transporter configured successfully');
+    
+    // Test SMTP connection
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('✗ SMTP Connection Failed:', error.message);
+      } else {
+        console.log('✓ SMTP Connection Verified - Ready to send emails');
+      }
+    });
+    
     return transporter;
   }
   // Default fallback transporter (for testing)

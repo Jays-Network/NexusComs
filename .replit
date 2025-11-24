@@ -28,10 +28,6 @@ externalPort = 3001
 localPort = 42799
 externalPort = 5000
 
-[[ports]]
-localPort = 43287
-externalPort = 4200
-
 [workflows]
 runButton = "Project"
 
@@ -120,5 +116,5 @@ value = "0"
 EMAIL_HOST = "smtp-relay.brevo.com"
 EMAIL_PORT = "587"
 EMAIL_USER = "9c30d0001@smtp-brevo.com"
-EMAIL_FROM = "jullian@worldrisk.co.za"
+EMAIL_FROM = "noreply@worldrisk.co.za"
 BACKEND_URL = "http://localhost:3000"
