@@ -48,7 +48,19 @@ function AppContent() {
   }
 
   // Show login screen if no user
-  if (!user || !chatClient) {
+  if (!user) {
+    return (
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Navigator>
+        <StatusBar style="auto" />
+      </NavigationContainer>
+    );
+  }
+
+  // If no chat client, show error (this should not happen if user is logged in)
+  if (!chatClient) {
     return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>

@@ -57,7 +57,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
       // Get token from backend
       const { token, userId: sanitizedUserId } = await getStreamToken(userId, userName, userImage);
       
-      // Connect to Stream Chat
+      // Connect to Stream Chat (may return null if API key is missing)
       const client = await connectStreamUser(sanitizedUserId, userName, token, userImage);
       
       // Connect to Stream Video (optional, only works in custom dev builds)
@@ -74,7 +74,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
       };
       
       setUser(userData);
-      setChatClient(client);
+      setChatClient(client); // client may be null if Stream is not available
       
       // Save user to storage
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));

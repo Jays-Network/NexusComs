@@ -258,7 +258,9 @@ app.post('/api/auth/request-reset', async (req, res) => {
     console.log(">>> EXTREME DEBUG: Database update successful");
 
     // Send password reset email with link
-    const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : 'http://localhost:3000';
+    // TEMPORARY FIX: Hardcoding the URL to bypass the stuck secret
+    const baseUrl = 'https://NexusComs.Jays-Network.replit.co';
+    // const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : 'http://localhost:3000';
     const resetLink = `${baseUrl}/reset-password.html?token=${resetToken}`;
     
     console.log(`>>> EXTREME DEBUG: Base URL: ${baseUrl}`);

@@ -5,9 +5,10 @@ import { StreamChat } from 'stream-chat';
 // import { StreamVideoClient } from '@stream-io/video-react-native-sdk';
 
 const STREAM_API_KEY = process.env.EXPO_PUBLIC_STREAM_API_KEY || '';
+const STREAM_API_KEY_VALID = STREAM_API_KEY && STREAM_API_KEY.length > 0 && !STREAM_API_KEY.includes('$');
 
-if (!STREAM_API_KEY) {
-  console.error('❌ CRITICAL: EXPO_PUBLIC_STREAM_API_KEY is not set. The app cannot function without this environment variable.');
+if (!STREAM_API_KEY_VALID) {
+  console.error('❌ CRITICAL: EXPO_PUBLIC_STREAM_API_KEY is not set or invalid. Please add it to your Replit secrets.');
 }
 
 // Singleton instances
@@ -16,12 +17,17 @@ let chatClient: StreamChat | null = null;
 // let videoClient: StreamVideoClient | null = null;
 
 export const getChatClient = () => {
-  if (!STREAM_API_KEY) {
-    console.error('❌ Cannot create StreamChat client: STREAM_API_KEY is empty');
+  if (!STREAM_API_KEY_VALID) {
+    console.error('❌ Cannot create StreamChat client: STREAM_API_KEY is not set or invalid');
     return null;
   }
   if (!chatClient) {
-    chatClient = StreamChat.getInstance(STREAM_API_KEY);
+    try {
+      chatClient = StreamChat.getInstance(STREAM_API_KEY);
+    } catch (error) {
+      console.error('❌ Failed to initialize StreamChat:', error);
+      return null;
+    }
   }
   return chatClient;
 };
