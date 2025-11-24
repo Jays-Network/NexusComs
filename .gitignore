@@ -45,6 +45,17 @@ app-example
 # Backend environment files
 backend/.env
 backend/.env.local
+.env
+.env.local
+.env.*.local
+
+# Configuration files with potential secrets
+.replit.local
+.replit.secrets
+
+# Secrets and API keys
+*.secret
+*.key.txt
 
 # Archives (don't commit to git)
 *.tar.gz
