@@ -1,4 +1,5 @@
 #!/bin/bash
-cd backend
-echo "Starting WorldRisk Nexus Coms backend server on port 3000..."
-PORT=3000 node src/server.js
+cd /home/runner/workspace
+echo "Starting NexusComs Backend Server on port 3000..."
+echo "Admin Dashboard: http://localhost:3000"
+node backend/src/server.js

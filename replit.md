@@ -79,11 +79,33 @@ Production-ready mobile chat application built with Expo React Native, using Str
 - ℹ️ **Backend Required**: Must run backend server for authentication to work
 
 ## Running the Application
-See `BACKEND_SETUP.md` for detailed instructions. Quick start:
-1. In a Shell tab, run: `./start-backend.sh` (backend on port 3000)
-2. Access backend web UI at http://localhost:3000 for testing
-3. Main workflow automatically runs frontend (Expo on port 8081)
-4. Or use `./start-dev.sh` to run both together
+
+### Frontend Workflow (Automatic)
+- **Workflow**: "Start application" 
+- **Command**: `npm run dev`
+- **Port**: 8081
+- **Status**: Automatically runs when you open the project
+
+### Backend Workflow (Manual Setup Required)
+**IMPORTANT: You must set up a Backend Workflow for password reset emails to work!**
+
+**To set up the Backend Workflow in Replit UI:**
+1. Click on "Workflows" in the left sidebar (or look for workflow icon)
+2. Click "Create Workflow" or "Add new workflow"
+3. **Name**: `Backend Server`
+4. **Command**: `node backend/src/server.js`
+5. **Port**: 3000
+6. Save and start the workflow
+
+**Once started:**
+- Backend runs on http://localhost:3000
+- Admin Dashboard accessible at http://localhost:3000
+- Password reset emails will send via Brevo SMTP
+- REST API endpoints available for authentication and user management
+
+**Alternative (Manual Shell):**
+In a Shell tab, run: `bash start-backend.sh`
+(Note: This won't have access to encrypted secrets, so emails won't send)
 
 ## Known Limitations
 1. **WebRTC (video calling) DISABLED for Expo Go** - Import commented out to prevent Android crashes
