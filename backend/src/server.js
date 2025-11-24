@@ -20,9 +20,15 @@ const supabase = createClient(
 
 // Email transporter using Brevo SMTP
 const createEmailTransporter = () => {
+  console.log('Creating email transporter...');
+  console.log('EMAIL_HOST:', process.env.EMAIL_HOST ? 'SET' : 'MISSING');
+  console.log('EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'MISSING');
+  console.log('BREVO_SMTP_PASSWORD:', process.env.BREVO_SMTP_PASSWORD ? 'SET' : 'MISSING');
+  console.log('EMAIL_PORT:', process.env.EMAIL_PORT);
+  
   // Using Brevo SMTP
   if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.BREVO_SMTP_PASSWORD) {
-    return nodemailer.createTransport({
+    const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT) || 587,
       secure: false, // Brevo uses STARTTLS on port 587
@@ -31,9 +37,11 @@ const createEmailTransporter = () => {
         pass: process.env.BREVO_SMTP_PASSWORD
       }
     });
+    console.log('✓ Email transporter configured successfully');
+    return transporter;
   }
   // Default fallback transporter (for testing)
-  console.warn('Email transporter not configured - password reset emails will not be sent');
+  console.error('✗ Email transporter NOT configured - password reset emails will NOT be sent');
   return null;
 };
 
