@@ -9,6 +9,7 @@ import {
   disconnectVideoUser
 } from './streamClient';
 import { getStreamToken, loginWithUsernamePassword } from './streamApi';
+import { useSupabaseSync } from './supabaseSync';
 
 interface User {
   id: string;
