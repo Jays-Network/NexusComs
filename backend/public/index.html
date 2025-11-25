@@ -642,12 +642,72 @@
                                 <h3 style="font-size: 20px; color: #4CAF50;" id="dbStatus">Connected</h3>
                             </div>
                         </div>
-                        <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                        <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; margin-bottom: 30px;">
                             <h3 style="color: #FFFFFF; margin-bottom: 16px;">System Information</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
                                 <div><span style="color: #b0b0b0;">API Version:</span> <span style="color: #D4AF37;">1.0.0</span></div>
                                 <div><span style="color: #b0b0b0;">Auth Method:</span> <span style="color: #D4AF37;">Email OTP</span></div>
                                 <div id="lastUpdate"><span style="color: #b0b0b0;">Last Updated:</span> <span style="color: #D4AF37;">Just now</span></div>
+                            </div>
+                        </div>
+
+                        <h3 style="color: #FFFFFF; margin: 30px 0 20px 0; font-size: 18px;">External Services</h3>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            <!-- STREAM.IO -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #FF0066 0%, #FF6600 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">S</div>
+                                    <div>
+                                        <h4 style="color: #FFFFFF; margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">Stream Chat</h4>
+                                        <p style="color: #b0b0b0; margin: 0; font-size: 12px;">getstream.io</p>
+                                    </div>
+                                </div>
+                                <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Status:</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="streamStatus">Connected</p>
+                                </div>
+                                <div style="font-size: 12px;">
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">API Key: <span style="color: #D4AF37;" id="streamKey">gxfjy67sps69</span></p>
+                                    <p style="color: #b0b0b0; margin: 0;">Messaging SDK: <span style="color: #D4AF37;">v11.x</span></p>
+                                </div>
+                            </div>
+
+                            <!-- SUPABASE -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3ECF8E 0%, #24B47E 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">DB</div>
+                                    <div>
+                                        <h4 style="color: #FFFFFF; margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">Supabase</h4>
+                                        <p style="color: #b0b0b0; margin: 0; font-size: 12px;">supabase.com</p>
+                                    </div>
+                                </div>
+                                <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Database:</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="supabaseStatus">Connected</p>
+                                </div>
+                                <div style="font-size: 12px;">
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">Type: <span style="color: #D4AF37;">PostgreSQL</span></p>
+                                    <p style="color: #b0b0b0; margin: 0;">Region: <span style="color: #D4AF37;" id="supabaseRegion">US East</span></p>
+                                </div>
+                            </div>
+
+                            <!-- BREVO -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">B</div>
+                                    <div>
+                                        <h4 style="color: #FFFFFF; margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">Brevo</h4>
+                                        <p style="color: #b0b0b0; margin: 0; font-size: 12px;">app.brevo.com</p>
+                                    </div>
+                                </div>
+                                <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Email Service:</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="brevoStatus">Active</p>
+                                </div>
+                                <div style="font-size: 12px;">
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">Sender: <span style="color: #D4AF37;">noreply@worldrisk.co.za</span></p>
+                                    <p style="color: #b0b0b0; margin: 0;">SMTP: <span style="color: #D4AF37;">Configured</span></p>
+                                </div>
                             </div>
                         </div>
                     </div>
