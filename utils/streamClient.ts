@@ -9,8 +9,8 @@ const isValidStreamKey = (key: string): boolean => {
   if (!key || typeof key !== 'string') return false;
   if (key.length === 0) return false;
   if (key.includes('$') || key.includes('undefined') || key.includes('null')) return false;
-  // Stream API keys are typically 40+ characters
-  if (key.length < 20) return false;
+  // Stream API keys should be at least 8 characters
+  if (key.length < 8) return false;
   return true;
 };
 
