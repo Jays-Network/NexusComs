@@ -224,6 +224,42 @@ See `BACKEND_SETUP_SUPABASE.md` for complete setup instructions. Quick summary:
 - EXPO_PUBLIC_SUPABASE_URL
 - EXPO_PUBLIC_SUPABASE_ANON_KEY
 
+## Database Setup: Accounts Feature
+
+Run this SQL in your Supabase SQL Editor to enable the Accounts feature:
+
+```sql
+-- Create accounts table with hierarchy support
+CREATE TABLE IF NOT EXISTS accounts (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  parent_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+  billing_plan VARCHAR(50) DEFAULT 'basic',
+  created_by VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create account_channels junction table
+CREATE TABLE IF NOT EXISTS account_channels (
+  id SERIAL PRIMARY KEY,
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  channel_id VARCHAR(255) NOT NULL,
+  access_level VARCHAR(50) DEFAULT 'read_write',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(account_id, channel_id)
+);
+
+-- Add account_id column to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_accounts_parent ON accounts(parent_account_id);
+CREATE INDEX IF NOT EXISTS idx_account_channels_account ON account_channels(account_id);
+CREATE INDEX IF NOT EXISTS idx_users_account ON users(account_id);
+```
+
 ## Next Steps (Future Enhancements)
 1. Add actual emergency.wav audio file
 2. Add location sharing functionality to chat
