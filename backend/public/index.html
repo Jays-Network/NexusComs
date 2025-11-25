@@ -848,7 +848,7 @@
                     <div class="section-content">
                         <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">Groups & Subgroups</h2>
                         <div class="toolbar">
-                            <button class="add-user-btn" onclick="">+ Add Group</button>
+                            <button class="add-user-btn" onclick="openAddGroupModal()">+ Add Group</button>
                             <input type="text" class="search-box" placeholder="Search groups...">
                         </div>
                         <div class="table-container" style="margin-top: 20px;">
@@ -875,7 +875,7 @@
                 <div id="emergency-groups" class="section">
                     <div class="section-content">
                         <div class="toolbar">
-                            <button class="add-user-btn" onclick="">+ Add Emergency Group</button>
+                            <button class="add-user-btn" onclick="openAddEmergencyGroupModal()">+ Add Emergency Group</button>
                             <input type="text" class="search-box" placeholder="Search emergency groups...">
                         </div>
                         <div class="table-container" style="margin-top: 20px;">
@@ -978,6 +978,76 @@
                         Close
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD GROUP MODAL -->
+    <div class="modal" id="groupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Group</h2>
+                <button class="close-btn" onclick="closeGroupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="error-message" id="groupError" style="display: none;"></div>
+                <div class="form-group">
+                    <label for="groupName">Group Name</label>
+                    <input type="text" id="groupName" placeholder="Enter group name">
+                </div>
+                <div class="form-group">
+                    <label for="groupDescription">Description</label>
+                    <input type="text" id="groupDescription" placeholder="Enter group description (optional)">
+                </div>
+                <div class="form-group">
+                    <label>Select Members</label>
+                    <div id="groupMembersContainer" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+                        <p style="color: #808080; text-align: center; padding: 20px;">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeGroupModal()">Cancel</button>
+                <button class="btn-save" onclick="createGroup()">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD EMERGENCY GROUP MODAL -->
+    <div class="modal" id="emergencyGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Emergency Group</h2>
+                <button class="close-btn" onclick="closeEmergencyGroupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="error-message" id="emergencyGroupError" style="display: none;"></div>
+                <div class="form-group">
+                    <label for="emergencyGroupName">Group Name</label>
+                    <input type="text" id="emergencyGroupName" placeholder="Enter emergency group name">
+                </div>
+                <div class="form-group">
+                    <label for="emergencyGroupDescription">Description</label>
+                    <input type="text" id="emergencyGroupDescription" placeholder="Enter group description (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="alertProtocol">Alert Protocol</label>
+                    <select id="alertProtocol" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                        <option value="standard">Standard</option>
+                        <option value="immediate">Immediate</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Members</label>
+                    <div id="emergencyGroupMembersContainer" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+                        <p style="color: #808080; text-align: center; padding: 20px;">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEmergencyGroupModal()">Cancel</button>
+                <button class="btn-save" onclick="createEmergencyGroup()">Create Emergency Group</button>
             </div>
         </div>
     </div>
@@ -1864,6 +1934,178 @@
 
         // Add event listener for log filter
         document.getElementById('logFilter')?.addEventListener('change', refreshLogs);
+
+        // ============= GROUP MANAGEMENT FUNCTIONS =============
+        
+        let availableUsers = [];
+
+        async function fetchAvailableUsers() {
+            try {
+                const response = await fetch('/api/users/available', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch users');
+                availableUsers = await response.json();
+                return availableUsers;
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                return [];
+            }
+        }
+
+        function renderMembersCheckboxes(containerId, prefix) {
+            const users = availableUsers;
+            const container = document.getElementById(containerId);
+            
+            if (!users || users.length === 0) {
+                container.innerHTML = '<p style="color: #808080; text-align: center; padding: 20px;">No users available</p>';
+                return;
+            }
+
+            container.innerHTML = users.map(user => `
+                <div class="checkbox-group" style="margin-bottom: 8px;">
+                    <input type="checkbox" id="${prefix}_${user.id}" value="${user.id}" class="${prefix}-member">
+                    <label for="${prefix}_${user.id}" style="margin: 0; font-weight: normal; color: #FFFFFF;">${user.username} (${user.email})</label>
+                </div>
+            `).join('');
+        }
+
+        async function openAddGroupModal() {
+            document.getElementById('groupError').style.display = 'none';
+            document.getElementById('groupName').value = '';
+            document.getElementById('groupDescription').value = '';
+            
+            // Fetch users
+            await fetchAvailableUsers();
+            renderMembersCheckboxes('groupMembersContainer', 'group');
+            
+            document.getElementById('groupModal').classList.add('active');
+        }
+
+        function closeGroupModal() {
+            document.getElementById('groupModal').classList.remove('active');
+        }
+
+        async function createGroup() {
+            const name = document.getElementById('groupName').value.trim();
+            const description = document.getElementById('groupDescription').value.trim();
+            const errorDiv = document.getElementById('groupError');
+            const btn = event.target;
+
+            if (!name) {
+                errorDiv.textContent = 'Group name is required';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const memberCheckboxes = document.querySelectorAll('.group-member:checked');
+            const memberIds = Array.from(memberCheckboxes).map(cb => cb.value);
+
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/groups', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        description,
+                        memberIds
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create group');
+                }
+
+                alert('Group created successfully!');
+                closeGroupModal();
+                // Optionally refresh groups list here
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Group';
+            }
+        }
+
+        async function openAddEmergencyGroupModal() {
+            document.getElementById('emergencyGroupError').style.display = 'none';
+            document.getElementById('emergencyGroupName').value = '';
+            document.getElementById('emergencyGroupDescription').value = '';
+            document.getElementById('alertProtocol').value = 'standard';
+            
+            // Fetch users
+            await fetchAvailableUsers();
+            renderMembersCheckboxes('emergencyGroupMembersContainer', 'emergency');
+            
+            document.getElementById('emergencyGroupModal').classList.add('active');
+        }
+
+        function closeEmergencyGroupModal() {
+            document.getElementById('emergencyGroupModal').classList.remove('active');
+        }
+
+        async function createEmergencyGroup() {
+            const name = document.getElementById('emergencyGroupName').value.trim();
+            const description = document.getElementById('emergencyGroupDescription').value.trim();
+            const alertProtocol = document.getElementById('alertProtocol').value;
+            const errorDiv = document.getElementById('emergencyGroupError');
+            const btn = event.target;
+
+            if (!name) {
+                errorDiv.textContent = 'Emergency group name is required';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const memberCheckboxes = document.querySelectorAll('.emergency-member:checked');
+            const memberIds = Array.from(memberCheckboxes).map(cb => cb.value);
+
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/emergency-groups', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        description,
+                        alertProtocol,
+                        memberIds
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create emergency group');
+                }
+
+                alert('Emergency group created successfully!');
+                closeEmergencyGroupModal();
+                // Optionally refresh emergency groups list here
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Emergency Group';
+            }
+        }
     </script>
 </body>
 </html>
