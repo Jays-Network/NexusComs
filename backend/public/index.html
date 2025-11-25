@@ -862,6 +862,7 @@
                 const response = await fetch(`/api/users/${userId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                if (!response.ok) throw new Error('Failed to fetch user');
                 currentUserData = await response.json();
 
                 document.getElementById('modalTitle').textContent = 'Edit User';
@@ -869,17 +870,19 @@
                 document.getElementById('userEmail').value = currentUserData.email || '';
                 document.getElementById('userAccount').value = currentUserData.account_name || '';
                 document.getElementById('userBillingPlan').value = currentUserData.billing_plan || 'basic';
-                document.getElementById('hostMask').value = currentUserData.host_mask || '';
-                document.getElementById('creatorName').value = currentUserData.creator_id || 'System';
-                document.getElementById('createdDate').value = new Date(currentUserData.created_at).toLocaleString();
+                document.getElementById('creatorName').value = currentUserData.creator_id ? (currentUserData.creator_id === currentUserData.id ? 'System' : currentUserData.creator_id) : 'System';
+                document.getElementById('createdDate').value = currentUserData.created_at ? new Date(currentUserData.created_at).toLocaleString() : '';
                 document.getElementById('lastVisit').value = currentUserData.last_login ? new Date(currentUserData.last_login).toLocaleString() : 'Never';
+                document.getElementById('lastDevice').value = currentUserData.last_device || '';
 
                 const perms = currentUserData.permissions || {};
-                document.getElementById('canCreateObjects').checked = perms.can_create_objects || false;
-                document.getElementById('canChangePassword').checked = perms.can_change_password || true;
-                document.getElementById('canSendSms').checked = perms.can_send_sms || false;
                 document.getElementById('isEnabled').checked = perms.is_enabled !== false;
-                document.getElementById('canChangeSettings').checked = perms.can_change_settings || false;
+                document.getElementById('canChangePassword').checked = perms.can_change_password !== false;
+                document.getElementById('canCreateGroups').checked = perms.can_create_groups || false;
+                document.getElementById('canAccessCms').checked = perms.can_access_cms || false;
+                document.getElementById('canEditProfile').checked = perms.can_edit_profile || false;
+                
+                document.getElementById('locationTracking').checked = currentUserData.location_tracking || false;
 
                 document.getElementById('userModal').classList.add('active');
             } catch (error) {
@@ -897,16 +900,18 @@
             document.getElementById('userEmail').value = '';
             document.getElementById('userAccount').value = '';
             document.getElementById('userBillingPlan').value = 'basic';
-            document.getElementById('hostMask').value = '';
             document.getElementById('creatorName').value = '';
             document.getElementById('createdDate').value = '';
             document.getElementById('lastVisit').value = '';
+            document.getElementById('lastDevice').value = '';
 
-            document.getElementById('canCreateObjects').checked = false;
-            document.getElementById('canChangePassword').checked = true;
-            document.getElementById('canSendSms').checked = false;
             document.getElementById('isEnabled').checked = true;
-            document.getElementById('canChangeSettings').checked = false;
+            document.getElementById('canChangePassword').checked = true;
+            document.getElementById('canCreateGroups').checked = false;
+            document.getElementById('canAccessCms').checked = false;
+            document.getElementById('canEditProfile').checked = false;
+            
+            document.getElementById('locationTracking').checked = false;
 
             document.getElementById('userModal').classList.add('active');
         }

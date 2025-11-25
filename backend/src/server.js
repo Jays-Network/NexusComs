@@ -563,7 +563,7 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
 // Update user
 app.put("/api/users/:id", sessionMiddleware, async (req, res) => {
   try {
-    const { username, account_name, billing_plan, permissions, host_mask } =
+    const { username, account_name, billing_plan, permissions, location_tracking } =
       req.body;
 
     const updateData = {};
@@ -571,7 +571,7 @@ app.put("/api/users/:id", sessionMiddleware, async (req, res) => {
     if (account_name) updateData.account_name = account_name;
     if (billing_plan) updateData.billing_plan = billing_plan;
     if (permissions) updateData.permissions = permissions;
-    if (host_mask) updateData.host_mask = host_mask;
+    if (location_tracking !== undefined) updateData.location_tracking = location_tracking;
     updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
