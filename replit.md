@@ -3,7 +3,19 @@
 ## Overview
 Production-ready mobile chat application built with Expo React Native, using Stream (getstream.io) for chat, messaging, and video functionality. Successfully migrated from custom Supabase/Socket.io backend to Stream's infrastructure.
 
-## Recent Changes (November 20, 2025)
+## Recent Changes (November 25, 2025)
+- ✅ **Stream Chat Login Fixed**: Backend now generates real JWT tokens using Stream SDK
+  - Fixed critical bug where backend was returning mock tokens instead of real JWT tokens
+  - Backend uses `StreamChat.getInstance()` with `createToken()` for proper token generation
+  - Users can now successfully connect to Stream Chat
+- ✅ **Supabase Real-time Sync**: Added `stream_id` column for linking Supabase users to Stream
+  - Frontend queries use `stream_id` (e.g., "jullian_worldriskglobal_com") instead of UUID
+  - User needs to populate `stream_id` column for their users in Supabase
+- ✅ **Frontend Fixes**: 
+  - streamAuth.tsx now stores sanitized Stream ID instead of Supabase UUID
+  - supabaseClient.ts improved quote stripping for web bundler compatibility
+
+## Previous Changes (November 20, 2025)
 - ✅ **Repository Cleanup**: Removed archive files, organized documentation
   - Moved all documentation to /docs folder (FRONTEND_README.md, BACKEND_README.md, BACKEND_SETUP.md, GITHUB_UPLOAD_GUIDE.md)
   - Created comprehensive main README.md for GitHub
