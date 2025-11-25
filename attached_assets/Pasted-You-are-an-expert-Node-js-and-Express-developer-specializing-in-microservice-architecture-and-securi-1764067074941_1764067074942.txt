@@ -1,0 +1,62 @@
+You are an expert Node.js and Express developer specializing in microservice architecture and security. Your task is to refactor and harden the application in backend/src/server.js to function strictly as a headless API service. The client (frontend) will run remotely on Expo, not on Replit's webview.
+
+The goal is to ensure the API provides correct data and link construction for the remote Expo client and is secure for production use.
+
+1. Core API Refactoring
+The primary goal is to remove all file serving logic that is no longer needed:
+
+Remove Static File Middleware: Delete the line configuring the static file server, as the frontend will not be served from here.
+
+Delete the line: app.use(express.static(path.join(__dirname, '../public'))); (or ../../public if it was changed).
+
+Remove Index Route: Delete the fallback route that serves the main page.
+
+Delete the entire block:
+
+JavaScript
+
+// Serve index on root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '.../public/index.html'));
+});
+2. Dynamic URL & Link Construction
+The hardcoded URL fix must be removed and replaced with the dynamic logic, ensuring security and resilience against Replit's changing URLs.
+
+In the /api/auth/request-reset endpoint:
+
+Finalize Dynamic baseUrl: Replace the temporary hardcoded URL (or the old process.env.BACKEND_URL fallback) with the dynamic construction using request headers.
+
+JavaScript
+
+// Replace the entire URL detection block (Lines 275-285 approx) with this:
+const protocol = req.headers['x-forwarded-proto'] || 'https';
+const host = req.get('host'); 
+const baseUrl = `${protocol}://${host}`;
+
+// Ensure the resetLink uses the dynamically calculated baseUrl
+const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
+Remove .html: Since the frontend runs on Expo, the reset page is now a route, not a static file.
+
+Change the link construction from /reset-password.html to /reset-password (no extension).
+
+3. Security and Dependencies
+Remove Frontend-Specific Code: Delete the reset-password.html file from the repository, as it is no longer used and eliminates confusion.
+
+Check CORS: Verify that the cors middleware is configured correctly to allow API calls from the Expo frontend, especially if using dynamic domains.
+
+Ensure the cors configuration is simple and permissive during development:
+
+JavaScript
+
+app.use(cors()); 
+If the user's setup requires strict configuration, ensure it handles the Expo development URL.
+
+4. Logging Finalization
+Clean Up Debugging Logs: Remove all verbose console.log statements prefixed with >>> EXTREME DEBUG: from the /api/auth/request-reset endpoint to clean up the production logs. Keep only essential error logging (console.error).
+
+Final Endpoint Status: Ensure the final app.listen block clearly states the server is running in API-only mode.
+
+Summary of File Changes
+backend/src/server.js: Remove app.use(express.static(...)), remove app.get('/', ...), replace URL hardcode with dynamic logic, remove .html from reset link, and clean up excessive debugging logs.
+
+backend/public/reset-password.html: Delete this file.
