@@ -606,6 +606,7 @@
                 <div class="tabs">
                     <button class="tab active" onclick="switchTab('general')">General</button>
                     <button class="tab" onclick="switchTab('access')">Access</button>
+                    <button class="tab" onclick="switchTab('location')">Location tracking</button>
                     <button class="tab" onclick="switchTab('advanced')">Advanced</button>
                 </div>
 
@@ -631,38 +632,43 @@
                             <option value="enterprise">Enterprise</option>
                         </select>
                     </div>
-                </div>
-
-                <!-- ACCESS TAB -->
-                <div id="access" class="tab-content">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="canCreateObjects">
-                        <label for="canCreateObjects">Can create objects</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="canChangePassword">
-                        <label for="canChangePassword">Can change password</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="canSendSms">
-                        <label for="canSendSms">Can send SMS</label>
-                    </div>
                     <div class="checkbox-group">
                         <input type="checkbox" id="isEnabled">
                         <label for="isEnabled">Enabled</label>
                     </div>
                     <div class="checkbox-group">
-                        <input type="checkbox" id="canChangeSettings">
-                        <label for="canChangeSettings">Can change settings</label>
+                        <input type="checkbox" id="canChangePassword">
+                        <label for="canChangePassword">Can change password</label>
                     </div>
+                </div>
+
+                <!-- ACCESS TAB -->
+                <div id="access" class="tab-content">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canCreateGroups">
+                        <label for="canCreateGroups">Can create groups and subgroups on front end</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canAccessCms">
+                        <label for="canAccessCms">Can access CMS backend</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canEditProfile">
+                        <label for="canEditProfile">Can edit profile on front end</label>
+                    </div>
+                </div>
+
+                <!-- LOCATION TRACKING TAB -->
+                <div id="location" class="tab-content">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="locationTracking">
+                        <label for="locationTracking">Enable location tracking</label>
+                    </div>
+                    <p style="color: #b0b0b0; font-size: 12px; margin-top: 12px;">When enabled, this user can be tracked via the location tracking feature on the front end.</p>
                 </div>
 
                 <!-- ADVANCED TAB -->
                 <div id="advanced" class="tab-content">
-                    <div class="form-group">
-                        <label for="hostMask">Host Mask</label>
-                        <input type="text" id="hostMask" placeholder="e.g., *.example.com">
-                    </div>
                     <div class="form-group">
                         <label>Creator</label>
                         <input type="text" id="creatorName" disabled placeholder="System">
@@ -674,6 +680,10 @@
                     <div class="form-group">
                         <label>Last Visit</label>
                         <input type="text" id="lastVisit" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Device</label>
+                        <input type="text" id="lastDevice" disabled>
                     </div>
                 </div>
             </div>
@@ -919,14 +929,14 @@
             const userEmail = document.getElementById('userEmail').value;
             const userAccount = document.getElementById('userAccount').value;
             const billingPlan = document.getElementById('userBillingPlan').value;
-            const hostMask = document.getElementById('hostMask').value;
+            const locationTracking = document.getElementById('locationTracking').checked;
 
             const permissions = {
-                can_create_objects: document.getElementById('canCreateObjects').checked,
-                can_change_password: document.getElementById('canChangePassword').checked,
-                can_send_sms: document.getElementById('canSendSms').checked,
                 is_enabled: document.getElementById('isEnabled').checked,
-                can_change_settings: document.getElementById('canChangeSettings').checked
+                can_change_password: document.getElementById('canChangePassword').checked,
+                can_create_groups: document.getElementById('canCreateGroups').checked,
+                can_access_cms: document.getElementById('canAccessCms').checked,
+                can_edit_profile: document.getElementById('canEditProfile').checked
             };
 
             try {
@@ -942,7 +952,7 @@
                             username: userName,
                             account_name: userAccount,
                             billing_plan: billingPlan,
-                            host_mask: hostMask,
+                            location_tracking: locationTracking,
                             permissions
                         })
                     });

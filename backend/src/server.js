@@ -533,12 +533,14 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
           creator_id: req.user.id,
           account_name: account_name || "",
           billing_plan: billing_plan || "basic",
+          location_tracking: false,
+          last_device: null,
           permissions: permissions || {
-            can_create_objects: false,
+            can_create_groups: false,
             can_change_password: true,
-            can_send_sms: false,
+            can_access_cms: false,
             is_enabled: true,
-            can_change_settings: false,
+            can_edit_profile: false,
           },
         },
       ])

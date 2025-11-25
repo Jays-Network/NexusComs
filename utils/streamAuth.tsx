@@ -63,26 +63,37 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
   const loginUser = async (userId: string, userName: string, userImage?: string) => {
     console.log('🔐 loginUser() called for:', userName);
     try {
+      let client = null;
+      
       // Get token from backend
       console.log('🎫 Requesting Stream token...');
-      const { token, userId: sanitizedUserId } = await getStreamToken(userId, userName, userImage);
-      console.log('✅ Got Stream token for user:', sanitizedUserId);
-      
-      // Connect to Stream Chat (may return null if API key is missing)
-      console.log('🔗 Connecting to Stream Chat...');
-      const client = await connectStreamUser(sanitizedUserId, userName, token, userImage);
-      console.log('✅ Connected to Stream Chat');
-      
-      // Connect to Stream Video (optional, only works in custom dev builds)
       try {
-        console.log('📹 Attempting to connect Video SDK...');
-        await connectVideoUser(sanitizedUserId, userName, token);
-      } catch (error) {
-        console.warn('⚠️ Video SDK not available (Expo Go limitation)');
+        const { token, userId: sanitizedUserId } = await getStreamToken(userId, userName, userImage);
+        console.log('✅ Got Stream token for user:', sanitizedUserId);
+        
+        // Connect to Stream Chat (may return null if API key is missing)
+        console.log('🔗 Connecting to Stream Chat...');
+        try {
+          client = await connectStreamUser(sanitizedUserId, userName, token, userImage);
+          console.log('✅ Connected to Stream Chat');
+        } catch (streamError) {
+          console.warn('⚠️ Stream Chat connection failed, continuing without Stream:', streamError);
+          client = null;
+        }
+        
+        // Connect to Stream Video (optional, only works in custom dev builds)
+        try {
+          console.log('📹 Attempting to connect Video SDK...');
+          await connectVideoUser(sanitizedUserId, userName, token);
+        } catch (error) {
+          console.warn('⚠️ Video SDK not available (Expo Go limitation)');
+        }
+      } catch (tokenError) {
+        console.error('⚠️ Failed to get Stream token, app will work in offline mode:', tokenError);
       }
       
       const userData: User = {
-        id: sanitizedUserId,
+        id: userId,
         name: userName,
         image: userImage,
       };
@@ -96,7 +107,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('✅ User logged in and saved:', userName);
     } catch (error) {
       console.error('❌ Login error:', error);
-      console.error('📋 Error details:', JSON.stringify(error));
+      console.error('📋 Error details:', error instanceof Error ? error.message : String(error));
       throw error;
     }
   };
