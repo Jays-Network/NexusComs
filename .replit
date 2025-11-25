@@ -21,6 +21,10 @@ localPort = 33495
 externalPort = 3002
 
 [[ports]]
+localPort = 37727
+externalPort = 6000
+
+[[ports]]
 localPort = 37793
 externalPort = 3001
 
@@ -128,3 +132,5 @@ EMAIL_FROM = "jullian@worldrisk.co.za"
 BACKEND_URL = "https://NexusComs.replit.app"
 EXPO_PUBLIC_STREAM_API_KEY = "gxfjy67sps69"
 EXPO_PUBLIC_API_URL = "https://NexusComs.replit.app"
+EXPO_PUBLIC_SUPABASE_URL = "https://pyqjpymkckmhtnacqqtd.supabase.co"
+EXPO_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_FpD1SFdHw10Y3B68LQqLwQ_S-15m0BX"

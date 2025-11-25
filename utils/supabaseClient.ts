@@ -4,27 +4,43 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+// Basic validation: check that URL looks valid and key exists
+const isUrlValid = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseUrl.includes('.supabase.co');
+const isKeyValid = supabaseAnonKey && supabaseAnonKey.length > 20;
+
 // Flag to track if Supabase is available
-export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+export let isSupabaseConfigured = !!(isUrlValid && isKeyValid);
 
 let supabaseInstance: SupabaseClient | null = null;
 
 if (isSupabaseConfigured) {
-  supabaseInstance = createClient(supabaseUrl!, supabaseAnonKey!, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10,
+  try {
+    supabaseInstance = createClient(supabaseUrl!, supabaseAnonKey!, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
       },
-    },
-  });
-  console.log('✅ Supabase client initialized for real-time sync');
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    });
+    console.log('✅ Supabase client initialized for real-time sync');
+    console.log('📍 URL:', supabaseUrl);
+  } catch (error) {
+    console.error('❌ Failed to initialize Supabase client:', error);
+    isSupabaseConfigured = false;
+    supabaseInstance = null;
+  }
 } else {
   console.warn('⚠️ Supabase not configured - real-time sync disabled');
-  console.warn('Missing: EXPO_PUBLIC_SUPABASE_URL and/or EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  if (!isUrlValid) {
+    console.warn('   Invalid URL:', supabaseUrl || '(not set)');
+  }
+  if (!isKeyValid) {
+    console.warn('   Invalid anon key (should be a JWT starting with "eyJ")');
+  }
 }
 
 // Export a safe getter that returns null if not configured
@@ -32,6 +48,10 @@ export const supabase = supabaseInstance;
 
 // Real-time subscription helpers
 export const subscribeToUsers = (callback: (payload: any) => void) => {
+  if (!supabase) {
+    console.warn('⚠️ Cannot subscribe to users - Supabase not configured');
+    return null;
+  }
   console.log('🔔 Subscribing to users table changes...');
   return supabase
     .channel('public:users')
@@ -54,6 +74,10 @@ export const subscribeToUsers = (callback: (payload: any) => void) => {
 
 // Subscribe to specific user changes
 export const subscribeToUserById = (userId: string, callback: (payload: any) => void) => {
+  if (!supabase) {
+    console.warn('⚠️ Cannot subscribe to user - Supabase not configured');
+    return null;
+  }
   console.log('🔔 Subscribing to user changes:', userId);
   return supabase
     .channel(`public:users:id=eq.${userId}`)
@@ -77,6 +101,10 @@ export const subscribeToUserById = (userId: string, callback: (payload: any) => 
 
 // Fetch current user data from Supabase
 export const fetchUserFromSupabase = async (userId: string) => {
+  if (!supabase) {
+    console.warn('⚠️ Cannot fetch user - Supabase not configured');
+    return null;
+  }
   try {
     const { data, error } = await supabase
       .from('users')
@@ -99,6 +127,10 @@ export const fetchUserFromSupabase = async (userId: string) => {
 
 // Fetch all users (admin)
 export const fetchAllUsersFromSupabase = async () => {
+  if (!supabase) {
+    console.warn('⚠️ Cannot fetch users - Supabase not configured');
+    return [];
+  }
   try {
     const { data, error } = await supabase
       .from('users')
@@ -120,6 +152,10 @@ export const fetchAllUsersFromSupabase = async () => {
 
 // Update user data in Supabase
 export const updateUserInSupabase = async (userId: string, updates: Record<string, any>) => {
+  if (!supabase) {
+    console.warn('⚠️ Cannot update user - Supabase not configured');
+    return null;
+  }
   try {
     const { data, error } = await supabase
       .from('users')
@@ -143,7 +179,7 @@ export const updateUserInSupabase = async (userId: string, updates: Record<strin
 
 // Unsubscribe from channel
 export const unsubscribeFromChannel = (channel: any) => {
-  if (channel) {
+  if (channel && supabase) {
     supabase.removeChannel(channel);
     console.log('🔕 Unsubscribed from channel');
   }
