@@ -1,27 +1,34 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client for frontend
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase environment variables not configured');
-  console.error('Missing:', { url: !supabaseUrl, key: !supabaseAnonKey });
+// Flag to track if Supabase is available
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+
+let supabaseInstance: SupabaseClient | null = null;
+
+if (isSupabaseConfigured) {
+  supabaseInstance = createClient(supabaseUrl!, supabaseAnonKey!, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+  });
+  console.log('✅ Supabase client initialized for real-time sync');
+} else {
+  console.warn('⚠️ Supabase not configured - real-time sync disabled');
+  console.warn('Missing: EXPO_PUBLIC_SUPABASE_URL and/or EXPO_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-});
-
-console.log('✅ Supabase client initialized for real-time sync');
+// Export a safe getter that returns null if not configured
+export const supabase = supabaseInstance;
 
 // Real-time subscription helpers
 export const subscribeToUsers = (callback: (payload: any) => void) => {

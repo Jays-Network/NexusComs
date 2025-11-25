@@ -224,25 +224,33 @@ app.post("/api/auth/verify-code", async (req, res) => {
   }
 });
 
-// Login with username and password
+// Login with username/email and password
 app.post("/api/auth/login", async (req, res) => {
   try {
     console.log("🔐 [LOGIN] Received login request");
-    const { username, password } = req.body;
-    console.log("📝 [LOGIN] Username:", username);
+    const { username, email, password } = req.body;
+    const loginIdentifier = username || email;
+    console.log("📝 [LOGIN] Identifier:", loginIdentifier);
 
-    if (!username || !password) {
-      console.warn("⚠️ [LOGIN] Missing username or password");
+    if (!loginIdentifier || !password) {
+      console.warn("⚠️ [LOGIN] Missing username/email or password");
       return res.status(400).json({ error: "Username and password required" });
     }
 
-    // Get user from Supabase by username
-    console.log("🔍 [LOGIN] Querying Supabase for user:", username);
-    const { data: users, error: userError } = await supabase
+    // Get user from Supabase by username or email
+    console.log("🔍 [LOGIN] Querying Supabase for user:", loginIdentifier);
+    let query = supabase
       .from("users")
-      .select("id, email, password_hash, username")
-      .eq("username", username)
-      .single();
+      .select("id, email, password_hash, username");
+    
+    // Try username first, then email if it looks like an email
+    if (loginIdentifier.includes('@')) {
+      query = query.eq("email", loginIdentifier);
+    } else {
+      query = query.eq("username", loginIdentifier);
+    }
+    
+    const { data: users, error: userError } = await query.single();
 
     if (userError) {
       console.error("❌ [LOGIN] Supabase error:", userError.message);

@@ -15,6 +15,7 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { StreamAuthProvider, useStreamAuth } from "@/utils/streamAuth";
+import { SupabaseSyncProvider, useSupabaseSync } from "@/utils/supabaseSync";
 import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -35,6 +36,7 @@ const Stack = createNativeStackNavigator();
 
 function AppContent() {
   const { user, chatClient, isLoading } = useStreamAuth();
+  const { startSync, stopSync } = useSupabaseSync();
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -49,6 +51,19 @@ function AppContent() {
       SplashScreen.hideAsync();
     }
   }, [isLoading, user, chatClient, theme]);
+
+  useEffect(() => {
+    if (user && user.id) {
+      console.log('🔄 [App.tsx] Starting Supabase sync for user:', user.id);
+      startSync(user.id);
+    } else {
+      console.log('🔄 [App.tsx] Stopping Supabase sync (no user)');
+      stopSync();
+    }
+    return () => {
+      stopSync();
+    };
+  }, [user]);
 
   if (isLoading || !theme) {
     console.log('⏳ Loading... isLoading:', isLoading, 'theme:', !!theme);
@@ -113,9 +128,11 @@ export default function App() {
       <SafeAreaProvider>
         <GestureHandlerRootView style={styles.root}>
           <KeyboardProvider>
-            <StreamAuthProvider>
-              <AppContent />
-            </StreamAuthProvider>
+            <SupabaseSyncProvider>
+              <StreamAuthProvider>
+                <AppContent />
+              </StreamAuthProvider>
+            </SupabaseSyncProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>

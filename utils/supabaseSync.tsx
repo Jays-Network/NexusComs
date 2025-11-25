@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   supabase,
+  isSupabaseConfigured,
   subscribeToUserById,
   fetchUserFromSupabase,
   unsubscribeFromChannel,
@@ -37,6 +38,13 @@ export const SupabaseSyncProvider = ({ children }: { children: ReactNode }) => {
 
   const startSync = async (userId: string) => {
     console.log('🔄 [SupabaseSync] Starting real-time sync for user:', userId);
+    
+    if (!isSupabaseConfigured) {
+      console.warn('⚠️ [SupabaseSync] Supabase not configured - sync disabled');
+      setIsSyncing(false);
+      return;
+    }
+    
     setIsSyncing(true);
 
     try {
