@@ -273,6 +273,50 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// Handle password change request from new user creation
+app.post("/api/users", sessionMiddleware, async (req, res) => {
+  try {
+    const { email, username, password, account_name, billing_plan, permissions } = req.body;
+
+    if (!email || !username || !password) {
+      return res.status(400).json({ error: "Email, username, and password required" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { data, error } = await supabase
+      .from("users")
+      .insert([
+        {
+          email,
+          username,
+          password_hash: hashedPassword,
+          account_name: account_name || "",
+          billing_plan: billing_plan || "basic",
+          location_tracking: false,
+          last_device: null,
+          permissions: permissions || {
+            can_create_groups: false,
+            can_change_password: true,
+            can_access_cms: false,
+            is_enabled: true,
+            can_edit_profile: false,
+          },
+        },
+      ])
+      .select();
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.status(201).json(data[0]);
+  } catch (error) {
+    console.error("Create user error:", error);
+    res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
 // Register endpoint (for first admin setup)
 app.post("/api/auth/register", async (req, res) => {
   try {
@@ -563,7 +607,7 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
 // Update user
 app.put("/api/users/:id", sessionMiddleware, async (req, res) => {
   try {
-    const { username, account_name, billing_plan, permissions, location_tracking } =
+    const { username, account_name, billing_plan, permissions, location_tracking, password } =
       req.body;
 
     const updateData = {};
@@ -572,6 +616,13 @@ app.put("/api/users/:id", sessionMiddleware, async (req, res) => {
     if (billing_plan) updateData.billing_plan = billing_plan;
     if (permissions) updateData.permissions = permissions;
     if (location_tracking !== undefined) updateData.location_tracking = location_tracking;
+    
+    // Handle password update
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateData.password_hash = hashedPassword;
+    }
+    
     updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase

@@ -918,6 +918,22 @@
                         <input type="checkbox" id="canChangePassword">
                         <label for="canChangePassword">Can change password</label>
                     </div>
+
+                    <!-- PASSWORD SECTION -->
+                    <div style="border-top: 1px solid #404040; padding-top: 20px; margin-top: 20px;">
+                        <h3 style="color: #D4AF37; font-size: 14px; margin-bottom: 16px;">Login Password</h3>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Leave blank to keep current password">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Re-enter new password">
+                        </div>
+                        <p style="color: #b0b0b0; font-size: 12px; margin-top: 8px;">
+                            Leave both fields blank to keep the current password unchanged.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- ACCESS TAB -->
@@ -1336,6 +1352,10 @@
                 
                 document.getElementById('locationTracking').checked = currentUserData.location_tracking || false;
 
+                // Clear password fields when editing (user can optionally set new password)
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+
                 document.getElementById('userModal').classList.add('active');
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -1356,6 +1376,8 @@
             document.getElementById('createdDate').value = '';
             document.getElementById('lastVisit').value = '';
             document.getElementById('lastDevice').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
 
             document.getElementById('isEnabled').checked = true;
             document.getElementById('canChangePassword').checked = true;
@@ -1387,6 +1409,24 @@
             const userAccount = document.getElementById('userAccount').value;
             const billingPlan = document.getElementById('userBillingPlan').value;
             const locationTracking = document.getElementById('locationTracking').checked;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords if provided
+            if (newPassword || confirmPassword) {
+                if (!newPassword || !confirmPassword) {
+                    alert('Please fill in both password fields or leave them blank');
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    alert('Passwords do not match');
+                    return;
+                }
+                if (newPassword.length < 6) {
+                    alert('Password must be at least 6 characters long');
+                    return;
+                }
+            }
 
             const permissions = {
                 is_enabled: document.getElementById('isEnabled').checked,
@@ -1399,24 +1439,39 @@
             try {
                 if (currentUserId) {
                     // Update existing user
+                    const updateData = {
+                        username: userName,
+                        account_name: userAccount,
+                        billing_plan: billingPlan,
+                        location_tracking: locationTracking,
+                        permissions
+                    };
+
+                    if (newPassword) {
+                        updateData.password = newPassword;
+                    }
+
                     const response = await fetch(`/api/users/${currentUserId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify({
-                            username: userName,
-                            account_name: userAccount,
-                            billing_plan: billingPlan,
-                            location_tracking: locationTracking,
-                            permissions
-                        })
+                        body: JSON.stringify(updateData)
                     });
 
                     if (!response.ok) throw new Error('Failed to update user');
                 } else {
                     // Create new user
+                    if (!userEmail) {
+                        alert('Email is required when creating a new user');
+                        return;
+                    }
+                    if (!newPassword) {
+                        alert('Password is required when creating a new user');
+                        return;
+                    }
+
                     const response = await fetch('/api/users', {
                         method: 'POST',
                         headers: {
@@ -1426,6 +1481,7 @@
                         body: JSON.stringify({
                             email: userEmail,
                             username: userName,
+                            password: newPassword,
                             account_name: userAccount,
                             billing_plan: billingPlan,
                             permissions
