@@ -7,8 +7,16 @@ const getSupabaseCredentials = () => {
   const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
   const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
   
-  const supabaseUrl = rawUrl.replace(/\s+/g, '').replace(/\/+$/, '');
-  const supabaseAnonKey = rawKey.replace(/\s+/g, '');
+  // Remove quotes, whitespace, and trailing slashes
+  // Web bundler sometimes injects env vars with embedded quotes ("\"https://...\"")
+  const supabaseUrl = rawUrl
+    .replace(/['"]/g, '') // Remove any quote characters (critical for web)
+    .replace(/\s+/g, '')  // Remove whitespace
+    .replace(/\/+$/, ''); // Remove trailing slashes
+  
+  const supabaseAnonKey = rawKey
+    .replace(/['"]/g, '') // Remove any quote characters
+    .replace(/\s+/g, ''); // Remove whitespace
   
   console.log('🔍 [supabaseClient] Checking credentials:');
   console.log('  Raw URL:', JSON.stringify(rawUrl));

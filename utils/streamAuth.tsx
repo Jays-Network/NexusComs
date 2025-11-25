@@ -65,12 +65,18 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('🔐 loginUser() called for:', userName);
     try {
       let client = null;
+      let streamUserId = userId; // Will be updated to sanitized ID from backend
       
       // Get token from backend
       console.log('🎫 Requesting Stream token...');
       try {
         const { token, userId: sanitizedUserId } = await getStreamToken(userId, userName, userImage);
         console.log('✅ Got Stream token for user:', sanitizedUserId);
+        
+        // CRITICAL: Use the sanitized user ID from the backend for all Stream operations
+        // The backend sanitizes the ID to be Stream-compatible (e.g., jullian_worldriskglobal_com)
+        streamUserId = sanitizedUserId;
+        console.log('🔑 Using sanitized Stream ID:', streamUserId);
         
         // Connect to Stream Chat (may return null if API key is missing)
         console.log('🔗 Connecting to Stream Chat...');
@@ -93,13 +99,15 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('⚠️ Failed to get Stream token, app will work in offline mode:', tokenError);
       }
       
+      // IMPORTANT: Store the sanitized Stream ID, not the original Supabase UUID
+      // This ensures that on app relaunch, we request a token with the same ID format
       const userData: User = {
-        id: userId,
+        id: streamUserId, // Use sanitized Stream ID for consistency
         name: userName,
         image: userImage,
       };
       
-      console.log('💾 Saving user to state and storage...');
+      console.log('💾 Saving user to state and storage with Stream ID:', streamUserId);
       setUser(userData);
       setChatClient(client); // client may be null if Stream is not available
       
