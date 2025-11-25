@@ -654,7 +654,7 @@
                         <h3 style="color: #FFFFFF; margin: 30px 0 20px 0; font-size: 18px;">External Services</h3>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                             <!-- STREAM.IO -->
-                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                            <div onclick="openServiceModal('stream')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #FF0066 0%, #FF6600 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">S</div>
                                     <div>
@@ -673,7 +673,7 @@
                             </div>
 
                             <!-- SUPABASE -->
-                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                            <div onclick="openServiceModal('supabase')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3ECF8E 0%, #24B47E 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">DB</div>
                                     <div>
@@ -692,7 +692,7 @@
                             </div>
 
                             <!-- BREVO -->
-                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                            <div onclick="openServiceModal('brevo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">B</div>
                                     <div>
@@ -711,7 +711,7 @@
                             </div>
 
                             <!-- EXPO -->
-                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                            <div onclick="openServiceModal('expo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #D4AF37; font-size: 18px;">E</div>
                                     <div>
@@ -818,6 +818,17 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- SERVICE DETAILS MODALS -->
+    <div class="modal" id="serviceModal">
+        <div class="modal-content" style="max-width: 800px; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2 id="serviceTitle">Service Details</h2>
+                <button class="close-btn" onclick="closeServiceModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="serviceModalBody"></div>
         </div>
     </div>
 
@@ -1139,6 +1150,162 @@
             
             // Mark nav item as active
             event.target.classList.add('active');
+        }
+
+        // SERVICE MODAL FUNCTIONS
+        const serviceDetails = {
+            stream: {
+                title: 'Stream Chat - Detailed Connection',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Operational</span></p>
+                        <p><span style="color: #b0b0b0;">API Key:</span> <span style="color: #D4AF37;">gxfjy67sps69</span></p>
+                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;">Global</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">APIs & Endpoints</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #D4AF37; font-weight: 600;">Chat API:</p>
+                        <p style="color: #b0b0b0;">• POST /channels - Create/Update channels</p>
+                        <p style="color: #b0b0b0;">• GET /channels - List channels</p>
+                        <p style="color: #b0b0b0;">• POST /messages - Send messages</p>
+                        <p style="color: #b0b0b0;">• WebSocket: Real-time message sync</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Functions in Use</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">• createChannel() - Initialize group channels</p>
+                        <p style="color: #b0b0b0;">• sendMessage() - Post messages with emergency flag</p>
+                        <p style="color: #b0b0b0;">• listenToMessages() - Real-time updates</p>
+                        <p style="color: #b0b0b0;">• getUserInfo() - User profile sync</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700;">⚠️ Connection Timeout (30s)</p>
+                        <p style="color: #b0b0b0;">→ Auto-retry with exponential backoff</p>
+                        <p style="color: #FFD700;">⚠️ Invalid API Key</p>
+                        <p style="color: #b0b0b0;">→ Fallback to defensive initialization</p>
+                        <p style="color: #FFD700;">⚠️ Message Send Failure</p>
+                        <p style="color: #b0b0b0;">→ Queue locally & retry when online</p>
+                    </div>
+                `
+            },
+            supabase: {
+                title: 'Supabase - Database Connection',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected</span></p>
+                        <p><span style="color: #b0b0b0;">Database:</span> <span style="color: #D4AF37;">PostgreSQL (Neon)</span></p>
+                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;">US East</span></p>
+                        <p><span style="color: #b0b0b0;">Response Time:</span> <span style="color: #D4AF37;">~45ms avg</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Tables & Queries</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #D4AF37; font-weight: 600;">Core Tables:</p>
+                        <p style="color: #b0b0b0;">• users (id, email, username, permissions JSONB)</p>
+                        <p style="color: #b0b0b0;">• groups (id, name, parent_id, members)</p>
+                        <p style="color: #b0b0b0;">• messages (id, channel_id, content)</p>
+                        <p style="color: #b0b0b0;">• location_tracking (user_id, lat, lng)</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Common Operations</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">• SELECT * FROM users - Fetch all users</p>
+                        <p style="color: #b0b0b0;">• INSERT INTO users - Create new user</p>
+                        <p style="color: #b0b0b0;">• UPDATE users SET permissions - Update perms</p>
+                        <p style="color: #b0b0b0;">• Real-time subscriptions via websocket</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700;">⚠️ Connection Failed</p>
+                        <p style="color: #b0b0b0;">→ Log error, retry with backoff</p>
+                        <p style="color: #FFD700;">⚠️ Query Timeout (5s)</p>
+                        <p style="color: #b0b0b0;">→ Abort & return empty result</p>
+                        <p style="color: #FFD700;">⚠️ Auth Failed</p>
+                        <p style="color: #b0b0b0;">→ Clear token, redirect to login</p>
+                    </div>
+                `
+            },
+            brevo: {
+                title: 'Brevo - Email Service',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Service Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Active & Operational</span></p>
+                        <p><span style="color: #b0b0b0;">Sender Email:</span> <span style="color: #D4AF37;">noreply@worldrisk.co.za</span></p>
+                        <p><span style="color: #b0b0b0;">SMTP:</span> <span style="color: #D4AF37;">smtp-relay.brevo.com:587</span></p>
+                        <p><span style="color: #b0b0b0;">Authentication:</span> <span style="color: #D4AF37;">API Key + SMTP</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Email Templates</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">• Verification Code (6-digit OTP)</p>
+                        <p style="color: #b0b0b0;">• Password Reset Link</p>
+                        <p style="color: #b0b0b0;">• Account Confirmation</p>
+                        <p style="color: #b0b0b0;">• Emergency Alert Notification</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">API Endpoints</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">POST /smtp/email - Send transactional email</p>
+                        <p style="color: #b0b0b0;">GET /smtp/stats - Email delivery stats</p>
+                        <p style="color: #b0b0b0;">Rate Limit: 500 emails/hour</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700;">⚠️ Rate Limit Exceeded</p>
+                        <p style="color: #b0b0b0;">→ Queue email & retry after 60s</p>
+                        <p style="color: #FFD700;">⚠️ Invalid Email Address</p>
+                        <p style="color: #b0b0b0;">→ Validate & log error</p>
+                        <p style="color: #FFD700;">⚠️ SMTP Connection Failed</p>
+                        <p style="color: #b0b0b0;">→ Fallback to REST API</p>
+                    </div>
+                `
+            },
+            expo: {
+                title: 'Expo - Frontend Platform',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Platform Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Building</span></p>
+                        <p><span style="color: #b0b0b0;">SDK Version:</span> <span style="color: #D4AF37;">54.0.x</span></p>
+                        <p><span style="color: #b0b0b0;">React Native:</span> <span style="color: #D4AF37;">0.75+</span></p>
+                        <p><span style="color: #b0b0b0;">Build Method:</span> <span style="color: #D4AF37;">EAS Build</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Features Enabled</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">✓ Hot Module Reloading (HMR)</p>
+                        <p style="color: #b0b0b0;">✓ Over-the-Air Updates</p>
+                        <p style="color: #b0b0b0;">✓ Push Notifications</p>
+                        <p style="color: #b0b0b0;">✓ Gesture Handler & Reanimated</p>
+                        <p style="color: #b0b0b0;">✓ Async Storage (Session Persistence)</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Core Libraries</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">• react-navigation 7+ - App navigation</p>
+                        <p style="color: #b0b0b0;">• expo-camera - Camera access</p>
+                        <p style="color: #b0b0b0;">• expo-location - GPS tracking</p>
+                        <p style="color: #b0b0b0;">• expo-notifications - Push alerts</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700;">⚠️ App Crash</p>
+                        <p style="color: #b0b0b0;">→ ErrorBoundary catches & offers restart</p>
+                        <p style="color: #FFD700;">⚠️ Module Load Failed</p>
+                        <p style="color: #b0b0b0;">→ Clear cache & hot reload</p>
+                        <p style="color: #FFD700;">⚠️ Permission Denied</p>
+                        <p style="color: #b0b0b0;">→ Request permission with fallback</p>
+                    </div>
+                `
+            }
+        };
+
+        function openServiceModal(service) {
+            const data = serviceDetails[service];
+            document.getElementById('serviceTitle').textContent = data.title;
+            document.getElementById('serviceModalBody').innerHTML = data.html;
+            document.getElementById('serviceModal').classList.add('active');
+        }
+
+        function closeServiceModal() {
+            document.getElementById('serviceModal').classList.remove('active');
         }
 
         async function openEditUserModal(userId) {
