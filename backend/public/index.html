@@ -1295,6 +1295,11 @@
             
             // Mark nav item as active
             event.target.classList.add('active');
+            
+            // Load logs when switching to logs section
+            if (sectionId === 'logs-section') {
+                loadLogs();
+            }
         }
 
         // SERVICE MODAL FUNCTIONS
@@ -1758,6 +1763,78 @@
                 resetError.style.display = 'block';
             }
         }
+
+        // ============= LOGS FUNCTIONS =============
+        async function loadLogs(filter = '') {
+            try {
+                const filterParam = filter ? `?filter=${encodeURIComponent(filter)}` : '';
+                const response = await fetch(`/api/logs${filterParam}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load logs');
+                
+                const logs = await response.json();
+                renderLogs(logs);
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                document.getElementById('logsTableBody').innerHTML = 
+                    '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #FF6B6B;">Failed to load logs: ' + error.message + '</td></tr>';
+            }
+        }
+
+        function renderLogs(logs) {
+            const tbody = document.getElementById('logsTableBody');
+            
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #808080;">No logs found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logs.map(log => {
+                const levelColor = log.level === 'ERROR' ? '#FF6B6B' : 
+                                   log.level === 'WARN' ? '#FFB84D' : 
+                                   log.level === 'INFO' ? '#4CAF50' : '#FFFFFF';
+                
+                const timestamp = new Date(log.timestamp).toLocaleString();
+                const details = log.details ? ` - ${log.details}` : '';
+                
+                return `
+                    <tr style="border-bottom: 1px solid #333;">
+                        <td style="padding: 12px 16px; color: #b0b0b0; font-size: 12px; white-space: nowrap;">${timestamp}</td>
+                        <td style="padding: 12px 16px;"><span style="color: ${levelColor}; font-weight: 600; font-size: 12px;">${log.level}</span></td>
+                        <td style="padding: 12px 16px; color: #D4AF37; font-size: 13px;">${log.source}</td>
+                        <td style="padding: 12px 16px; color: #FFFFFF; font-size: 13px;">${log.message}${details}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function refreshLogs() {
+            const filter = document.getElementById('logFilter').value;
+            loadLogs(filter);
+        }
+
+        async function clearLogs() {
+            if (!confirm('Are you sure you want to clear all logs?')) return;
+            
+            try {
+                const response = await fetch('/api/logs', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to clear logs');
+                
+                loadLogs();
+                alert('Logs cleared successfully');
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Add event listener for log filter
+        document.getElementById('logFilter')?.addEventListener('change', refreshLogs);
     </script>
 </body>
 </html>
