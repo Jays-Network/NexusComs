@@ -615,6 +615,7 @@
                     <div class="nav-item active" onclick="switchSection('dashboard-section')">Dashboard</div>
                     <div class="nav-item" onclick="switchSection('logs-section')">Logs</div>
                     <div class="nav-item" onclick="switchSection('users')">Users</div>
+                    <div class="nav-item" onclick="switchSection('billing-plans')">Billing Plans</div>
                     <div class="nav-item" onclick="switchSection('groups')">Groups & Subgroups</div>
                     <div class="nav-item" onclick="switchSection('emergency-groups')">Emergency Groups</div>
                     <div class="nav-item" onclick="switchSection('tracking')">Tracking</div>
@@ -837,6 +838,159 @@
                                 </thead>
                                 <tbody id="usersTableBody">
                                     <tr><td colspan="7" class="loading">Loading users...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BILLING PLANS SECTION -->
+                <div id="billing-plans" class="section">
+                    <div class="section-content">
+                        <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">Billing Plans</h2>
+                        <p style="color: #b0b0b0; margin-bottom: 30px;">Configure and manage user access levels based on billing tiers. Each plan dynamically controls what features and permissions users have access to.</p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                            <!-- BASIC PLAN -->
+                            <div style="background: #2a2a2a; border: 2px solid #404040; border-radius: 12px; padding: 24px; position: relative;">
+                                <div style="position: absolute; top: -12px; left: 20px; background: #1a1a1a; padding: 4px 12px; border-radius: 4px;">
+                                    <span style="color: #b0b0b0; font-size: 12px; font-weight: 600;">TIER 1</span>
+                                </div>
+                                <h3 style="color: #D4AF37; font-size: 20px; margin: 12px 0 8px 0;">Basic</h3>
+                                <p style="color: #808080; font-size: 13px; margin-bottom: 20px;">Restricted access for standard users</p>
+                                
+                                <div style="border-top: 1px solid #404040; padding-top: 16px;">
+                                    <h4 style="color: #FFFFFF; font-size: 13px; margin-bottom: 12px;">Restrictions:</h4>
+                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> Tracking restricted to active only
+                                        </li>
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> Groups controlled by backend only
+                                        </li>
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> Contact list restricted to allowed list
+                                        </li>
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> No access to CMS backend
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0;">Users: <span id="basicUsersCount" style="color: #D4AF37;">0</span></p>
+                                </div>
+                            </div>
+                            
+                            <!-- ADMIN PLAN -->
+                            <div style="background: #2a2a2a; border: 2px solid #D4AF37; border-radius: 12px; padding: 24px; position: relative;">
+                                <div style="position: absolute; top: -12px; left: 20px; background: #D4AF37; padding: 4px 12px; border-radius: 4px;">
+                                    <span style="color: #1a1a1a; font-size: 12px; font-weight: 600;">TIER 2</span>
+                                </div>
+                                <h3 style="color: #D4AF37; font-size: 20px; margin: 12px 0 8px 0;">Admin</h3>
+                                <p style="color: #808080; font-size: 13px; margin-bottom: 20px;">Enhanced access for group administrators</p>
+                                
+                                <div style="border-top: 1px solid #404040; padding-top: 16px;">
+                                    <h4 style="color: #FFFFFF; font-size: 13px; margin-bottom: 12px;">Permissions:</h4>
+                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Group admin on frontend
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Full contact list access (Admin & below)
+                                        </li>
+                                        <li style="color: #FFB84D; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#9679;</span> Limited CMS access (allocated by Executive)
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Standard tracking access
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0;">Users: <span id="adminUsersCount" style="color: #D4AF37;">0</span></p>
+                                </div>
+                            </div>
+                            
+                            <!-- EXECUTIVE PLAN -->
+                            <div style="background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%); border: 2px solid #4CAF50; border-radius: 12px; padding: 24px; position: relative;">
+                                <div style="position: absolute; top: -12px; left: 20px; background: #4CAF50; padding: 4px 12px; border-radius: 4px;">
+                                    <span style="color: #1a1a1a; font-size: 12px; font-weight: 600;">TIER 3</span>
+                                </div>
+                                <h3 style="color: #4CAF50; font-size: 20px; margin: 12px 0 8px 0;">Executive</h3>
+                                <p style="color: #808080; font-size: 13px; margin-bottom: 20px;">Full unrestricted access</p>
+                                
+                                <div style="border-top: 1px solid #404040; padding-top: 16px;">
+                                    <h4 style="color: #FFFFFF; font-size: 13px; margin-bottom: 12px;">Full Access:</h4>
+                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> No restrictions
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Full CMS backend access
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Allocate CMS access to Admins
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Full tracking & group control
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Manage all user permissions
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0;">Users: <span id="executiveUsersCount" style="color: #D4AF37;">0</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Permissions Matrix -->
+                        <div style="margin-top: 40px; background: #2a2a2a; border: 1px solid #404040; border-radius: 12px; padding: 24px;">
+                            <h3 style="color: #FFFFFF; margin-bottom: 20px; font-size: 18px;">Permission Matrix</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid #404040;">
+                                        <th style="text-align: left; padding: 12px; color: #b0b0b0; font-size: 13px;">Feature</th>
+                                        <th style="text-align: center; padding: 12px; color: #b0b0b0; font-size: 13px;">Basic</th>
+                                        <th style="text-align: center; padding: 12px; color: #D4AF37; font-size: 13px;">Admin</th>
+                                        <th style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Executive</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Location Tracking</td>
+                                        <td style="text-align: center; padding: 12px; color: #FFB84D; font-size: 13px;">Active Only</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Group Management</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">Backend Only</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Frontend Admin</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full Control</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Contact List Access</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">Allowed Only</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Admin & Below</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">All Users</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">CMS Backend Access</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">None</td>
+                                        <td style="text-align: center; padding: 12px; color: #FFB84D; font-size: 13px;">Limited</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Allocate Permissions</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">None</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">None</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1084,10 +1238,10 @@
                     </div>
                     <div class="form-group">
                         <label for="userBillingPlan">Billing Plan</label>
-                        <select id="userBillingPlan" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                        <select id="userBillingPlan" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;" onchange="applyBillingPlanRestrictions()">
                             <option value="basic">Basic</option>
-                            <option value="pro">Pro</option>
-                            <option value="enterprise">Enterprise</option>
+                            <option value="admin">Admin</option>
+                            <option value="executive">Executive</option>
                         </select>
                     </div>
                     <div class="checkbox-group">
@@ -1374,8 +1528,12 @@
                     document.getElementById('totalUsersCount').textContent = data.total || data.users.length;
                     const activeCount = data.users.filter(u => u.permissions?.is_enabled).length;
                     document.getElementById('activeUsersCount').textContent = activeCount;
+                    
+                    // Update billing plan counts
+                    updateBillingPlanCounts(data.users);
                 } else {
                     tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
+                    updateBillingPlanCounts([]);
                 }
             } catch (error) {
                 console.error('Error loading users:', error);
@@ -1648,6 +1806,9 @@
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmPassword').value = '';
 
+                // Apply billing plan restrictions dynamically
+                applyBillingPlanRestrictions();
+
                 document.getElementById('userModal').classList.add('active');
             } catch (error) {
                 console.error('Error loading user:', error);
@@ -1678,6 +1839,9 @@
             document.getElementById('canEditProfile').checked = false;
             
             document.getElementById('locationTracking').checked = false;
+
+            // Apply billing plan restrictions dynamically for new users
+            applyBillingPlanRestrictions();
 
             document.getElementById('userModal').classList.add('active');
         }
@@ -1720,12 +1884,22 @@
                 }
             }
 
+            // Get billing plan configuration and apply restrictions
+            const planConfig = BILLING_PLANS[billingPlan] || BILLING_PLANS.basic;
+            const planPerms = planConfig.permissions;
+            
+            // Build permissions based on billing plan restrictions
             const permissions = {
                 is_enabled: document.getElementById('isEnabled').checked,
                 can_change_password: document.getElementById('canChangePassword').checked,
-                can_create_groups: document.getElementById('canCreateGroups').checked,
-                can_access_cms: document.getElementById('canAccessCms').checked,
-                can_edit_profile: document.getElementById('canEditProfile').checked
+                // Apply billing plan restrictions - if plan doesn't allow, force false
+                can_create_groups: planPerms.can_create_groups === true ? document.getElementById('canCreateGroups').checked : false,
+                can_access_cms: planPerms.can_access_cms === true ? document.getElementById('canAccessCms').checked : (planPerms.can_access_cms === 'limited' ? 'limited' : false),
+                can_edit_profile: planPerms.can_edit_profile === true ? document.getElementById('canEditProfile').checked : false,
+                // Store additional billing plan metadata
+                location_tracking_level: planPerms.location_tracking,
+                contact_list_access: planPerms.contact_list,
+                group_management_level: planPerms.group_management
             };
 
             try {
@@ -2105,6 +2279,145 @@
                 btn.disabled = false;
                 btn.textContent = 'Create Emergency Group';
             }
+        }
+
+        // ============= BILLING PLAN CONFIGURATION =============
+        
+        const BILLING_PLANS = {
+            basic: {
+                name: 'Basic',
+                tier: 1,
+                permissions: {
+                    can_create_groups: false,
+                    can_access_cms: false,
+                    can_edit_profile: false,
+                    location_tracking: 'active_only',
+                    contact_list: 'allowed_only',
+                    group_management: 'backend_only'
+                }
+            },
+            admin: {
+                name: 'Admin',
+                tier: 2,
+                permissions: {
+                    can_create_groups: true,
+                    can_access_cms: 'limited',
+                    can_edit_profile: true,
+                    location_tracking: 'full',
+                    contact_list: 'admin_and_below',
+                    group_management: 'frontend_admin'
+                }
+            },
+            executive: {
+                name: 'Executive',
+                tier: 3,
+                permissions: {
+                    can_create_groups: true,
+                    can_access_cms: true,
+                    can_edit_profile: true,
+                    location_tracking: 'full',
+                    contact_list: 'all',
+                    group_management: 'full_control',
+                    can_allocate_permissions: true
+                }
+            }
+        };
+
+        // Apply billing plan restrictions when plan changes
+        function applyBillingPlanRestrictions() {
+            const plan = document.getElementById('userBillingPlan').value;
+            const config = BILLING_PLANS[plan];
+            
+            if (!config) return;
+
+            // Update permission checkboxes based on billing plan
+            const canCreateGroups = document.getElementById('canCreateGroups');
+            const canAccessCms = document.getElementById('canAccessCms');
+            const canEditProfile = document.getElementById('canEditProfile');
+            const locationTracking = document.getElementById('locationTracking');
+
+            if (canCreateGroups) {
+                canCreateGroups.checked = config.permissions.can_create_groups === true;
+                canCreateGroups.disabled = plan === 'basic';
+            }
+            
+            if (canAccessCms) {
+                canAccessCms.checked = config.permissions.can_access_cms === true;
+                canAccessCms.disabled = plan === 'basic';
+            }
+            
+            if (canEditProfile) {
+                canEditProfile.checked = config.permissions.can_edit_profile === true;
+                canEditProfile.disabled = plan === 'basic';
+            }
+            
+            if (locationTracking) {
+                locationTracking.checked = config.permissions.location_tracking === 'full';
+                locationTracking.disabled = plan === 'basic';
+            }
+
+            // Show restriction notice for Basic plan
+            let restrictionNotice = document.getElementById('billingRestrictionNotice');
+            if (!restrictionNotice) {
+                restrictionNotice = document.createElement('div');
+                restrictionNotice.id = 'billingRestrictionNotice';
+                restrictionNotice.style.cssText = 'background: #2a2a2a; border: 1px solid #FF6B6B; border-radius: 6px; padding: 12px; margin-top: 16px; display: none;';
+                const accessTab = document.getElementById('access');
+                if (accessTab) accessTab.appendChild(restrictionNotice);
+            }
+            
+            if (plan === 'basic') {
+                restrictionNotice.innerHTML = '<p style="color: #FF6B6B; font-size: 13px; margin: 0;"><strong>Basic Plan Restrictions:</strong> This user has limited access. All permissions are controlled by the backend.</p>';
+                restrictionNotice.style.display = 'block';
+            } else if (plan === 'admin') {
+                restrictionNotice.innerHTML = '<p style="color: #FFB84D; font-size: 13px; margin: 0;"><strong>Admin Plan:</strong> CMS access is limited and must be allocated by an Executive user.</p>';
+                restrictionNotice.style.display = 'block';
+            } else {
+                restrictionNotice.style.display = 'none';
+            }
+        }
+
+        // Update billing plan user counts
+        function updateBillingPlanCounts(users) {
+            let basicCount = 0;
+            let adminCount = 0;
+            let executiveCount = 0;
+            
+            if (users && users.length > 0) {
+                users.forEach(user => {
+                    const plan = (user.billing_plan || '').toLowerCase();
+                    if (plan === 'basic') basicCount++;
+                    else if (plan === 'admin') adminCount++;
+                    else if (plan === 'executive' || plan === 'enterprise') executiveCount++;
+                });
+            }
+            
+            const basicEl = document.getElementById('basicUsersCount');
+            const adminEl = document.getElementById('adminUsersCount');
+            const executiveEl = document.getElementById('executiveUsersCount');
+            
+            if (basicEl) basicEl.textContent = basicCount;
+            if (adminEl) adminEl.textContent = adminCount;
+            if (executiveEl) executiveEl.textContent = executiveCount;
+        }
+
+        // Get billing plan permissions for API calls
+        function getBillingPlanPermissions(plan) {
+            return BILLING_PLANS[plan] ? BILLING_PLANS[plan].permissions : BILLING_PLANS.basic.permissions;
+        }
+
+        // Check if user can access feature based on billing plan
+        function canAccessFeature(userPlan, feature) {
+            const config = BILLING_PLANS[userPlan] || BILLING_PLANS.basic;
+            const permission = config.permissions[feature];
+            
+            if (permission === true || permission === 'full' || permission === 'all' || permission === 'full_control') {
+                return true;
+            }
+            if (permission === 'limited' || permission === 'admin_and_below' || permission === 'frontend_admin' || permission === 'active_only' || permission === 'allowed_only') {
+                return 'limited';
+            }
+            return false;
         }
     </script>
 </body>

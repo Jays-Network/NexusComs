@@ -882,6 +882,107 @@ app.get("/api/services/status", async (req, res) => {
   res.json(services);
 });
 
+// ============= BILLING PLANS CONFIGURATION =============
+
+const BILLING_PLANS = {
+  basic: {
+    name: 'Basic',
+    tier: 1,
+    permissions: {
+      can_create_groups: false,
+      can_access_cms: false,
+      can_edit_profile: false,
+      location_tracking: 'active_only',
+      contact_list: 'allowed_only',
+      group_management: 'backend_only'
+    },
+    description: 'Restricted access for standard users'
+  },
+  admin: {
+    name: 'Admin',
+    tier: 2,
+    permissions: {
+      can_create_groups: true,
+      can_access_cms: 'limited',
+      can_edit_profile: true,
+      location_tracking: 'full',
+      contact_list: 'admin_and_below',
+      group_management: 'frontend_admin'
+    },
+    description: 'Enhanced access for group administrators'
+  },
+  executive: {
+    name: 'Executive',
+    tier: 3,
+    permissions: {
+      can_create_groups: true,
+      can_access_cms: true,
+      can_edit_profile: true,
+      location_tracking: 'full',
+      contact_list: 'all',
+      group_management: 'full_control',
+      can_allocate_permissions: true
+    },
+    description: 'Full unrestricted access'
+  }
+};
+
+// Get billing plans configuration
+app.get("/api/billing-plans", async (req, res) => {
+  res.json(BILLING_PLANS);
+});
+
+// Get permissions for a specific billing plan
+app.get("/api/billing-plans/:plan", async (req, res) => {
+  const plan = req.params.plan.toLowerCase();
+  if (BILLING_PLANS[plan]) {
+    res.json(BILLING_PLANS[plan]);
+  } else {
+    res.status(404).json({ error: "Billing plan not found" });
+  }
+});
+
+// Check user access based on billing plan
+app.get("/api/billing-plans/:plan/can-access/:feature", async (req, res) => {
+  const plan = req.params.plan.toLowerCase();
+  const feature = req.params.feature;
+  
+  const planConfig = BILLING_PLANS[plan] || BILLING_PLANS.basic;
+  const permission = planConfig.permissions[feature];
+  
+  let canAccess = false;
+  let accessLevel = 'none';
+  
+  if (permission === true || permission === 'full' || permission === 'all' || permission === 'full_control') {
+    canAccess = true;
+    accessLevel = 'full';
+  } else if (permission === 'limited' || permission === 'admin_and_below' || permission === 'frontend_admin' || permission === 'active_only' || permission === 'allowed_only') {
+    canAccess = true;
+    accessLevel = 'limited';
+  }
+  
+  res.json({ canAccess, accessLevel, permission });
+});
+
+// Get available users for group assignment (with billing plan info)
+app.get("/api/users/available", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, billing_plan, stream_id")
+      .order("username");
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Error fetching available users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
 // ============= GROUPS & EMERGENCY GROUPS MANAGEMENT =============
 
 // Create a new group
