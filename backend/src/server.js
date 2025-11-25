@@ -887,7 +887,7 @@ app.get("/api/services/status", async (req, res) => {
 // Create a new group
 app.post("/api/groups", sessionMiddleware, async (req, res) => {
   try {
-    const { name, description, parentGroupId } = req.body;
+    const { name, description, parentGroupId, memberIds } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: "Group name required" });
@@ -913,9 +913,11 @@ app.post("/api/groups", sessionMiddleware, async (req, res) => {
     }
 
     // Create corresponding Stream channel
+    let streamChannelId = null;
     if (streamServerClient && group) {
       try {
-        await streamServerClient.createChannel('team', `group-${group.id}`, {
+        streamChannelId = `group-${group.id}`;
+        await streamServerClient.createChannel('team', streamChannelId, {
           name: name,
           image: null,
           description: description,
@@ -932,8 +934,61 @@ app.post("/api/groups", sessionMiddleware, async (req, res) => {
       }
     }
 
+    // Add members to group and Stream channel
+    if (memberIds && memberIds.length > 0) {
+      try {
+        // Get user details for Stream IDs
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, stream_id")
+          .in("id", memberIds);
+
+        if (users && users.length > 0) {
+          // Add members to Supabase group_members table
+          const memberRecords = users.map(user => ({
+            group_id: group.id,
+            user_id: user.id,
+            added_by: req.user.id,
+            added_at: new Date().toISOString(),
+          }));
+
+          const { error: memberError } = await supabase
+            .from("group_members")
+            .insert(memberRecords);
+
+          if (memberError) {
+            console.warn("Error adding members to Supabase:", memberError);
+          }
+
+          // Add members to Stream channel
+          if (streamServerClient && streamChannelId) {
+            try {
+              const streamUserIds = users
+                .map(u => u.stream_id)
+                .filter(id => id != null);
+              
+              if (streamUserIds.length > 0) {
+                await streamServerClient.addChannelMembers(
+                  `team:${streamChannelId}`,
+                  streamUserIds
+                );
+                console.log(`Added ${streamUserIds.length} members to Stream channel`);
+                addLog("INFO", "Stream", `Added ${streamUserIds.length} members to group ${name}`);
+              }
+            } catch (streamMemberError) {
+              console.warn(`Error adding members to Stream: ${streamMemberError.message}`);
+              addLog("WARN", "Stream", `Could not add members to Stream channel`, streamMemberError.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error processing members:", error);
+        addLog("WARN", "Groups", "Error adding members to group", error.message);
+      }
+    }
+
     res.status(201).json({ 
-      message: "Group created successfully", 
+      message: "Group created successfully with members", 
       group 
     });
   } catch (error) {
@@ -965,7 +1020,7 @@ app.get("/api/groups", sessionMiddleware, async (req, res) => {
 // Create a new emergency group
 app.post("/api/emergency-groups", sessionMiddleware, async (req, res) => {
   try {
-    const { name, description, alertProtocol, members } = req.body;
+    const { name, description, alertProtocol, memberIds } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: "Emergency group name required" });
@@ -978,7 +1033,6 @@ app.post("/api/emergency-groups", sessionMiddleware, async (req, res) => {
         name,
         description,
         alert_protocol: alertProtocol || "standard",
-        members: members || [],
         created_by: req.user.id,
         created_at: new Date().toISOString(),
       })
@@ -992,9 +1046,11 @@ app.post("/api/emergency-groups", sessionMiddleware, async (req, res) => {
     }
 
     // Create corresponding Stream channel
+    let streamChannelId = null;
     if (streamServerClient && emergencyGroup) {
       try {
-        await streamServerClient.createChannel('team', `emergency-${emergencyGroup.id}`, {
+        streamChannelId = `emergency-${emergencyGroup.id}`;
+        await streamServerClient.createChannel('team', streamChannelId, {
           name: name,
           image: null,
           description: description,
@@ -1012,8 +1068,61 @@ app.post("/api/emergency-groups", sessionMiddleware, async (req, res) => {
       }
     }
 
+    // Add members to emergency group and Stream channel
+    if (memberIds && memberIds.length > 0) {
+      try {
+        // Get user details for Stream IDs
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, stream_id")
+          .in("id", memberIds);
+
+        if (users && users.length > 0) {
+          // Add members to Supabase emergency_group_members table
+          const memberRecords = users.map(user => ({
+            emergency_group_id: emergencyGroup.id,
+            user_id: user.id,
+            added_by: req.user.id,
+            added_at: new Date().toISOString(),
+          }));
+
+          const { error: memberError } = await supabase
+            .from("emergency_group_members")
+            .insert(memberRecords);
+
+          if (memberError) {
+            console.warn("Error adding members to emergency group:", memberError);
+          }
+
+          // Add members to Stream channel
+          if (streamServerClient && streamChannelId) {
+            try {
+              const streamUserIds = users
+                .map(u => u.stream_id)
+                .filter(id => id != null);
+              
+              if (streamUserIds.length > 0) {
+                await streamServerClient.addChannelMembers(
+                  `team:${streamChannelId}`,
+                  streamUserIds
+                );
+                console.log(`Added ${streamUserIds.length} members to emergency Stream channel`);
+                addLog("INFO", "Stream", `Added ${streamUserIds.length} members to emergency group ${name}`);
+              }
+            } catch (streamMemberError) {
+              console.warn(`Error adding members to Stream: ${streamMemberError.message}`);
+              addLog("WARN", "Stream", `Could not add members to emergency Stream channel`, streamMemberError.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error processing emergency group members:", error);
+        addLog("WARN", "Emergency Groups", "Error adding members to emergency group", error.message);
+      }
+    }
+
     res.status(201).json({ 
-      message: "Emergency group created successfully", 
+      message: "Emergency group created successfully with members", 
       emergencyGroup 
     });
   } catch (error) {
@@ -1039,6 +1148,25 @@ app.get("/api/emergency-groups", sessionMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Fetch emergency groups error:", error);
     res.status(500).json({ error: "Failed to fetch emergency groups" });
+  }
+});
+
+// Get list of available users for member assignment
+app.get("/api/users/available", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, stream_id")
+      .order("username", { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to fetch users" });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Fetch available users error:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
