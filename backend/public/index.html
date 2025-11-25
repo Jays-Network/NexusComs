@@ -1761,44 +1761,46 @@
                         <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;">US East</span></p>
                         <p><span style="color: #b0b0b0;">Response Time:</span> <span style="color: #D4AF37;">~45ms avg</span></p>
                     </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Tables & Queries</h3>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Database Diagnostics</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p style="color: #b0b0b0; margin-bottom: 12px;">Run a comprehensive check of all database tables:</p>
+                        <button onclick="runDatabaseCheck()" id="dbCheckBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: all 0.3s;">
+                            Run Database Check
+                        </button>
+                        <div id="dbCheckStatus" style="margin-top: 12px; display: none;">
+                            <p style="color: #b0b0b0; font-size: 12px;"><span id="dbCheckTime"></span></p>
+                        </div>
+                    </div>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Debug Logs</h3>
+                    <div id="dbCheckOutput" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; min-height: 150px;">
+                        <p style="color: #666;">Click "Run Database Check" to see results...</p>
+                    </div>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Required Tables</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
                         <p style="color: #D4AF37; font-weight: 600;">Core Tables:</p>
-                        <p style="color: #b0b0b0;">• users (id, email, username, permissions JSONB)</p>
-                        <p style="color: #b0b0b0;">• groups (id, name, parent_id, members)</p>
-                        <p style="color: #b0b0b0;">• messages (id, channel_id, content)</p>
-                        <p style="color: #b0b0b0;">• location_tracking (user_id, lat, lng)</p>
+                        <p style="color: #b0b0b0;">• users (id, email, name, role, account_id, stream_id, permissions)</p>
+                        <p style="color: #b0b0b0;">• groups (id, name, description, created_by)</p>
+                        <p style="color: #b0b0b0;">• group_members (group_id, user_id, role)</p>
+                        <p style="color: #b0b0b0;">• emergency_groups (id, name, description, priority)</p>
+                        <p style="color: #b0b0b0;">• emergency_group_members (emergency_group_id, user_id)</p>
+                        <p style="color: #b0b0b0;">• accounts (id, name, parent_account_id, billing_plan)</p>
+                        <p style="color: #b0b0b0;">• account_channels (account_id, channel_id, access_level)</p>
                     </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Common Operations</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">• SELECT * FROM users - Fetch all users</p>
-                        <p style="color: #b0b0b0;">• INSERT INTO users - Create new user</p>
-                        <p style="color: #b0b0b0;">• UPDATE users SET permissions - Update perms</p>
-                        <p style="color: #b0b0b0;">• Real-time subscriptions via websocket</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
                         <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
-                        <p style="color: #FFD700;">⚠️ Connection Failed</p>
-                        <p style="color: #b0b0b0;">→ Log error, retry with backoff</p>
-                        <p style="color: #b0b0b0;">→ Verify SUPABASE_URL & SERVICE_ROLE_KEY set</p>
-                        <p style="color: #b0b0b0;">→ Check Supabase project is active</p>
+                        <p style="color: #FFD700;">PGRST205 - Table not found</p>
+                        <p style="color: #b0b0b0;">→ Run the SQL schema in Supabase SQL Editor</p>
                         
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Query Timeout (5s)</p>
-                        <p style="color: #b0b0b0;">→ Abort & return empty result</p>
-                        <p style="color: #b0b0b0;">→ Monitor database performance metrics</p>
-                        <p style="color: #b0b0b0;">→ Check table indexes for slow queries</p>
+                        <p style="color: #FFD700; margin-top: 12px;">42703 - Column does not exist</p>
+                        <p style="color: #b0b0b0;">→ Run ALTER TABLE to add missing columns</p>
                         
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Auth Failed</p>
-                        <p style="color: #b0b0b0;">→ Clear token, redirect to login</p>
-                        <p style="color: #b0b0b0;">→ Verify user exists in database</p>
-                    </div>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
-                        <p style="color: #b0b0b0;">• Backend: Check server logs in console</p>
-                        <p style="color: #b0b0b0;">• Dashboard: View this status page (refreshes every session)</p>
-                        <p style="color: #b0b0b0;">• SQL: Use Supabase SQL Editor for direct queries</p>
-                        <p style="color: #b0b0b0;">• Monitor: Track API response times in Network tab</p>
+                        <p style="color: #FFD700; margin-top: 12px;">Connection Failed</p>
+                        <p style="color: #b0b0b0;">→ Verify SUPABASE_URL & SERVICE_ROLE_KEY</p>
                     </div>
                 `
             },
@@ -1913,6 +1915,91 @@
 
         function closeServiceModal() {
             document.getElementById('serviceModal').classList.remove('active');
+        }
+
+        async function runDatabaseCheck() {
+            const btn = document.getElementById('dbCheckBtn');
+            const output = document.getElementById('dbCheckOutput');
+            const statusDiv = document.getElementById('dbCheckStatus');
+            const timeSpan = document.getElementById('dbCheckTime');
+            
+            if (!btn || !output) {
+                console.error('Database check elements not found');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            btn.style.opacity = '0.7';
+            
+            const startTime = new Date();
+            output.innerHTML = '<p style="color: #D4AF37;">Running database check...</p>';
+            
+            try {
+                const response = await fetch('/api/db-check');
+                const data = await response.json();
+                const endTime = new Date();
+                const duration = endTime - startTime;
+                
+                let html = '';
+                
+                // Status header
+                const statusColor = data.status === 'ok' ? '#4CAF50' : '#FF6B6B';
+                const statusIcon = data.status === 'ok' ? 'OK' : 'INCOMPLETE';
+                html += `<p style="color: ${statusColor}; font-weight: bold; font-size: 14px; margin-bottom: 12px;">STATUS: ${statusIcon}</p>`;
+                
+                // Summary
+                html += `<p style="color: #b0b0b0; margin-bottom: 8px;">Supabase URL: <span style="color: ${data.supabase_url === 'configured' ? '#4CAF50' : '#FF6B6B'};">${data.supabase_url}</span></p>`;
+                
+                if (data.summary) {
+                    html += `<p style="color: #b0b0b0;">Tables: <span style="color: #D4AF37;">${data.summary.existing}/${data.summary.total_tables}</span> configured</p>`;
+                    if (data.summary.missing > 0) {
+                        html += `<p style="color: #FF6B6B;">Missing: ${data.summary.missing_tables.join(', ')}</p>`;
+                    }
+                }
+                
+                html += '<hr style="border: none; border-top: 1px solid #404040; margin: 16px 0;">';
+                html += '<p style="color: #D4AF37; font-weight: bold; margin-bottom: 8px;">TABLE DETAILS:</p>';
+                
+                // Table details
+                if (data.tables) {
+                    for (const [tableName, info] of Object.entries(data.tables)) {
+                        const tableStatus = info.exists ? '#4CAF50' : '#FF6B6B';
+                        const icon = info.exists ? '[OK]' : '[MISSING]';
+                        html += `<p style="color: ${tableStatus}; margin: 4px 0;">${icon} ${tableName}`;
+                        
+                        if (info.exists && info.rows !== undefined && info.rows !== null) {
+                            html += ` <span style="color: #888;">(${info.rows} rows)</span>`;
+                        }
+                        
+                        if (info.error) {
+                            html += `<br><span style="color: #FF6B6B; margin-left: 20px; font-size: 11px;">Error: ${info.error}</span>`;
+                            if (info.code) {
+                                html += ` <span style="color: #888;">[${info.code}]</span>`;
+                            }
+                        }
+                        html += '</p>';
+                    }
+                }
+                
+                html += '<hr style="border: none; border-top: 1px solid #404040; margin: 16px 0;">';
+                html += `<p style="color: #888; font-size: 11px;">Completed in ${duration}ms at ${endTime.toLocaleTimeString()}</p>`;
+                
+                output.innerHTML = html;
+                
+                // Update status
+                if (statusDiv && timeSpan) {
+                    statusDiv.style.display = 'block';
+                    timeSpan.textContent = `Last check: ${endTime.toLocaleTimeString()} (${duration}ms)`;
+                }
+                
+            } catch (error) {
+                output.innerHTML = `<p style="color: #FF6B6B;">Error: ${error.message}</p><p style="color: #888; margin-top: 8px;">Make sure the backend server is running.</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Database Check';
+                btn.style.opacity = '1';
+            }
         }
 
         async function openEditUserModal(userId) {
