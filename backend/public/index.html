@@ -644,10 +644,44 @@
                         </div>
                         <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; margin-bottom: 30px;">
                             <h3 style="color: #FFFFFF; margin-bottom: 16px;">System Information</h3>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
-                                <div><span style="color: #b0b0b0;">API Version:</span> <span style="color: #D4AF37;">1.0.0</span></div>
-                                <div><span style="color: #b0b0b0;">Auth Method:</span> <span style="color: #D4AF37;">Email OTP</span></div>
-                                <div id="lastUpdate"><span style="color: #b0b0b0;">Last Updated:</span> <span style="color: #D4AF37;">Just now</span></div>
+                            
+                            <div style="margin-bottom: 20px; border-bottom: 1px solid #404040; padding-bottom: 16px;">
+                                <p style="color: #b0b0b0; font-size: 12px; font-weight: 600; margin-bottom: 8px;">BACKEND</p>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
+                                    <div><span style="color: #b0b0b0;">API Version:</span> <span style="color: #D4AF37;">1.0.0</span></div>
+                                    <div><span style="color: #b0b0b0;">Auth Method:</span> <span style="color: #D4AF37;">Username/Password</span></div>
+                                    <div><span style="color: #b0b0b0;">Runtime:</span> <span style="color: #D4AF37;">Node.js Express</span></div>
+                                    <div id="backendUptime"><span style="color: #b0b0b0;">Server Status:</span> <span style="color: #4CAF50;">Online</span></div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 20px; border-bottom: 1px solid #404040; padding-bottom: 16px;">
+                                <p style="color: #b0b0b0; font-size: 12px; font-weight: 600; margin-bottom: 8px;">FRONTEND</p>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
+                                    <div><span style="color: #b0b0b0;">Platform:</span> <span style="color: #D4AF37;" id="frontendPlatform">Expo React Native</span></div>
+                                    <div><span style="color: #b0b0b0;">SDK Version:</span> <span style="color: #D4AF37;">54.0.x</span></div>
+                                    <div><span style="color: #b0b0b0;">Response Time:</span> <span style="color: #D4AF37;" id="frontendResponseTime">~120ms avg</span></div>
+                                    <div><span style="color: #b0b0b0;">Error Handling:</span> <span style="color: #4CAF50;">ErrorBoundary Active</span></div>
+                                    <div><span style="color: #b0b0b0;">HMR Status:</span> <span style="color: #4CAF50;" id="hmrStatus">Enabled</span></div>
+                                    <div><span style="color: #b0b0b0;">Network State:</span> <span style="color: #4CAF50;" id="networkStatus">Online</span></div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 20px; border-bottom: 1px solid #404040; padding-bottom: 16px;">
+                                <p style="color: #b0b0b0; font-size: 12px; font-weight: 600; margin-bottom: 8px;">DEBUGGING</p>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 14px;">
+                                    <div><span style="color: #b0b0b0;">Console Logging:</span> <span style="color: #D4AF37;" id="consoleLogging">Enabled</span></div>
+                                    <div><span style="color: #b0b0b0;">Performance Metrics:</span> <span style="color: #D4AF37;" id="performanceMetrics">Tracking</span></div>
+                                    <div><span style="color: #b0b0b0;">Error Logs:</span> <span style="color: #D4AF37;" id="errorLogs">Captured</span></div>
+                                    <div><span style="color: #b0b0b0;">API Monitoring:</span> <span style="color: #D4AF37;" id="apiMonitoring">Active</span></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p style="color: #b0b0b0; font-size: 12px; font-weight: 600; margin-bottom: 8px;">UPDATES</p>
+                                <div style="font-size: 14px;">
+                                    <div id="lastUpdate"><span style="color: #b0b0b0;">Last Updated:</span> <span style="color: #D4AF37;">Just now</span></div>
+                                </div>
                             </div>
                         </div>
 
@@ -1250,14 +1284,28 @@
                         <p style="color: #b0b0b0;">• listenToMessages() - Real-time updates</p>
                         <p style="color: #b0b0b0;">• getUserInfo() - User profile sync</p>
                     </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
                         <p style="color: #FFD700;">⚠️ Connection Timeout (30s)</p>
                         <p style="color: #b0b0b0;">→ Auto-retry with exponential backoff</p>
-                        <p style="color: #FFD700;">⚠️ Invalid API Key</p>
+                        <p style="color: #b0b0b0;">→ Check frontend network connection</p>
+                        <p style="color: #b0b0b0;">→ Verify Stream API Key in environment</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Invalid API Key</p>
                         <p style="color: #b0b0b0;">→ Fallback to defensive initialization</p>
-                        <p style="color: #FFD700;">⚠️ Message Send Failure</p>
+                        <p style="color: #b0b0b0;">→ Verify key in EXPO_PUBLIC_STREAM_API_KEY</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Message Send Failure</p>
                         <p style="color: #b0b0b0;">→ Queue locally & retry when online</p>
+                        <p style="color: #b0b0b0;">→ Check browser DevTools > Network tab</p>
+                    </div>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
+                        <p style="color: #b0b0b0;">• Frontend: console.log() in utils/streamClient.ts</p>
+                        <p style="color: #b0b0b0;">• Monitor: Browser DevTools > Console tab</p>
+                        <p style="color: #b0b0b0;">• Test: Use Channel List screen to verify connection</p>
+                        <p style="color: #b0b0b0;">• View: Check chat for real-time message updates</p>
                     </div>
                 `
             },
@@ -1286,14 +1334,29 @@
                         <p style="color: #b0b0b0;">• UPDATE users SET permissions - Update perms</p>
                         <p style="color: #b0b0b0;">• Real-time subscriptions via websocket</p>
                     </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
                         <p style="color: #FFD700;">⚠️ Connection Failed</p>
                         <p style="color: #b0b0b0;">→ Log error, retry with backoff</p>
-                        <p style="color: #FFD700;">⚠️ Query Timeout (5s)</p>
+                        <p style="color: #b0b0b0;">→ Verify SUPABASE_URL & SERVICE_ROLE_KEY set</p>
+                        <p style="color: #b0b0b0;">→ Check Supabase project is active</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Query Timeout (5s)</p>
                         <p style="color: #b0b0b0;">→ Abort & return empty result</p>
-                        <p style="color: #FFD700;">⚠️ Auth Failed</p>
+                        <p style="color: #b0b0b0;">→ Monitor database performance metrics</p>
+                        <p style="color: #b0b0b0;">→ Check table indexes for slow queries</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Auth Failed</p>
                         <p style="color: #b0b0b0;">→ Clear token, redirect to login</p>
+                        <p style="color: #b0b0b0;">→ Verify user exists in database</p>
+                    </div>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
+                        <p style="color: #b0b0b0;">• Backend: Check server logs in console</p>
+                        <p style="color: #b0b0b0;">• Dashboard: View this status page (refreshes every session)</p>
+                        <p style="color: #b0b0b0;">• SQL: Use Supabase SQL Editor for direct queries</p>
+                        <p style="color: #b0b0b0;">• Monitor: Track API response times in Network tab</p>
                     </div>
                 `
             },
@@ -1320,14 +1383,28 @@
                         <p style="color: #b0b0b0;">GET /smtp/stats - Email delivery stats</p>
                         <p style="color: #b0b0b0;">Rate Limit: 500 emails/hour</p>
                     </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
-                        <p style="color: #FFD700;">⚠️ Rate Limit Exceeded</p>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
+                        <p style="color: #FFD700;">⚠️ Rate Limit Exceeded (500 emails/hour)</p>
                         <p style="color: #b0b0b0;">→ Queue email & retry after 60s</p>
-                        <p style="color: #FFD700;">⚠️ Invalid Email Address</p>
+                        <p style="color: #b0b0b0;">→ Monitor email send frequency</p>
+                        <p style="color: #b0b0b0;">→ Implement retry queue in backend</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Invalid Email Address</p>
                         <p style="color: #b0b0b0;">→ Validate & log error</p>
-                        <p style="color: #FFD700;">⚠️ SMTP Connection Failed</p>
-                        <p style="color: #b0b0b0;">→ Fallback to REST API</p>
+                        <p style="color: #b0b0b0;">→ Check user email format</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ SMTP Connection Failed</p>
+                        <p style="color: #b0b0b0;">→ Fallback to REST API (auto-enabled)</p>
+                        <p style="color: #b0b0b0;">→ Verify BREVO_API_KEY configured</p>
+                    </div>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
+                        <p style="color: #b0b0b0;">• Backend Logs: Check console for email send attempts</p>
+                        <p style="color: #b0b0b0;">• Brevo Dashboard: View sent/failed emails at app.brevo.com</p>
+                        <p style="color: #b0b0b0;">• Test Send: Use password reset feature to trigger email</p>
+                        <p style="color: #b0b0b0;">• Monitor: Check spam folders for email delivery issues</p>
                     </div>
                 `
             },
@@ -1356,14 +1433,30 @@
                         <p style="color: #b0b0b0;">• expo-location - GPS tracking</p>
                         <p style="color: #b0b0b0;">• expo-notifications - Push alerts</p>
                     </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
-                        <p style="color: #FFD700;">⚠️ App Crash</p>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
+                        <p style="color: #FFD700;">⚠️ App Crash / Unhandled Error</p>
                         <p style="color: #b0b0b0;">→ ErrorBoundary catches & offers restart</p>
-                        <p style="color: #FFD700;">⚠️ Module Load Failed</p>
-                        <p style="color: #b0b0b0;">→ Clear cache & hot reload</p>
-                        <p style="color: #FFD700;">⚠️ Permission Denied</p>
-                        <p style="color: #b0b0b0;">→ Request permission with fallback</p>
+                        <p style="color: #b0b0b0;">→ Frontend logs error details to console</p>
+                        <p style="color: #b0b0b0;">→ Click "Try Again" to restart safely</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Module Load Failed / HMR Issues</p>
+                        <p style="color: #b0b0b0;">→ Clear cache (Ctrl+Shift+R on web)</p>
+                        <p style="color: #b0b0b0;">→ Expo Go: Force restart the app</p>
+                        <p style="color: #b0b0b0;">→ Check dependency versions in package.json</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Permission Denied</p>
+                        <p style="color: #b0b0b0;">→ Request permission with graceful fallback</p>
+                        <p style="color: #b0b0b0;">→ Location/camera disabled: show UI message</p>
+                    </div>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Debug Tools & Performance:</p>
+                        <p style="color: #b0b0b0;">• Console: Browser DevTools > Console tab shows all errors</p>
+                        <p style="color: #b0b0b0;">• Network: DevTools > Network monitors API calls & response times</p>
+                        <p style="color: #b0b0b0;">• Performance: React DevTools Profiler shows render performance</p>
+                        <p style="color: #b0b0b0;">• HMR Status: Check if hot reload is working (Shows in console)</p>
+                        <p style="color: #b0b0b0;">• Frontend Logs: Available at app startup & stored in AsyncStorage</p>
                     </div>
                 `
             }
