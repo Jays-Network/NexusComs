@@ -6,6 +6,10 @@ import { StreamChat } from 'stream-chat';
 
 const STREAM_API_KEY = process.env.EXPO_PUBLIC_STREAM_API_KEY || '';
 
+console.log('🔍 [streamClient.ts] Initializing Stream Chat client...');
+console.log('📌 EXPO_PUBLIC_STREAM_API_KEY exists:', !!STREAM_API_KEY);
+console.log('📌 EXPO_PUBLIC_STREAM_API_KEY length:', STREAM_API_KEY.length);
+
 // Validate API key more strictly
 const isValidStreamKey = (key: string): boolean => {
   if (!key || typeof key !== 'string') return false;
@@ -18,9 +22,12 @@ const isValidStreamKey = (key: string): boolean => {
 
 const STREAM_API_KEY_VALID = isValidStreamKey(STREAM_API_KEY);
 
+console.log('✅ API Key validation result:', STREAM_API_KEY_VALID);
+
 if (!STREAM_API_KEY_VALID) {
   console.error('❌ CRITICAL: EXPO_PUBLIC_STREAM_API_KEY is not configured properly.');
-  console.error('Stream Chat features will be unavailable.');
+  console.error('⚠️ Stream Chat features will be unavailable.');
+  console.error('📝 To fix: Add a valid EXPO_PUBLIC_STREAM_API_KEY to your Replit Secrets');
 }
 
 // Singleton instances
@@ -29,22 +36,29 @@ let chatClient: StreamChat | null = null;
 // let videoClient: StreamVideoClient | null = null;
 
 export const getChatClient = () => {
+  console.log('📞 getChatClient() called, STREAM_API_KEY_VALID:', STREAM_API_KEY_VALID);
+  
   if (!STREAM_API_KEY_VALID) {
     console.error('❌ Cannot create StreamChat client: STREAM_API_KEY is not configured');
     return null;
   }
   if (!chatClient) {
     try {
+      console.log('🚀 Creating new StreamChat instance...');
       // Wrap in try-catch to prevent crashes from malformed keys
       if (!STREAM_API_KEY || STREAM_API_KEY.length === 0) {
         throw new Error('Empty API key');
       }
       chatClient = StreamChat.getInstance(STREAM_API_KEY);
+      console.log('✅ StreamChat instance created successfully');
     } catch (error) {
       console.error('❌ Failed to initialize StreamChat:', error);
+      console.error('📋 Error details:', JSON.stringify(error));
       chatClient = null;
       return null;
     }
+  } else {
+    console.log('✅ Using existing StreamChat instance');
   }
   return chatClient;
 };
@@ -63,13 +77,16 @@ export const connectStreamUser = async (
   userToken: string,
   userImage?: string
 ) => {
+  console.log('🔗 connectStreamUser() called for:', userId);
   const client = getChatClient();
   
   if (!client) {
+    console.error('❌ Stream client not initialized: EXPO_PUBLIC_STREAM_API_KEY is missing');
     throw new Error('Stream client not initialized: EXPO_PUBLIC_STREAM_API_KEY is missing');
   }
   
   try {
+    console.log('🔐 Connecting Stream user...');
     await client.connectUser(
       {
         id: userId,
@@ -79,10 +96,11 @@ export const connectStreamUser = async (
       userToken
     );
     
-    console.log('Stream chat user connected:', userId);
+    console.log('✅ Stream chat user connected:', userId);
     return client;
   } catch (error) {
-    console.error('Failed to connect Stream user:', error);
+    console.error('❌ Failed to connect Stream user:', error);
+    console.error('📋 Error details:', JSON.stringify(error));
     throw error;
   }
 };

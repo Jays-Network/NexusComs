@@ -38,17 +38,26 @@ function AppContent() {
   const { theme } = useTheme();
 
   useEffect(() => {
+    console.log('📱 [App.tsx] AppContent state change:');
+    console.log('  - isLoading:', isLoading);
+    console.log('  - user:', user ? `${user.name} (${user.id})` : null);
+    console.log('  - chatClient:', !!chatClient);
+    console.log('  - theme:', !!theme);
+
     if (!isLoading) {
+      console.log('🎬 Hiding splash screen...');
       SplashScreen.hideAsync();
     }
-  }, [isLoading]);
+  }, [isLoading, user, chatClient, theme]);
 
   if (isLoading || !theme) {
+    console.log('⏳ Loading... isLoading:', isLoading, 'theme:', !!theme);
     return null;
   }
 
   // Show login screen if no user
   if (!user) {
+    console.log('📝 No user - showing login screen');
     return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -61,6 +70,7 @@ function AppContent() {
 
   // If no chat client, show error (this should not happen if user is logged in)
   if (!chatClient) {
+    console.log('⚠️ User logged in but no chat client - showing login screen');
     return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -72,6 +82,7 @@ function AppContent() {
   }
 
   // Show main app with Stream Chat provider
+  console.log('✅ Rendering main app for user:', user.name);
   return (
     <OverlayProvider
       value={{
@@ -96,6 +107,7 @@ function AppContent() {
 }
 
 export default function App() {
+  console.log('🚀 App.tsx: Application starting...');
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
