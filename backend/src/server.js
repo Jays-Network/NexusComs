@@ -1742,39 +1742,72 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Database tables check
+// Comprehensive database tables check
 app.get("/api/db-check", async (req, res) => {
   try {
     const tables = {};
-    
-    // Check accounts table
-    const { data: accounts, error: accountsError } = await supabase
-      .from("accounts")
-      .select("id")
-      .limit(1);
-    tables.accounts = accountsError ? { error: accountsError.message, code: accountsError.code } : { exists: true, count: accounts?.length || 0 };
-    
-    // Check account_channels table
-    const { data: channels, error: channelsError } = await supabase
-      .from("account_channels")
-      .select("id")
-      .limit(1);
-    tables.account_channels = channelsError ? { error: channelsError.message, code: channelsError.code } : { exists: true, count: channels?.length || 0 };
-    
-    // Check users table has account_id column
-    const { data: users, error: usersError } = await supabase
-      .from("users")
-      .select("id, account_id")
-      .limit(1);
-    tables.users_account_id = usersError ? { error: usersError.message, code: usersError.code } : { exists: true, has_account_id: users?.length > 0 ? 'account_id' in users[0] : 'unknown' };
-    
+    const checkTable = async (tableName, selectFields = "id") => {
+      const { data, error, count } = await supabase
+        .from(tableName)
+        .select(selectFields, { count: 'exact', head: false })
+        .limit(1);
+      if (error) {
+        return { exists: false, error: error.message, code: error.code };
+      }
+      return { exists: true, accessible: true };
+    };
+
+    // Get actual row counts for each table
+    const getCount = async (tableName) => {
+      const { count, error } = await supabase
+        .from(tableName)
+        .select("*", { count: 'exact', head: true });
+      return error ? 0 : count;
+    };
+
+    // Core user management
+    const usersCheck = await checkTable("users", "id, email, name, role, account_id, stream_id");
+    tables.users = { ...usersCheck, rows: await getCount("users") };
+
+    // Groups and messaging
+    const groupsCheck = await checkTable("groups", "id, name, description");
+    tables.groups = { ...groupsCheck, rows: await getCount("groups") };
+
+    const groupMembersCheck = await checkTable("group_members", "id, group_id, user_id");
+    tables.group_members = { ...groupMembersCheck, rows: await getCount("group_members") };
+
+    // Emergency groups
+    const emergencyGroupsCheck = await checkTable("emergency_groups", "id, name, description");
+    tables.emergency_groups = { ...emergencyGroupsCheck, rows: await getCount("emergency_groups") };
+
+    const emergencyMembersCheck = await checkTable("emergency_group_members", "id, emergency_group_id, user_id");
+    tables.emergency_group_members = { ...emergencyMembersCheck, rows: await getCount("emergency_group_members") };
+
+    // Accounts hierarchy
+    const accountsCheck = await checkTable("accounts", "id, name, parent_account_id");
+    tables.accounts = { ...accountsCheck, rows: await getCount("accounts") };
+
+    const accountChannelsCheck = await checkTable("account_channels", "id, account_id, channel_id");
+    tables.account_channels = { ...accountChannelsCheck, rows: await getCount("account_channels") };
+
+    // Calculate summary
+    const allTables = Object.values(tables);
+    const existingTables = allTables.filter(t => t.exists).length;
+    const missingTables = allTables.filter(t => !t.exists);
+
     res.json({ 
-      status: "ok",
+      status: missingTables.length === 0 ? "ok" : "incomplete",
       supabase_url: process.env.SUPABASE_URL ? "configured" : "missing",
+      summary: {
+        total_tables: allTables.length,
+        existing: existingTables,
+        missing: missingTables.length,
+        missing_tables: missingTables.length > 0 ? Object.keys(tables).filter(k => !tables[k].exists) : []
+      },
       tables 
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 
