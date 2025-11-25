@@ -510,6 +510,11 @@ app.post("/api/auth/stream-token", async (req, res) => {
   }
 });
 
+// Root endpoint - API status
+app.get("/", (req, res) => {
+  res.json({ status: "API running", service: "NexusComs Backend" });
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({
@@ -524,4 +529,5 @@ app.listen(PORT, "0.0.0.0", () => {
     `✓ Supabase: ${process.env.SUPABASE_URL ? "Configured" : "Missing"}`,
   );
   console.log(`✓ Brevo Email: ${process.env.BREVO_API_KEY ? "Configured" : "Missing"}`);
+  console.log(`✓ API Endpoints available at http://localhost:${PORT}`);
 });
