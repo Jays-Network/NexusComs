@@ -6,8 +6,25 @@ const jwt = require("jsonwebtoken");
 const { createClient } = require("@supabase/supabase-js");
 const bcrypt = require("bcrypt");
 const https = require("https");
+const { StreamChat } = require("stream-chat");
 
 dotenv.config();
+
+// Initialize Stream Chat server client for token generation
+let streamServerClient = null;
+if (process.env.STREAM_API_KEY && process.env.STREAM_API_SECRET) {
+  try {
+    streamServerClient = StreamChat.getInstance(
+      process.env.STREAM_API_KEY,
+      process.env.STREAM_API_SECRET
+    );
+    console.log("✓ Stream Chat server client initialized");
+  } catch (error) {
+    console.error("✗ Failed to initialize Stream Chat:", error.message);
+  }
+} else {
+  console.error("✗ STREAM_API_KEY or STREAM_API_SECRET not set - Stream tokens will not work");
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -691,7 +708,7 @@ app.delete("/api/users/:id", sessionMiddleware, async (req, res) => {
 
 // ============= STREAM TOKEN ENDPOINT =============
 
-// Legacy endpoint for Stream token generation
+// Stream token generation endpoint
 app.post("/api/auth/stream-token", async (req, res) => {
   try {
     const { userId, userName, userImage } = req.body;
@@ -702,18 +719,43 @@ app.post("/api/auth/stream-token", async (req, res) => {
         .json({ error: "userId and userName are required" });
     }
 
+    // Sanitize user ID to be Stream-compatible (lowercase, only alphanumeric, underscore, dash)
     const sanitizedUserId = userId.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+    console.log(`[Stream] Generating token for user: ${sanitizedUserId}`);
 
-    // Note: Stream SDK integration would go here
-    // For now, return a mock token structure
+    // Check if Stream client is available
+    if (!streamServerClient) {
+      console.error("[Stream] Server client not initialized");
+      return res.status(500).json({ 
+        error: "Stream Chat not configured - STREAM_API_KEY or STREAM_API_SECRET missing" 
+      });
+    }
+
+    // Generate real Stream token using the server SDK
+    const token = streamServerClient.createToken(sanitizedUserId);
+    console.log(`[Stream] Token generated successfully for: ${sanitizedUserId}`);
+
+    // Optionally upsert the user to Stream (creates or updates)
+    try {
+      await streamServerClient.upsertUser({
+        id: sanitizedUserId,
+        name: userName,
+        image: userImage || undefined,
+      });
+      console.log(`[Stream] User upserted: ${sanitizedUserId}`);
+    } catch (upsertError) {
+      console.warn(`[Stream] User upsert warning: ${upsertError.message}`);
+      // Continue even if upsert fails - token is still valid
+    }
+
     res.json({
-      token: "mock-token-" + sanitizedUserId,
+      token: token,
       userId: sanitizedUserId,
-      apiKey: process.env.STREAM_API_KEY || "mock-key",
+      apiKey: process.env.STREAM_API_KEY,
     });
   } catch (error) {
     console.error("Stream token error:", error);
-    res.status(500).json({ error: "Failed to generate token" });
+    res.status(500).json({ error: "Failed to generate token: " + error.message });
   }
 });
 
