@@ -1742,6 +1742,42 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Database tables check
+app.get("/api/db-check", async (req, res) => {
+  try {
+    const tables = {};
+    
+    // Check accounts table
+    const { data: accounts, error: accountsError } = await supabase
+      .from("accounts")
+      .select("id")
+      .limit(1);
+    tables.accounts = accountsError ? { error: accountsError.message, code: accountsError.code } : { exists: true, count: accounts?.length || 0 };
+    
+    // Check account_channels table
+    const { data: channels, error: channelsError } = await supabase
+      .from("account_channels")
+      .select("id")
+      .limit(1);
+    tables.account_channels = channelsError ? { error: channelsError.message, code: channelsError.code } : { exists: true, count: channels?.length || 0 };
+    
+    // Check users table has account_id column
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("id, account_id")
+      .limit(1);
+    tables.users_account_id = usersError ? { error: usersError.message, code: usersError.code } : { exists: true, has_account_id: users?.length > 0 ? 'account_id' in users[0] : 'unknown' };
+    
+    res.json({ 
+      status: "ok",
+      supabase_url: process.env.SUPABASE_URL ? "configured" : "missing",
+      tables 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✓ Hybrid API & CMS server running on port ${PORT}`);
   console.log(
