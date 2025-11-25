@@ -616,6 +616,7 @@
                     <div class="nav-item" onclick="switchSection('logs-section')">Logs</div>
                     <div class="nav-item" onclick="switchSection('users')">Users</div>
                     <div class="nav-item" onclick="switchSection('groups')">Groups & Subgroups</div>
+                    <div class="nav-item" onclick="switchSection('emergency-groups')">Emergency Groups</div>
                     <div class="nav-item" onclick="switchSection('tracking')">Tracking</div>
                 </div>
             </div>
@@ -864,6 +865,34 @@
                                 </thead>
                                 <tbody>
                                     <tr><td colspan="6" class="loading">No groups found. Create your first group!</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EMERGENCY GROUPS SECTION -->
+                <div id="emergency-groups" class="section">
+                    <div class="section-content">
+                        <div class="toolbar">
+                            <button class="add-user-btn" onclick="">+ Add Emergency Group</button>
+                            <input type="text" class="search-box" placeholder="Search emergency groups...">
+                        </div>
+                        <div class="table-container" style="margin-top: 20px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Group Name</th>
+                                        <th>Type</th>
+                                        <th>Members</th>
+                                        <th>Alert Protocol</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="7" class="loading">No emergency groups found. Create your first emergency group!</td></tr>
                                 </tbody>
                             </table>
                         </div>

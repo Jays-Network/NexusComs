@@ -5,7 +5,6 @@ import { BlurView } from "expo-blur";
 import { Platform, StyleSheet } from "react-native";
 import ChatsStackNavigator from "@/navigation/ChatsStackNavigator";
 import EmergencyStackNavigator from "@/navigation/EmergencyStackNavigator";
-import EmergencyGroupsStackNavigator from "@/navigation/EmergencyGroupsStackNavigator";
 import SettingsStackNavigator from "@/navigation/SettingsStackNavigator";
 import ContactsStackNavigator from "@/navigation/ContactsStackNavigator";
 import { useTheme } from "@/hooks/useTheme";
@@ -14,7 +13,6 @@ import { Colors } from "@/constants/theme";
 export type MainTabParamList = {
   ChatsTab: undefined;
   AlertsTab: undefined;
-  EmergencyGroupsTab: undefined;
   ContactsTab: undefined;
   SettingsTab: undefined;
 };
@@ -67,17 +65,6 @@ export default function MainTabNavigator() {
           title: "Alerts",
           tabBarIcon: ({ color, size }) => (
             <Feather name="alert-octagon" size={size} color={color} />
-          ),
-          tabBarActiveTintColor: Colors.light.emergency,
-        }}
-      />
-      <Tab.Screen
-        name="EmergencyGroupsTab"
-        component={EmergencyGroupsStackNavigator}
-        options={{
-          title: "Emergency",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="lock" size={size} color={color} />
           ),
           tabBarActiveTintColor: Colors.light.emergency,
         }}
