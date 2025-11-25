@@ -105,19 +105,19 @@ export const subscribeToUserById = (userId: string, callback: (payload: any) => 
     console.warn('⚠️ Cannot subscribe to user - Supabase not configured');
     return null;
   }
-  console.log('🔔 Subscribing to user changes:', userId);
+  console.log('🔔 Subscribing to user changes (stream_id):', userId);
   return client
-    .channel(`public:users:id=eq.${userId}`)
+    .channel(`public:users:stream_id=eq.${userId}`)
     .on(
       'postgres_changes',
       {
         event: 'UPDATE',
         schema: 'public',
         table: 'users',
-        filter: `id=eq.${userId}`,
+        filter: `stream_id=eq.${userId}`,
       },
       (payload) => {
-        console.log('📡 User updated:', userId);
+        console.log('📡 User updated (stream_id):', userId);
         callback(payload);
       }
     )
@@ -126,25 +126,30 @@ export const subscribeToUserById = (userId: string, callback: (payload: any) => 
     });
 };
 
-export const fetchUserFromSupabase = async (userId: string) => {
+export const fetchUserFromSupabase = async (streamId: string) => {
   const client = getSupabaseClient();
   if (!client) {
     console.warn('⚠️ Cannot fetch user - Supabase not configured');
     return null;
   }
   try {
+    console.log('🔍 Fetching user by stream_id:', streamId);
     const { data, error } = await client
       .from('users')
       .select('*')
-      .eq('id', userId)
+      .eq('stream_id', streamId)
       .single();
 
     if (error) {
-      console.error('❌ Error fetching user from Supabase:', error.message);
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ No user found with stream_id:', streamId);
+      } else {
+        console.error('❌ Error fetching user from Supabase:', error.message);
+      }
       return null;
     }
 
-    console.log('✅ User fetched from Supabase:', userId);
+    console.log('✅ User fetched from Supabase by stream_id:', streamId);
     return data;
   } catch (err) {
     console.error('❌ Failed to fetch user:', err);
@@ -177,7 +182,7 @@ export const fetchAllUsersFromSupabase = async () => {
   }
 };
 
-export const updateUserInSupabase = async (userId: string, updates: Record<string, any>) => {
+export const updateUserInSupabase = async (streamId: string, updates: Record<string, any>) => {
   const client = getSupabaseClient();
   if (!client) {
     console.warn('⚠️ Cannot update user - Supabase not configured');
@@ -187,7 +192,7 @@ export const updateUserInSupabase = async (userId: string, updates: Record<strin
     const { data, error } = await client
       .from('users')
       .update(updates)
-      .eq('id', userId)
+      .eq('stream_id', streamId)
       .select()
       .single();
 
@@ -196,7 +201,7 @@ export const updateUserInSupabase = async (userId: string, updates: Record<strin
       return null;
     }
 
-    console.log('✅ User updated in Supabase:', userId);
+    console.log('✅ User updated in Supabase by stream_id:', streamId);
     return data;
   } catch (err) {
     console.error('❌ Failed to update user:', err);

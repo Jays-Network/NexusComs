@@ -10,6 +10,7 @@ import {
 
 interface SyncedUser {
   id: string;
+  stream_id: string;
   username: string;
   email: string;
   account_name?: string;
