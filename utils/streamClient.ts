@@ -41,7 +41,7 @@ if (STREAM_API_KEY_VALID) {
 // import { StreamVideoClient } from '@stream-io/video-react-native-sdk';
 
 // Singleton instances
-let chatClient: StreamChat | null = null;
+let chatClient: any = null;
 // Video client disabled for Expo Go
 // let videoClient: StreamVideoClient | null = null;
 
