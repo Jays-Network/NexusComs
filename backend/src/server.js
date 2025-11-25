@@ -1271,6 +1271,469 @@ app.get("/api/users/available", sessionMiddleware, async (req, res) => {
   }
 });
 
+// ============= ACCOUNTS ENDPOINTS =============
+
+// Get all accounts with hierarchy info
+app.get("/api/accounts", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: accounts, error } = await supabase
+      .from("accounts")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Fetch accounts error:", error);
+      return res.status(500).json({ error: "Failed to fetch accounts" });
+    }
+
+    // Build hierarchy tree
+    const accountMap = {};
+    const rootAccounts = [];
+
+    (accounts || []).forEach(account => {
+      accountMap[account.id] = { ...account, children: [] };
+    });
+
+    (accounts || []).forEach(account => {
+      if (account.parent_account_id && accountMap[account.parent_account_id]) {
+        accountMap[account.parent_account_id].children.push(accountMap[account.id]);
+      } else {
+        rootAccounts.push(accountMap[account.id]);
+      }
+    });
+
+    res.json({ accounts: accounts || [], tree: rootAccounts });
+  } catch (error) {
+    console.error("Fetch accounts error:", error);
+    res.status(500).json({ error: "Failed to fetch accounts" });
+  }
+});
+
+// Get single account with details
+app.get("/api/accounts/:id", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get account
+    const { data: account, error: accountError } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (accountError || !account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    // Get assigned users
+    const { data: users } = await supabase
+      .from("users")
+      .select("id, username, email, billing_plan")
+      .eq("account_id", id);
+
+    // Get assigned channels
+    const { data: channelAssignments } = await supabase
+      .from("account_channels")
+      .select("*")
+      .eq("account_id", id);
+
+    // Get child accounts
+    const { data: childAccounts } = await supabase
+      .from("accounts")
+      .select("id, name")
+      .eq("parent_account_id", id);
+
+    res.json({
+      ...account,
+      users: users || [],
+      channels: channelAssignments || [],
+      childAccounts: childAccounts || []
+    });
+  } catch (error) {
+    console.error("Fetch account error:", error);
+    res.status(500).json({ error: "Failed to fetch account" });
+  }
+});
+
+// Create new account
+app.post("/api/accounts", sessionMiddleware, async (req, res) => {
+  try {
+    const { name, description, parent_account_id, billing_plan } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: "Account name is required" });
+    }
+
+    // Check if parent account exists
+    if (parent_account_id) {
+      const { data: parentAccount } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("id", parent_account_id)
+        .single();
+
+      if (!parentAccount) {
+        return res.status(400).json({ error: "Parent account not found" });
+      }
+    }
+
+    const { data: account, error } = await supabase
+      .from("accounts")
+      .insert({
+        name,
+        description: description || null,
+        parent_account_id: parent_account_id || null,
+        billing_plan: billing_plan || 'basic',
+        created_by: req.user.userId,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Create account error:", error);
+      return res.status(500).json({ error: "Failed to create account" });
+    }
+
+    addLog("INFO", "Accounts", `Account created: ${name}`);
+    res.status(201).json(account);
+  } catch (error) {
+    console.error("Create account error:", error);
+    res.status(500).json({ error: "Failed to create account" });
+  }
+});
+
+// Update account
+app.put("/api/accounts/:id", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, parent_account_id, billing_plan } = req.body;
+
+    // Prevent setting parent to self or creating cycles
+    if (parent_account_id === parseInt(id)) {
+      return res.status(400).json({ error: "Account cannot be its own parent" });
+    }
+
+    // Check for cycles in hierarchy
+    if (parent_account_id) {
+      const { data: descendants } = await supabase
+        .from("accounts")
+        .select("id, parent_account_id");
+      
+      // Simple cycle detection
+      const isDescendant = (checkId, targetId, accounts) => {
+        const account = accounts.find(a => a.id === checkId);
+        if (!account) return false;
+        if (account.parent_account_id === targetId) return true;
+        if (account.parent_account_id) {
+          return isDescendant(account.parent_account_id, targetId, accounts);
+        }
+        return false;
+      };
+
+      if (isDescendant(parent_account_id, parseInt(id), descendants || [])) {
+        return res.status(400).json({ error: "Cannot create circular hierarchy" });
+      }
+    }
+
+    const updateData = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (parent_account_id !== undefined) updateData.parent_account_id = parent_account_id;
+    if (billing_plan !== undefined) updateData.billing_plan = billing_plan;
+
+    const { data: account, error } = await supabase
+      .from("accounts")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Update account error:", error);
+      return res.status(500).json({ error: "Failed to update account" });
+    }
+
+    addLog("INFO", "Accounts", `Account updated: ${account.name}`);
+    res.json(account);
+  } catch (error) {
+    console.error("Update account error:", error);
+    res.status(500).json({ error: "Failed to update account" });
+  }
+});
+
+// Delete account
+app.delete("/api/accounts/:id", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if account has children
+    const { data: children } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("parent_account_id", id);
+
+    if (children && children.length > 0) {
+      return res.status(400).json({ 
+        error: "Cannot delete account with child accounts. Delete or reassign children first." 
+      });
+    }
+
+    // Remove account_id from users
+    await supabase
+      .from("users")
+      .update({ account_id: null })
+      .eq("account_id", id);
+
+    // Delete channel assignments
+    await supabase
+      .from("account_channels")
+      .delete()
+      .eq("account_id", id);
+
+    // Delete account
+    const { error } = await supabase
+      .from("accounts")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Delete account error:", error);
+      return res.status(500).json({ error: "Failed to delete account" });
+    }
+
+    addLog("INFO", "Accounts", `Account deleted: ${id}`);
+    res.json({ message: "Account deleted successfully" });
+  } catch (error) {
+    console.error("Delete account error:", error);
+    res.status(500).json({ error: "Failed to delete account" });
+  }
+});
+
+// Assign users to account
+app.post("/api/accounts/:id/users", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userIds } = req.body;
+
+    if (!userIds || !Array.isArray(userIds)) {
+      return res.status(400).json({ error: "userIds array is required" });
+    }
+
+    // Update users to belong to this account
+    const { error } = await supabase
+      .from("users")
+      .update({ account_id: parseInt(id) })
+      .in("id", userIds);
+
+    if (error) {
+      console.error("Assign users error:", error);
+      return res.status(500).json({ error: "Failed to assign users" });
+    }
+
+    addLog("INFO", "Accounts", `Assigned ${userIds.length} users to account ${id}`);
+    res.json({ message: "Users assigned successfully" });
+  } catch (error) {
+    console.error("Assign users error:", error);
+    res.status(500).json({ error: "Failed to assign users" });
+  }
+});
+
+// Remove user from account
+app.delete("/api/accounts/:id/users/:userId", sessionMiddleware, async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+
+    const { error } = await supabase
+      .from("users")
+      .update({ account_id: null })
+      .eq("id", userId)
+      .eq("account_id", id);
+
+    if (error) {
+      console.error("Remove user error:", error);
+      return res.status(500).json({ error: "Failed to remove user" });
+    }
+
+    addLog("INFO", "Accounts", `Removed user ${userId} from account ${id}`);
+    res.json({ message: "User removed from account" });
+  } catch (error) {
+    console.error("Remove user error:", error);
+    res.status(500).json({ error: "Failed to remove user" });
+  }
+});
+
+// Assign channels to account
+app.post("/api/accounts/:id/channels", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { channelIds, accessLevel = 'read_write' } = req.body;
+
+    if (!channelIds || !Array.isArray(channelIds)) {
+      return res.status(400).json({ error: "channelIds array is required" });
+    }
+
+    // Insert channel assignments
+    const assignments = channelIds.map(channelId => ({
+      account_id: parseInt(id),
+      channel_id: channelId,
+      access_level: accessLevel,
+      created_at: new Date().toISOString()
+    }));
+
+    const { error } = await supabase
+      .from("account_channels")
+      .upsert(assignments, { onConflict: 'account_id,channel_id' });
+
+    if (error) {
+      console.error("Assign channels error:", error);
+      return res.status(500).json({ error: "Failed to assign channels" });
+    }
+
+    // Sync with Stream - add all account users to these channels
+    if (streamServerClient) {
+      try {
+        const { data: accountUsers } = await supabase
+          .from("users")
+          .select("stream_id")
+          .eq("account_id", id);
+
+        const streamUserIds = (accountUsers || [])
+          .map(u => u.stream_id)
+          .filter(id => id != null);
+
+        for (const channelId of channelIds) {
+          if (streamUserIds.length > 0) {
+            await streamServerClient.addChannelMembers(
+              `team:${channelId}`,
+              streamUserIds
+            );
+          }
+        }
+        addLog("INFO", "Stream", `Synced ${channelIds.length} channels with account ${id} users`);
+      } catch (streamError) {
+        console.warn("Stream sync warning:", streamError.message);
+        addLog("WARN", "Stream", `Could not sync channels with Stream`, streamError.message);
+      }
+    }
+
+    addLog("INFO", "Accounts", `Assigned ${channelIds.length} channels to account ${id}`);
+    res.json({ message: "Channels assigned successfully" });
+  } catch (error) {
+    console.error("Assign channels error:", error);
+    res.status(500).json({ error: "Failed to assign channels" });
+  }
+});
+
+// Remove channel from account
+app.delete("/api/accounts/:id/channels/:channelId", sessionMiddleware, async (req, res) => {
+  try {
+    const { id, channelId } = req.params;
+
+    const { error } = await supabase
+      .from("account_channels")
+      .delete()
+      .eq("account_id", id)
+      .eq("channel_id", channelId);
+
+    if (error) {
+      console.error("Remove channel error:", error);
+      return res.status(500).json({ error: "Failed to remove channel" });
+    }
+
+    addLog("INFO", "Accounts", `Removed channel ${channelId} from account ${id}`);
+    res.json({ message: "Channel removed from account" });
+  } catch (error) {
+    console.error("Remove channel error:", error);
+    res.status(500).json({ error: "Failed to remove channel" });
+  }
+});
+
+// Get effective channels for account (including inherited from parents)
+app.get("/api/accounts/:id/effective-channels", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get account and all ancestors
+    const getAncestors = async (accountId, ancestors = []) => {
+      const { data: account } = await supabase
+        .from("accounts")
+        .select("id, name, parent_account_id")
+        .eq("id", accountId)
+        .single();
+
+      if (account) {
+        ancestors.push(account);
+        if (account.parent_account_id) {
+          await getAncestors(account.parent_account_id, ancestors);
+        }
+      }
+      return ancestors;
+    };
+
+    const ancestors = await getAncestors(parseInt(id));
+    const accountIds = ancestors.map(a => a.id);
+
+    // Get all channels assigned to this account and ancestors
+    const { data: channelAssignments } = await supabase
+      .from("account_channels")
+      .select("*")
+      .in("account_id", accountIds);
+
+    // Mark inherited channels
+    const effectiveChannels = (channelAssignments || []).map(ch => ({
+      ...ch,
+      inherited: ch.account_id !== parseInt(id),
+      inheritedFrom: ch.account_id !== parseInt(id) 
+        ? ancestors.find(a => a.id === ch.account_id)?.name 
+        : null
+    }));
+
+    res.json(effectiveChannels);
+  } catch (error) {
+    console.error("Get effective channels error:", error);
+    res.status(500).json({ error: "Failed to get effective channels" });
+  }
+});
+
+// Get all available channels (from groups)
+app.get("/api/channels", sessionMiddleware, async (req, res) => {
+  try {
+    // Get channels from groups
+    const { data: groups } = await supabase
+      .from("groups")
+      .select("id, name, description");
+
+    // Get channels from emergency groups
+    const { data: emergencyGroups } = await supabase
+      .from("emergency_groups")
+      .select("id, name, description");
+
+    const channels = [
+      ...(groups || []).map(g => ({ 
+        id: `group-${g.id}`, 
+        name: g.name, 
+        description: g.description,
+        type: 'group' 
+      })),
+      ...(emergencyGroups || []).map(g => ({ 
+        id: `emergency-${g.id}`, 
+        name: g.name, 
+        description: g.description,
+        type: 'emergency' 
+      }))
+    ];
+
+    res.json(channels);
+  } catch (error) {
+    console.error("Get channels error:", error);
+    res.status(500).json({ error: "Failed to get channels" });
+  }
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({
