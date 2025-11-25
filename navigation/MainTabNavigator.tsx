@@ -1,129 +1,107 @@
-import { View, StyleSheet, Text, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ChannelList } from 'stream-chat-expo';
-import { Channel } from 'stream-chat';
-import { Feather } from '@expo/vector-icons';
-import { useTheme } from '@/hooks/useTheme';
-import { useStreamAuth } from '@/utils/streamAuth';
-import { ChatsStackParamList } from '@/navigation/ChatsStackNavigator';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { Platform, StyleSheet } from "react-native";
+import ChatsStackNavigator from "@/navigation/ChatsStackNavigator";
+import EmergencyStackNavigator from "@/navigation/EmergencyStackNavigator";
+import EmergencyGroupsStackNavigator from "@/navigation/EmergencyGroupsStackNavigator";
+import SettingsStackNavigator from "@/navigation/SettingsStackNavigator";
+import ContactsStackNavigator from "@/navigation/ContactsStackNavigator";
+import { useTheme } from "@/hooks/useTheme";
+import { Colors } from "@/constants/theme";
 
-type NavigationProp = NativeStackNavigationProp<ChatsStackParamList>;
-
-const EmptyChannelList = () => {
-  const { theme } = useTheme();
-  
-  return (
-    <View style={styles.emptyContainer}>
-      <Feather name="alert-octagon" size={64} color={theme.emergency} />
-      <Text style={[styles.emptyTitle, { color: theme.text }]}>
-        No emergency groups
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-        Emergency groups will appear here
-      </Text>
-    </View>
-  );
+export type MainTabParamList = {
+  ChatsTab: undefined;
+  AlertsTab: undefined;
+  EmergencyGroupsTab: undefined;
+  ContactsTab: undefined;
+  SettingsTab: undefined;
 };
 
-const LoadingErrorIndicator = () => {
-  const { theme } = useTheme();
-  const { logout } = useStreamAuth();
-  
-  const handleRetry = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.warn('Logout error:', error);
-    }
-  };
-  
-  return (
-    <View style={styles.emptyContainer}>
-      <Feather name="alert-circle" size={64} color={theme.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: theme.text }]}>
-        No emergency groups available
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-        You are not a member of any emergency groups yet. Contact your administrator to be added.
-      </Text>
-      <Pressable 
-        style={[styles.retryButton, { backgroundColor: theme.primary }]}
-        onPress={handleRetry}
-      >
-        <Text style={[styles.retryButtonText, { color: theme.buttonText }]}>
-          Log Out and Try Again
-        </Text>
-      </Pressable>
-    </View>
-  );
-};
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
-export default function EmergencyGroupsScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const { theme } = useTheme();
-  const { user } = useStreamAuth();
-
-  const handleChannelSelect = (channel: Channel) => {
-    const channelId = channel.id ?? channel.cid ?? '';
-    const channelName = (channel.data as { name?: string })?.name || 'Chat';
-    
-    navigation.navigate('ChatRoom', {
-      channelId,
-      channelName,
-    });
-  };
-
-  if (!user) {
-    return null;
-  }
+export default function MainTabNavigator() {
+  const { theme, isDark } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
-      <ChannelList
-        filters={{
-          members: { $in: [user.id] },
-          type: 'emergency',
+    <Tab.Navigator
+      initialRouteName="ChatsTab"
+      screenOptions={{
+        tabBarActiveTintColor: theme.tabIconSelected,
+        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarStyle: {
+          position: "absolute",
+          backgroundColor: Platform.select({
+            ios: "transparent",
+            android: theme.backgroundRoot,
+          }),
+          borderTopWidth: 0,
+          elevation: 0,
+        },
+        tabBarBackground: () =>
+          Platform.OS === "ios" ? (
+            <BlurView
+              intensity={100}
+              tint={isDark ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null,
+        headerShown: false,
+      }}
+    >
+      <Tab.Screen
+        name="ChatsTab"
+        component={ChatsStackNavigator}
+        options={{
+          title: "Chats",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="message-circle" size={size} color={color} />
+          ),
         }}
-        sort={{ last_message_at: -1 }}
-        onSelect={handleChannelSelect}
-        EmptyStateIndicator={EmptyChannelList}
-        LoadingErrorIndicator={LoadingErrorIndicator}
       />
-    </View>
+      <Tab.Screen
+        name="AlertsTab"
+        component={EmergencyStackNavigator}
+        options={{
+          title: "Alerts",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="alert-octagon" size={size} color={color} />
+          ),
+          tabBarActiveTintColor: Colors.light.emergency,
+        }}
+      />
+      <Tab.Screen
+        name="EmergencyGroupsTab"
+        component={EmergencyGroupsStackNavigator}
+        options={{
+          title: "Emergency",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="lock" size={size} color={color} />
+          ),
+          tabBarActiveTintColor: Colors.light.emergency,
+        }}
+      />
+      <Tab.Screen
+        name="ContactsTab"
+        component={ContactsStackNavigator}
+        options={{
+          title: "Contacts",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="SettingsTab"
+        component={SettingsStackNavigator}
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="settings" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  retryButton: {
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
