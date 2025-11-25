@@ -1,21 +1,54 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client for frontend
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-// Basic validation: check that URL looks valid and key exists
-const isUrlValid = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseUrl.includes('.supabase.co');
-const isKeyValid = supabaseAnonKey && supabaseAnonKey.length > 20;
-
-// Flag to track if Supabase is available
-export let isSupabaseConfigured = !!(isUrlValid && isKeyValid);
-
 let supabaseInstance: SupabaseClient | null = null;
+export let isSupabaseConfigured = false;
 
-if (isSupabaseConfigured) {
+const getSupabaseCredentials = () => {
+  const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+  
+  const supabaseUrl = rawUrl.replace(/\s+/g, '').replace(/\/+$/, '');
+  const supabaseAnonKey = rawKey.replace(/\s+/g, '');
+  
+  console.log('🔍 [supabaseClient] Checking credentials:');
+  console.log('  Raw URL:', JSON.stringify(rawUrl));
+  console.log('  Cleaned URL:', supabaseUrl);
+  console.log('  URL length:', supabaseUrl.length);
+  console.log('  Key exists:', !!supabaseAnonKey);
+  console.log('  Key length:', supabaseAnonKey?.length);
+  
+  const isUrlValid = supabaseUrl && 
+    supabaseUrl.startsWith('https://') && 
+    supabaseUrl.includes('.supabase.co');
+  const isKeyValid = supabaseAnonKey && 
+    supabaseAnonKey.length > 20 && 
+    supabaseAnonKey.startsWith('eyJ');
+  
+  console.log('  URL valid:', isUrlValid);
+  console.log('  Key valid:', isKeyValid);
+  
+  return { supabaseUrl, supabaseAnonKey, isValid: !!(isUrlValid && isKeyValid) };
+};
+
+export const getSupabaseClient = (): SupabaseClient | null => {
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+  
+  const { supabaseUrl, supabaseAnonKey, isValid } = getSupabaseCredentials();
+  
+  if (!isValid) {
+    console.warn('⚠️ Supabase not configured - real-time sync disabled');
+    console.warn('  URL valid:', supabaseUrl?.startsWith('https://'));
+    console.warn('  Key valid:', supabaseAnonKey?.startsWith('eyJ'));
+    return null;
+  }
+  
   try {
-    supabaseInstance = createClient(supabaseUrl!, supabaseAnonKey!, {
+    console.log('🔄 Creating Supabase client...');
+    console.log('  URL:', supabaseUrl);
+    
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
@@ -26,34 +59,28 @@ if (isSupabaseConfigured) {
         },
       },
     });
-    console.log('✅ Supabase client initialized for real-time sync');
-    console.log('📍 URL:', supabaseUrl);
+    
+    isSupabaseConfigured = true;
+    console.log('✅ Supabase client initialized successfully');
+    return supabaseInstance;
   } catch (error) {
-    console.error('❌ Failed to initialize Supabase client:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Failed to initialize Supabase client:', errorMessage);
     isSupabaseConfigured = false;
-    supabaseInstance = null;
+    return null;
   }
-} else {
-  console.warn('⚠️ Supabase not configured - real-time sync disabled');
-  if (!isUrlValid) {
-    console.warn('   Invalid URL:', supabaseUrl || '(not set)');
-  }
-  if (!isKeyValid) {
-    console.warn('   Invalid anon key (should be a JWT starting with "eyJ")');
-  }
-}
+};
 
-// Export a safe getter that returns null if not configured
-export const supabase = supabaseInstance;
+export const supabase = getSupabaseClient();
 
-// Real-time subscription helpers
 export const subscribeToUsers = (callback: (payload: any) => void) => {
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     console.warn('⚠️ Cannot subscribe to users - Supabase not configured');
     return null;
   }
   console.log('🔔 Subscribing to users table changes...');
-  return supabase
+  return client
     .channel('public:users')
     .on(
       'postgres_changes',
@@ -72,25 +99,25 @@ export const subscribeToUsers = (callback: (payload: any) => void) => {
     });
 };
 
-// Subscribe to specific user changes
 export const subscribeToUserById = (userId: string, callback: (payload: any) => void) => {
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     console.warn('⚠️ Cannot subscribe to user - Supabase not configured');
     return null;
   }
   console.log('🔔 Subscribing to user changes:', userId);
-  return supabase
+  return client
     .channel(`public:users:id=eq.${userId}`)
     .on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'UPDATE',
         schema: 'public',
         table: 'users',
         filter: `id=eq.${userId}`,
       },
       (payload) => {
-        console.log('📡 User data changed:', userId);
+        console.log('📡 User updated:', userId);
         callback(payload);
       }
     )
@@ -99,25 +126,25 @@ export const subscribeToUserById = (userId: string, callback: (payload: any) => 
     });
 };
 
-// Fetch current user data from Supabase
 export const fetchUserFromSupabase = async (userId: string) => {
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     console.warn('⚠️ Cannot fetch user - Supabase not configured');
     return null;
   }
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('users')
       .select('*')
       .eq('id', userId)
       .single();
 
     if (error) {
-      console.error('❌ Error fetching user:', error.message);
+      console.error('❌ Error fetching user from Supabase:', error.message);
       return null;
     }
 
-    console.log('✅ User data fetched from Supabase:', data?.username);
+    console.log('✅ User fetched from Supabase:', userId);
     return data;
   } catch (err) {
     console.error('❌ Failed to fetch user:', err);
@@ -125,24 +152,24 @@ export const fetchUserFromSupabase = async (userId: string) => {
   }
 };
 
-// Fetch all users (admin)
 export const fetchAllUsersFromSupabase = async () => {
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     console.warn('⚠️ Cannot fetch users - Supabase not configured');
     return [];
   }
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('users')
-      .select('id, username, email, account_name, billing_plan, last_login, created_at, permissions')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('❌ Error fetching users:', error.message);
+      console.error('❌ Error fetching users from Supabase:', error.message);
       return [];
     }
 
-    console.log('✅ All users fetched from Supabase:', data?.length);
+    console.log('✅ Fetched', data?.length || 0, 'users from Supabase');
     return data || [];
   } catch (err) {
     console.error('❌ Failed to fetch users:', err);
@@ -150,14 +177,14 @@ export const fetchAllUsersFromSupabase = async () => {
   }
 };
 
-// Update user data in Supabase
 export const updateUserInSupabase = async (userId: string, updates: Record<string, any>) => {
-  if (!supabase) {
+  const client = getSupabaseClient();
+  if (!client) {
     console.warn('⚠️ Cannot update user - Supabase not configured');
     return null;
   }
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('users')
       .update(updates)
       .eq('id', userId)
@@ -177,10 +204,10 @@ export const updateUserInSupabase = async (userId: string, updates: Record<strin
   }
 };
 
-// Unsubscribe from channel
 export const unsubscribeFromChannel = (channel: any) => {
-  if (channel && supabase) {
-    supabase.removeChannel(channel);
+  const client = getSupabaseClient();
+  if (channel && client) {
+    client.removeChannel(channel);
     console.log('🔕 Unsubscribed from channel');
   }
 };
