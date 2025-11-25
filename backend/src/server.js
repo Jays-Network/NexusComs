@@ -694,6 +694,61 @@ app.get("/", (req, res) => {
   res.json({ status: "NexusComs Hybrid API running", mode: "API & CMS" });
 });
 
+// ============= LOGGING SYSTEM =============
+
+// Global logs array (in-memory, persists during server runtime)
+let systemLogs = [];
+const MAX_LOGS = 1000;
+
+// Function to add log entry
+function addLog(level, source, message, details = null) {
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    source,
+    message,
+    details,
+  };
+  systemLogs.unshift(logEntry); // Add to beginning
+  if (systemLogs.length > MAX_LOGS) {
+    systemLogs.pop(); // Remove oldest
+  }
+  console.log(`[${level}] ${source}: ${message}`);
+}
+
+// Get logs endpoint
+app.get("/api/logs", sessionMiddleware, async (req, res) => {
+  try {
+    const { filter, limit = 100 } = req.query;
+    let filteredLogs = systemLogs;
+
+    if (filter) {
+      if (filter === "ERROR" || filter === "WARN" || filter === "INFO") {
+        filteredLogs = systemLogs.filter((log) => log.level === filter);
+      } else {
+        filteredLogs = systemLogs.filter((log) =>
+          log.source.toLowerCase().includes(filter.toLowerCase()),
+        );
+      }
+    }
+
+    res.json(filteredLogs.slice(0, parseInt(limit)));
+  } catch (error) {
+    console.error("Error fetching logs:", error);
+    res.status(500).json({ error: "Failed to fetch logs" });
+  }
+});
+
+// Clear logs endpoint
+app.delete("/api/logs", sessionMiddleware, async (req, res) => {
+  try {
+    systemLogs = [];
+    res.json({ message: "Logs cleared successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to clear logs" });
+  }
+});
+
 // ============= SERVICE STATUS ENDPOINTS =============
 
 // Check all external services status
@@ -712,6 +767,7 @@ app.get("/api/services/status", async (req, res) => {
     services.stream.status = "disconnected";
     services.stream.error = "Stream API Key not configured";
     services.stream.severity = "critical";
+    addLog("ERROR", "Stream", "Stream API Key not configured");
   }
 
   // Check Supabase
@@ -723,6 +779,7 @@ app.get("/api/services/status", async (req, res) => {
         services.supabase.status = "error";
         services.supabase.error = error.message;
         services.supabase.severity = "critical";
+        addLog("ERROR", "Supabase", "Database query failed", error.message);
       } else {
         services.supabase.status = "connected";
       }
@@ -730,11 +787,13 @@ app.get("/api/services/status", async (req, res) => {
       services.supabase.status = "error";
       services.supabase.error = "Database connection timeout";
       services.supabase.severity = "critical";
+      addLog("ERROR", "Supabase", "Database connection timeout", e.message);
     }
   } else {
     services.supabase.status = "disconnected";
     services.supabase.error = "Supabase credentials not configured";
     services.supabase.severity = "critical";
+    addLog("ERROR", "Supabase", "Credentials not configured");
   }
 
   // Check Brevo
@@ -744,6 +803,7 @@ app.get("/api/services/status", async (req, res) => {
     services.brevo.status = "disconnected";
     services.brevo.error = "Brevo API Key not configured - Email features disabled";
     services.brevo.severity = "minor";
+    addLog("WARN", "Brevo", "Email service not configured - password reset emails disabled");
   }
 
   // Check Expo (frontend deployment)

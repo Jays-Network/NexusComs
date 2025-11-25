@@ -613,6 +613,7 @@
                 </div>
                 <div class="sidebar-nav">
                     <div class="nav-item active" onclick="switchSection('dashboard-section')">Dashboard</div>
+                    <div class="nav-item" onclick="switchSection('logs-section')">Logs</div>
                     <div class="nav-item" onclick="switchSection('users')">Users</div>
                     <div class="nav-item" onclick="switchSection('groups')">Groups & Subgroups</div>
                     <div class="nav-item" onclick="switchSection('tracking')">Tracking</div>
@@ -770,6 +771,44 @@
                                     <p style="color: #b0b0b0; margin: 0;">React Native: <span style="color: #D4AF37;">0.75+</span></p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOGS SECTION -->
+                <div id="logs-section" class="section">
+                    <div class="section-content">
+                        <h2 style="margin-bottom: 30px; font-size: 24px; color: #D4AF37;">System Logs</h2>
+                        
+                        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                            <select id="logFilter" style="padding: 10px 16px; background: #1a1a1a; border: 2px solid #404040; border-radius: 6px; color: #FFFFFF; font-size: 14px;">
+                                <option value="">All Logs</option>
+                                <option value="ERROR">Errors Only</option>
+                                <option value="WARN">Warnings Only</option>
+                                <option value="INFO">Info Only</option>
+                                <option value="backend">Backend Logs</option>
+                                <option value="stream">Stream Service</option>
+                                <option value="supabase">Supabase Service</option>
+                                <option value="brevo">Brevo Service</option>
+                            </select>
+                            <button onclick="clearLogs()" style="padding: 10px 20px; background: #FF6B6B; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Clear Logs</button>
+                            <button onclick="refreshLogs()" style="padding: 10px 20px; background: #D4AF37; color: #1a1a1a; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Refresh</button>
+                        </div>
+
+                        <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 8px; max-height: 600px; overflow-y: auto;">
+                            <table id="logsTable" style="width: 100%; border-collapse: collapse;">
+                                <thead style="position: sticky; top: 0; background: #2a2a2a;">
+                                    <tr>
+                                        <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Time</th>
+                                        <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Level</th>
+                                        <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Source</th>
+                                        <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody">
+                                    <tr><td colspan="4" style="padding: 20px; text-align: center; color: #808080;">Loading logs...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
