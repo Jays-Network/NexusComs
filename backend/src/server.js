@@ -104,7 +104,10 @@ if (process.env.BREVO_API_KEY) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../public")));
+
+const publicPath = path.join(__dirname, '../public');
+console.log(">>> DEBUG: Serving static files from:", publicPath);
+app.use(express.static(publicPath));
 
 // Session middleware
 const sessionMiddleware = (req, res, next) => {
