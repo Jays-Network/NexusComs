@@ -131,8 +131,10 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
       // Store session token for API calls
       await AsyncStorage.setItem('@session_token', sessionToken);
       
-      // Now login with Stream using the backend user info
-      await loginUser(backendUser.id, backendUser.username);
+      // CRITICAL: Pass the email to create a proper Stream ID (e.g., jullian_worldriskglobal_com)
+      // The backend will sanitize the email to create the stream_id
+      // DO NOT pass the Supabase UUID - it creates mismatched user IDs
+      await loginUser(backendUser.email, backendUser.username);
     } finally {
       setIsLoading(false);
     }
