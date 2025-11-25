@@ -1,0 +1,57 @@
+You are an expert Node.js and Express developer. Your task is to refactor and harden the application in backend/src/server.js to function as a Hybrid API Service, handling both API requests from Expo and static file requests for the local Backend CMS UI.
+
+1. Workflow Command & Setup
+Action: Ensure the primary workflow is set to run the backend file directly using node and not through npm run dev (this prevents the frontend web server from conflicting with your CMS files).
+
+Goal Command: node backend/src/server.js
+
+2. Core API Functionality
+A. Dynamic URL Construction (Expo Compatibility)
+In the /api/auth/request-reset endpoint, you must replace the hardcoded baseUrl with dynamic host detection. This allows the password reset link to correctly point back to the Expo application regardless of the temporary Replit Dev URL.
+
+JavaScript
+
+// DYNAMIC URL DETECTION - Replace the 'baseUrl' definition
+const protocol = req.headers['x-forwarded-proto'] || 'https';
+const host = req.get('host'); 
+const baseUrl = `${protocol}://${host}`;
+
+// Ensure the resetLink uses the dynamically calculated baseUrl
+const resetLink = `${baseUrl}/reset-password?token=${resetToken}`; // NO .html extension
+Remove .html: Since the reset page is handled by the remote Expo frontend, remove the .html extension from the reset link construction.
+
+B. CMS & Static File Preservation (CRITICAL)
+Preserve Static Serving: You must KEEP the static file middleware. This is essential for loading the HTML, CSS, and JS files for your Backend CMS UI (located in backend/public).
+
+Action: Ensure this line is present and correct for your structure (backend/src to backend/public):
+
+JavaScript
+
+app.use(express.static(path.join(__dirname, '../public')));
+Remove Redundant Root Route: The backend should respond with an API status on the bare root (/), even if static files are served from other paths (like /index.html).
+
+Action: Delete the entire file serving block at the bottom of the file:
+
+JavaScript
+
+// Serve index on root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '...')); // DELETE THIS BLOCK
+});
+New API Status Route: Replace the deleted block with a generic API status response:
+
+JavaScript
+
+app.get('/', (req, res) => {
+    res.json({ status: 'NexusComs Hybrid API running', mode: 'API & CMS' });
+});
+3. Final Cleanup
+Remove Debugging Logs: Remove all verbose console.log statements prefixed with >>> EXTREME DEBUG: to ensure clean, production-ready logs.
+
+Final Server Log: Ensure the final app.listen block reflects that the server is an API, not a web UI.
+
+Change: Web UI available at http://localhost:${PORT}
+
+To: API & CMS available at http://localhost:${PORT}
+
+Please apply these detailed changes to finalize the hybrid API server configuration now.

@@ -81,6 +81,9 @@ if (process.env.BREVO_API_KEY) {
 app.use(cors());
 app.use(express.json());
 
+// Serve static CMS files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
 // Session middleware
 const sessionMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -510,9 +513,9 @@ app.post("/api/auth/stream-token", async (req, res) => {
   }
 });
 
-// Root endpoint - API status
+// Root endpoint - API status (CMS UI accessed via static files)
 app.get("/", (req, res) => {
-  res.json({ status: "API running", service: "NexusComs Backend" });
+  res.json({ status: "NexusComs Hybrid API running", mode: "API & CMS" });
 });
 
 // Health check
@@ -524,10 +527,10 @@ app.get("/health", (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✓ Headless API server running on port ${PORT}`);
+  console.log(`✓ Hybrid API & CMS server running on port ${PORT}`);
   console.log(
     `✓ Supabase: ${process.env.SUPABASE_URL ? "Configured" : "Missing"}`,
   );
   console.log(`✓ Brevo Email: ${process.env.BREVO_API_KEY ? "Configured" : "Missing"}`);
-  console.log(`✓ API Endpoints available at http://localhost:${PORT}`);
+  console.log(`✓ API & CMS available at http://localhost:${PORT}`);
 });
