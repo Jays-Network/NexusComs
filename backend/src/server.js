@@ -882,6 +882,166 @@ app.get("/api/services/status", async (req, res) => {
   res.json(services);
 });
 
+// ============= GROUPS & EMERGENCY GROUPS MANAGEMENT =============
+
+// Create a new group
+app.post("/api/groups", sessionMiddleware, async (req, res) => {
+  try {
+    const { name, description, parentGroupId } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: "Group name required" });
+    }
+
+    // Create group in Supabase
+    const { data: group, error: groupError } = await supabase
+      .from("groups")
+      .insert({
+        name,
+        description,
+        parent_group_id: parentGroupId,
+        created_by: req.user.id,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (groupError) {
+      console.error("Group creation error:", groupError);
+      addLog("ERROR", "Groups", "Failed to create group", groupError.message);
+      return res.status(500).json({ error: "Failed to create group" });
+    }
+
+    // Create corresponding Stream channel
+    if (streamServerClient && group) {
+      try {
+        await streamServerClient.createChannel('team', `group-${group.id}`, {
+          name: name,
+          image: null,
+          description: description,
+          custom: {
+            type: 'group',
+            groupId: group.id,
+          }
+        });
+        console.log(`Stream channel created for group: ${group.id}`);
+        addLog("INFO", "Stream", `Channel created for group: ${name}`);
+      } catch (streamError) {
+        console.warn(`Stream channel creation warning: ${streamError.message}`);
+        addLog("WARN", "Stream", `Could not create channel for group ${name}`, streamError.message);
+      }
+    }
+
+    res.status(201).json({ 
+      message: "Group created successfully", 
+      group 
+    });
+  } catch (error) {
+    console.error("Create group error:", error);
+    addLog("ERROR", "Groups", "Server error creating group", error.message);
+    res.status(500).json({ error: "Failed to create group" });
+  }
+});
+
+// Get all groups
+app.get("/api/groups", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: groups, error } = await supabase
+      .from("groups")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to fetch groups" });
+    }
+
+    res.json(groups || []);
+  } catch (error) {
+    console.error("Fetch groups error:", error);
+    res.status(500).json({ error: "Failed to fetch groups" });
+  }
+});
+
+// Create a new emergency group
+app.post("/api/emergency-groups", sessionMiddleware, async (req, res) => {
+  try {
+    const { name, description, alertProtocol, members } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: "Emergency group name required" });
+    }
+
+    // Create emergency group in Supabase
+    const { data: emergencyGroup, error: groupError } = await supabase
+      .from("emergency_groups")
+      .insert({
+        name,
+        description,
+        alert_protocol: alertProtocol || "standard",
+        members: members || [],
+        created_by: req.user.id,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (groupError) {
+      console.error("Emergency group creation error:", groupError);
+      addLog("ERROR", "Emergency Groups", "Failed to create emergency group", groupError.message);
+      return res.status(500).json({ error: "Failed to create emergency group" });
+    }
+
+    // Create corresponding Stream channel
+    if (streamServerClient && emergencyGroup) {
+      try {
+        await streamServerClient.createChannel('team', `emergency-${emergencyGroup.id}`, {
+          name: name,
+          image: null,
+          description: description,
+          custom: {
+            type: 'emergency',
+            groupId: emergencyGroup.id,
+            alertProtocol: alertProtocol || "standard",
+          }
+        });
+        console.log(`Stream emergency channel created: ${emergencyGroup.id}`);
+        addLog("INFO", "Stream", `Emergency channel created: ${name}`);
+      } catch (streamError) {
+        console.warn(`Stream emergency channel creation warning: ${streamError.message}`);
+        addLog("WARN", "Stream", `Could not create emergency channel for ${name}`, streamError.message);
+      }
+    }
+
+    res.status(201).json({ 
+      message: "Emergency group created successfully", 
+      emergencyGroup 
+    });
+  } catch (error) {
+    console.error("Create emergency group error:", error);
+    addLog("ERROR", "Emergency Groups", "Server error creating emergency group", error.message);
+    res.status(500).json({ error: "Failed to create emergency group" });
+  }
+});
+
+// Get all emergency groups
+app.get("/api/emergency-groups", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: emergencyGroups, error } = await supabase
+      .from("emergency_groups")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to fetch emergency groups" });
+    }
+
+    res.json(emergencyGroups || []);
+  } catch (error) {
+    console.error("Fetch emergency groups error:", error);
+    res.status(500).json({ error: "Failed to fetch emergency groups" });
+  }
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({
