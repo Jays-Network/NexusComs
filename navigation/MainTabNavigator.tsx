@@ -6,12 +6,14 @@ import { Platform, StyleSheet } from "react-native";
 import ChatsStackNavigator from "@/navigation/ChatsStackNavigator";
 import EmergencyStackNavigator from "@/navigation/EmergencyStackNavigator";
 import SettingsStackNavigator from "@/navigation/SettingsStackNavigator";
+import ContactsStackNavigator from "@/navigation/ContactsStackNavigator";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors } from "@/constants/theme";
 
 export type MainTabParamList = {
   ChatsTab: undefined;
   EmergencyTab: undefined;
+  ContactsTab: undefined;
   SettingsTab: undefined;
 };
 
@@ -65,6 +67,16 @@ export default function MainTabNavigator() {
             <Feather name="alert-octagon" size={size} color={color} />
           ),
           tabBarActiveTintColor: Colors.light.emergency,
+        }}
+      />
+      <Tab.Screen
+        name="ContactsTab"
+        component={ContactsStackNavigator}
+        options={{
+          title: "Contacts",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
