@@ -4,6 +4,8 @@ let API_URL = 'http://localhost:3000'; // Default fallback
 if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
   API_URL = process.env.EXPO_PUBLIC_API_URL.trim();
 }
+console.log('🌐 [streamApi] API URL configured:', API_URL);
+console.log('🔍 [streamApi] EXPO_PUBLIC_API_URL raw:', process.env.EXPO_PUBLIC_API_URL);
 
 export interface StreamTokenResponse {
   token: string;
