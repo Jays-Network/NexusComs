@@ -227,30 +227,46 @@ app.post("/api/auth/verify-code", async (req, res) => {
 // Login with username and password
 app.post("/api/auth/login", async (req, res) => {
   try {
+    console.log("🔐 [LOGIN] Received login request");
     const { username, password } = req.body;
+    console.log("📝 [LOGIN] Username:", username);
 
     if (!username || !password) {
+      console.warn("⚠️ [LOGIN] Missing username or password");
       return res.status(400).json({ error: "Username and password required" });
     }
 
     // Get user from Supabase by username
+    console.log("🔍 [LOGIN] Querying Supabase for user:", username);
     const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, email, password_hash, username")
       .eq("username", username)
       .single();
 
-    if (userError || !users) {
+    if (userError) {
+      console.error("❌ [LOGIN] Supabase error:", userError.message);
+      addLog("ERROR", "Backend", "Login - Supabase query failed", userError.message);
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (!users) {
+      console.warn("⚠️ [LOGIN] User not found:", username);
+      addLog("WARN", "Backend", "Login attempt - User not found", username);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Verify password
+    console.log("🔑 [LOGIN] Verifying password for user:", username);
     const passwordMatch = await bcrypt.compare(password, users.password_hash);
     if (!passwordMatch) {
+      console.warn("⚠️ [LOGIN] Invalid password for user:", username);
+      addLog("WARN", "Backend", "Login attempt - Invalid password", username);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Generate session token
+    console.log("🎫 [LOGIN] Generating session token for user:", username);
     const token = jwt.sign(
       { id: users.id, email: users.email, username: users.username },
       process.env.SESSION_SECRET,
@@ -263,12 +279,16 @@ app.post("/api/auth/login", async (req, res) => {
       .update({ last_login: new Date().toISOString() })
       .eq("id", users.id);
 
+    console.log("✅ [LOGIN] Successful login for user:", username);
+    addLog("INFO", "Backend", "User logged in successfully", username);
+    
     res.json({
       token,
       user: { id: users.id, email: users.email, username: users.username },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ [LOGIN] Unexpected error:", error);
+    addLog("ERROR", "Backend", "Login endpoint error", error instanceof Error ? error.message : String(error));
     res.status(500).json({ error: "Login failed" });
   }
 });
