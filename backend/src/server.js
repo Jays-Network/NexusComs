@@ -101,7 +101,130 @@ const sessionMiddleware = (req, res, next) => {
 
 // ============= AUTH ENDPOINTS =============
 
-// Login endpoint
+// In-memory storage for verification codes (with expiry)
+const verificationCodes = new Map();
+
+// Send verification code to email
+app.post("/api/auth/send-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email required" });
+    }
+
+    // Check if user exists
+    const { data: users, error: userError } = await supabase
+      .from("users")
+      .select("id, email, username")
+      .eq("email", email)
+      .single();
+
+    if (userError || !users) {
+      return res.status(400).json({ error: "Email not found" });
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store code
+    verificationCodes.set(email, { code, expiresAt, attempts: 0 });
+
+    // Send email
+    try {
+      const emailHtml = `
+        <h2>Your Verification Code</h2>
+        <p>Use this code to access the NexusComs Admin Dashboard:</p>
+        <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #D4AF37; color: #1a1a1a; padding: 16px; border-radius: 8px; text-align: center; display: inline-block;">${code}</p>
+        <p><strong>This code expires in 10 minutes.</strong></p>
+        <p>If you didn't request this code, please ignore this email.</p>
+      `;
+
+      await sendBrevoEmail(users.email, "NexusComs Verification Code", emailHtml);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError.message);
+      return res.status(500).json({ error: "Failed to send verification code" });
+    }
+
+    res.json({ message: "Verification code sent to your email" });
+  } catch (error) {
+    console.error("Send code error:", error);
+    res.status(500).json({ error: "Failed to send code" });
+  }
+});
+
+// Verify code and login
+app.post("/api/auth/verify-code", async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and code required" });
+    }
+
+    // Check code
+    const stored = verificationCodes.get(email);
+    if (!stored) {
+      return res.status(400).json({ error: "No code sent for this email. Request a new one." });
+    }
+
+    // Check expiry
+    if (Date.now() > stored.expiresAt) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ error: "Code expired. Request a new one." });
+    }
+
+    // Check attempts (max 5)
+    if (stored.attempts >= 5) {
+      verificationCodes.delete(email);
+      return res.status(400).json({ error: "Too many attempts. Request a new code." });
+    }
+
+    // Verify code
+    if (code !== stored.code) {
+      stored.attempts++;
+      return res.status(400).json({ error: "Invalid code" });
+    }
+
+    // Get user
+    const { data: users, error: userError } = await supabase
+      .from("users")
+      .select("id, email, username")
+      .eq("email", email)
+      .single();
+
+    if (userError || !users) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    // Generate session token
+    const token = jwt.sign(
+      { id: users.id, email: users.email, username: users.username },
+      process.env.SESSION_SECRET,
+      { expiresIn: "7d" },
+    );
+
+    // Update last_login
+    await supabase
+      .from("users")
+      .update({ last_login: new Date().toISOString() })
+      .eq("id", users.id);
+
+    // Clear code
+    verificationCodes.delete(email);
+
+    res.json({
+      token,
+      user: { id: users.id, email: users.email, username: users.username },
+    });
+  } catch (error) {
+    console.error("Verify code error:", error);
+    res.status(500).json({ error: "Verification failed" });
+  }
+});
+
+// Legacy login endpoint (kept for backwards compatibility)
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;

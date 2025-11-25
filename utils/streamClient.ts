@@ -5,10 +5,22 @@ import { StreamChat } from 'stream-chat';
 // import { StreamVideoClient } from '@stream-io/video-react-native-sdk';
 
 const STREAM_API_KEY = process.env.EXPO_PUBLIC_STREAM_API_KEY || '';
-const STREAM_API_KEY_VALID = STREAM_API_KEY && STREAM_API_KEY.length > 0 && !STREAM_API_KEY.includes('$');
+
+// Validate API key more strictly
+const isValidStreamKey = (key: string): boolean => {
+  if (!key || typeof key !== 'string') return false;
+  if (key.length === 0) return false;
+  if (key.includes('$') || key.startsWith('undefined')) return false;
+  // Stream API keys are typically 40+ characters
+  if (key.length < 20) return false;
+  return true;
+};
+
+const STREAM_API_KEY_VALID = isValidStreamKey(STREAM_API_KEY);
 
 if (!STREAM_API_KEY_VALID) {
-  console.error('❌ CRITICAL: EXPO_PUBLIC_STREAM_API_KEY is not set or invalid. Please add it to your Replit secrets.');
+  console.error('❌ CRITICAL: EXPO_PUBLIC_STREAM_API_KEY is not configured properly.');
+  console.error('Stream Chat features will be unavailable.');
 }
 
 // Singleton instances
@@ -18,14 +30,19 @@ let chatClient: StreamChat | null = null;
 
 export const getChatClient = () => {
   if (!STREAM_API_KEY_VALID) {
-    console.error('❌ Cannot create StreamChat client: STREAM_API_KEY is not set or invalid');
+    console.error('❌ Cannot create StreamChat client: STREAM_API_KEY is not configured');
     return null;
   }
   if (!chatClient) {
     try {
+      // Wrap in try-catch to prevent crashes from malformed keys
+      if (!STREAM_API_KEY || STREAM_API_KEY.length === 0) {
+        throw new Error('Empty API key');
+      }
       chatClient = StreamChat.getInstance(STREAM_API_KEY);
     } catch (error) {
       console.error('❌ Failed to initialize StreamChat:', error);
+      chatClient = null;
       return null;
     }
   }
