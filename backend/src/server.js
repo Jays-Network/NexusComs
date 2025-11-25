@@ -298,7 +298,7 @@ app.post("/api/auth/request-reset", async (req, res) => {
 
     // Send password reset email with link
     // TEMPORARY FIX: Hardcoding the URL to bypass the stuck secret
-    const baseUrl = "https://nexuscoms-jays-network.replit.app";
+    const baseUrl = 'https://bb8e9acf-8f65-45c3-8db9-c62cf9f4d0de-00-y6vdq13da48a.worf.replit.dev';
     // const baseUrl = process.env.BACKEND_URL ? process.env.BACKEND_URL.replace(/\/$/, '') : 'http://localhost:3000';
     const resetLink = `${baseUrl}/reset-password.html?token=${resetToken}`;
 
