@@ -654,7 +654,8 @@
                         <h3 style="color: #FFFFFF; margin: 30px 0 20px 0; font-size: 18px;">External Services</h3>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                             <!-- STREAM.IO -->
-                            <div onclick="openServiceModal('stream')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                            <div onclick="openServiceModal('stream')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                                <div id="streamErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #FF0066 0%, #FF6600 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">S</div>
                                     <div>
@@ -665,6 +666,7 @@
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Status:</p>
                                     <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="streamStatus">Connected</p>
+                                    <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="streamError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">API Key: <span style="color: #D4AF37;" id="streamKey">gxfjy67sps69</span></p>
@@ -673,7 +675,8 @@
                             </div>
 
                             <!-- SUPABASE -->
-                            <div onclick="openServiceModal('supabase')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                            <div onclick="openServiceModal('supabase')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                                <div id="supabaseErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3ECF8E 0%, #24B47E 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">DB</div>
                                     <div>
@@ -684,6 +687,7 @@
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Database:</p>
                                     <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="supabaseStatus">Connected</p>
+                                    <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="supabaseError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">Type: <span style="color: #D4AF37;">PostgreSQL</span></p>
@@ -692,7 +696,8 @@
                             </div>
 
                             <!-- BREVO -->
-                            <div onclick="openServiceModal('brevo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                            <div onclick="openServiceModal('brevo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                                <div id="brevoErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">B</div>
                                     <div>
@@ -703,6 +708,7 @@
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Email Service:</p>
                                     <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="brevoStatus">Active</p>
+                                    <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="brevoError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">Sender: <span style="color: #D4AF37;">noreply@worldrisk.co.za</span></p>
@@ -711,7 +717,8 @@
                             </div>
 
                             <!-- EXPO -->
-                            <div onclick="openServiceModal('expo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                            <div onclick="openServiceModal('expo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                                <div id="expoErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #D4AF37; font-size: 18px;">E</div>
                                     <div>
@@ -722,6 +729,7 @@
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Frontend Platform:</p>
                                     <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="expoStatus">Connected</p>
+                                    <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="expoError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">SDK: <span style="color: #D4AF37;">54.x</span></p>
@@ -1000,6 +1008,54 @@
         if (token) {
             showDashboard();
             loadUsers();
+            loadServiceStatus();
+        }
+
+        // Load and display service status dynamically
+        async function loadServiceStatus() {
+            try {
+                const response = await fetch('/api/services/status');
+                const services = await response.json();
+
+                // Update each service with fetched status
+                updateServiceCard('stream', services.stream);
+                updateServiceCard('supabase', services.supabase);
+                updateServiceCard('brevo', services.brevo);
+                updateServiceCard('expo', services.expo);
+            } catch (error) {
+                console.error('Error loading service status:', error);
+            }
+        }
+
+        function updateServiceCard(serviceName, serviceData) {
+            const statusElement = document.getElementById(serviceName + 'Status');
+            const errorElement = document.getElementById(serviceName + 'Error');
+            const indicatorElement = document.getElementById(serviceName + 'ErrorIndicator');
+
+            if (serviceData.status === 'connected') {
+                statusElement.textContent = 'Connected';
+                statusElement.style.color = '#4CAF50';
+                errorElement.style.display = 'none';
+                indicatorElement.style.display = 'none';
+            } else if (serviceData.status === 'disconnected' || serviceData.status === 'error') {
+                statusElement.textContent = serviceData.status === 'disconnected' ? 'Disconnected' : 'Error';
+                statusElement.style.color = '#FF6B6B';
+                
+                if (serviceData.error) {
+                    errorElement.textContent = serviceData.error;
+                    errorElement.style.display = 'block';
+                }
+
+                // Show appropriate indicator
+                if (serviceData.severity === 'critical') {
+                    indicatorElement.textContent = '🔴';
+                    indicatorElement.title = 'Critical Error - App affected';
+                } else if (serviceData.severity === 'minor') {
+                    indicatorElement.textContent = '⚠️';
+                    indicatorElement.title = 'Caution - Minor error';
+                }
+                indicatorElement.style.display = 'block';
+            }
         }
 
         // SEND VERIFICATION CODE

@@ -694,6 +694,64 @@ app.get("/", (req, res) => {
   res.json({ status: "NexusComs Hybrid API running", mode: "API & CMS" });
 });
 
+// ============= SERVICE STATUS ENDPOINTS =============
+
+// Check all external services status
+app.get("/api/services/status", async (req, res) => {
+  const services = {
+    stream: { status: "unknown", error: null, severity: null },
+    supabase: { status: "unknown", error: null, severity: null },
+    brevo: { status: "unknown", error: null, severity: null },
+    expo: { status: "unknown", error: null, severity: null },
+  };
+
+  // Check Stream
+  if (process.env.EXPO_PUBLIC_STREAM_API_KEY) {
+    services.stream.status = "connected";
+  } else {
+    services.stream.status = "disconnected";
+    services.stream.error = "Stream API Key not configured";
+    services.stream.severity = "critical";
+  }
+
+  // Check Supabase
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      // Quick test query
+      const { error } = await supabase.from("users").select("count");
+      if (error) {
+        services.supabase.status = "error";
+        services.supabase.error = error.message;
+        services.supabase.severity = "critical";
+      } else {
+        services.supabase.status = "connected";
+      }
+    } catch (e) {
+      services.supabase.status = "error";
+      services.supabase.error = "Database connection timeout";
+      services.supabase.severity = "critical";
+    }
+  } else {
+    services.supabase.status = "disconnected";
+    services.supabase.error = "Supabase credentials not configured";
+    services.supabase.severity = "critical";
+  }
+
+  // Check Brevo
+  if (process.env.BREVO_API_KEY) {
+    services.brevo.status = "connected";
+  } else {
+    services.brevo.status = "disconnected";
+    services.brevo.error = "Brevo API Key not configured - Email features disabled";
+    services.brevo.severity = "minor";
+  }
+
+  // Check Expo (frontend deployment)
+  services.expo.status = "connected";
+
+  res.json(services);
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({
