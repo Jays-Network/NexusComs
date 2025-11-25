@@ -8,7 +8,7 @@ import { useStreamAuth } from '@/utils/streamAuth';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useStreamAuth();
   const insets = useSafeAreaInsets();
@@ -20,16 +20,16 @@ export default function LoginScreen() {
       return;
     }
 
-    const finalDisplayName = displayName.trim() || username.trim();
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter a password');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      // Create a unique user ID (in production, this might come from your backend)
-      const userId = username.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      
-      await login(userId, finalDisplayName);
+      await login(username.trim(), password.trim());
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Failed to connect to Stream');
+      Alert.alert('Login Failed', error.message || 'Invalid username or password');
     } finally {
       setIsLoading(false);
     }
@@ -62,44 +62,38 @@ export default function LoginScreen() {
               }]}
               value={username}
               onChangeText={setUsername}
-              placeholder="Enter username (e.g., john_doe)"
+              placeholder="Enter username"
               placeholderTextColor={Colors.light.textDisabled}
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isLoading}
             />
-            <ThemedText style={styles.hint}>
-              Lowercase letters and numbers only
-            </ThemedText>
           </View>
 
           <View style={styles.inputContainer}>
-            <ThemedText style={styles.label}>Display Name (Optional)</ThemedText>
+            <ThemedText style={styles.label}>Password</ThemedText>
             <TextInput
               style={[styles.input, { 
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
                 color: colors.text
               }]}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Enter display name (e.g., John Doe)"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Enter password"
               placeholderTextColor={Colors.light.textDisabled}
-              autoCorrect={false}
+              secureTextEntry
               editable={!isLoading}
             />
-            <ThemedText style={styles.hint}>
-              Leave blank to use username
-            </ThemedText>
           </View>
 
           <Pressable
             onPress={handleLogin}
-            disabled={isLoading || !username.trim()}
+            disabled={isLoading || !username.trim() || !password.trim()}
             style={[
               styles.loginButton,
               {
-                backgroundColor: !username.trim() 
+                backgroundColor: !username.trim() || !password.trim()
                   ? Colors.light.textDisabled 
                   : colors.primary
               }
@@ -108,13 +102,9 @@ export default function LoginScreen() {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <ThemedText style={styles.loginButtonText}>Continue</ThemedText>
+              <ThemedText style={styles.loginButtonText}>Login</ThemedText>
             )}
           </Pressable>
-          
-          <ThemedText style={styles.info}>
-            This demo uses Stream's development tokens. In production, tokens should be generated securely on your backend server.
-          </ThemedText>
         </View>
       </View>
     </View>

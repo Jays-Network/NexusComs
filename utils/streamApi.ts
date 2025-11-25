@@ -11,6 +11,43 @@ export interface StreamTokenResponse {
   apiKey: string;
 }
 
+export interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    username: string;
+  };
+}
+
+export async function loginWithUsernamePassword(
+  username: string,
+  password: string
+): Promise<LoginResponse> {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Login failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.warn('⚠️ Login request failed:', error);
+    throw error;
+  }
+}
+
 export async function getStreamToken(
   userId: string,
   userName: string,

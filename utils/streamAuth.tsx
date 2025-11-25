@@ -8,7 +8,7 @@ import {
   connectVideoUser,
   disconnectVideoUser
 } from './streamClient';
-import { getStreamToken } from './streamApi';
+import { getStreamToken, loginWithUsernamePassword } from './streamApi';
 
 interface User {
   id: string;
@@ -112,10 +112,18 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const login = async (userId: string, userName: string, userImage?: string) => {
+  const login = async (username: string, password: string) => {
     setIsLoading(true);
     try {
-      await loginUser(userId, userName, userImage);
+      console.log('🔐 Authenticating with backend...');
+      const { token: sessionToken, user: backendUser } = await loginWithUsernamePassword(username, password);
+      console.log('✅ Backend authentication successful for:', backendUser.username);
+      
+      // Store session token for API calls
+      await AsyncStorage.setItem('@session_token', sessionToken);
+      
+      // Now login with Stream using the backend user info
+      await loginUser(backendUser.id, backendUser.username);
     } finally {
       setIsLoading(false);
     }

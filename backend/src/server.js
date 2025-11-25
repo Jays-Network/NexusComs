@@ -224,20 +224,20 @@ app.post("/api/auth/verify-code", async (req, res) => {
   }
 });
 
-// Legacy login endpoint (kept for backwards compatibility)
+// Login with username and password
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password required" });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
     }
 
-    // Get user from Supabase
+    // Get user from Supabase by username
     const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, email, password_hash, username")
-      .eq("email", email)
+      .eq("username", username)
       .single();
 
     if (userError || !users) {
