@@ -89,7 +89,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
           console.warn('⚠️ Video SDK not available (Expo Go limitation)');
         }
       } catch (tokenError) {
-        console.error('⚠️ Failed to get Stream token, app will work in offline mode:', tokenError);
+        console.warn('⚠️ Failed to get Stream token, app will work in offline mode:', tokenError);
       }
       
       const userData: User = {

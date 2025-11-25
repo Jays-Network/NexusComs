@@ -36,7 +36,7 @@ export async function getStreamToken(
 
     return await response.json();
   } catch (error) {
-    console.error('Stream token API error:', error);
+    console.warn('⚠️ Stream token request failed (backend may be down):', error);
     throw error;
   }
 }
