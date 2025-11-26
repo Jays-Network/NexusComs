@@ -244,10 +244,11 @@ if (process.env.BREVO_API_KEY) {
 //   crossOriginResourcePolicy: { policy: "cross-origin" }
 // }));
 
-// Use helmet with CSP disabled for now (admin UI uses inline scripts)
-app.use(helmet({
-  contentSecurityPolicy: false
-}));
+// Helmet disabled temporarily - admin UI uses inline event handlers
+// TODO: Re-enable helmet with proper CSP for production API-only endpoints
+// app.use(helmet({
+//   contentSecurityPolicy: false
+// }));
 
 // CORS - Restrictive configuration
 const allowedOrigins = process.env.CORS_ORIGINS 
