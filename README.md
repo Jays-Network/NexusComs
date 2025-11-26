@@ -323,6 +323,7 @@ This project implements automated security scanning to detect vulnerable depende
 - **Automatic npm audit**: Runs on every backend server start
 - Logs vulnerability summary with severity counts (critical/high/moderate/low)
 - Creates security alerts for critical or high-severity vulnerabilities
+- **Audit log file**: `backend/logs/npm-audit.log` (persisted with timestamps)
 
 #### Security Dashboard (Admin Panel)
 Access the Security Dashboard at `http://localhost:3000` after logging in:

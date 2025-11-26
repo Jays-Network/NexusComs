@@ -17,46 +17,118 @@ const { addSecurityAlert } = require("./utils/alerts");
 dotenv.config();
 
 // Automated dependency vulnerability audit on startup
-const runStartupSecurityAudit = () => {
+const fs = require("fs");
+const AUDIT_LOG_FILE = path.join(__dirname, "../logs/npm-audit.log");
+
+const ensureAuditLogDir = () => {
+  const logDir = path.dirname(AUDIT_LOG_FILE);
+  if (!fs.existsSync(logDir)) {
+    try {
+      fs.mkdirSync(logDir, { recursive: true });
+    } catch (error) {
+      console.error("[SECURITY] Failed to create audit log directory:", error.message);
+    }
+  }
+};
+
+const parseAuditOutput = (stdout) => {
+  try {
+    const auditData = JSON.parse(stdout || "{}");
+    
+    // Support both npm v8+ (metadata.vulnerabilities) and older formats
+    if (auditData.metadata && auditData.metadata.vulnerabilities) {
+      // npm v8+ format
+      return auditData.metadata.vulnerabilities;
+    } else if (auditData.vulnerabilities) {
+      // Older format - count by severity
+      const vulnList = Object.values(auditData.vulnerabilities);
+      return {
+        critical: vulnList.filter(v => v.severity === "critical").length,
+        high: vulnList.filter(v => v.severity === "high").length,
+        moderate: vulnList.filter(v => v.severity === "moderate").length,
+        low: vulnList.filter(v => v.severity === "low").length,
+        total: vulnList.length
+      };
+    }
+    return { critical: 0, high: 0, moderate: 0, low: 0, total: 0 };
+  } catch (e) {
+    return null;
+  }
+};
+
+const writeAuditLog = (scope, counts, rawOutput) => {
+  ensureAuditLogDir();
+  const timestamp = new Date().toISOString();
+  const logEntry = `
+================================================================================
+Audit Run: ${timestamp}
+Scope: ${scope}
+================================================================================
+Summary:
+  - Critical: ${counts.critical}
+  - High: ${counts.high}
+  - Moderate: ${counts.moderate}
+  - Low: ${counts.low}
+  - Total: ${counts.total || (counts.critical + counts.high + counts.moderate + counts.low)}
+
+Raw Output:
+${rawOutput}
+================================================================================
+`;
+  try {
+    fs.appendFileSync(AUDIT_LOG_FILE, logEntry);
+  } catch (error) {
+    console.error("[SECURITY] Failed to write audit log:", error.message);
+  }
+};
+
+const runAuditForScope = (scope, cwd) => {
+  return new Promise((resolve) => {
+    exec("npm audit --json 2>/dev/null", { cwd, timeout: 60000 }, (error, stdout) => {
+      const counts = parseAuditOutput(stdout);
+      if (counts) {
+        writeAuditLog(scope, counts, stdout.substring(0, 5000)); // Limit raw output
+        resolve({ scope, counts, success: true });
+      } else {
+        resolve({ scope, counts: { critical: 0, high: 0, moderate: 0, low: 0 }, success: false });
+      }
+    });
+  });
+};
+
+const runStartupSecurityAudit = async () => {
   console.log("[SECURITY] Running automated dependency audit...");
   
-  exec("npm audit --json 2>/dev/null", { cwd: path.join(__dirname, "../.."), timeout: 60000 }, (error, stdout) => {
-    try {
-      const auditData = JSON.parse(stdout || "{}");
-      const vulnerabilities = auditData.vulnerabilities || {};
-      const vulnList = Object.keys(vulnerabilities);
+  // Audit backend dependencies (primary concern for server security)
+  const backendDir = path.join(__dirname, "..");
+  const backendResult = await runAuditForScope("backend", backendDir);
+  
+  if (backendResult.success) {
+    const counts = backendResult.counts;
+    const total = counts.total || (counts.critical + counts.high + counts.moderate + counts.low);
+    
+    if (total > 0) {
+      console.log(`[SECURITY] Backend audit: ${total} vulnerabilities found`);
+      console.log(`  - Critical: ${counts.critical}`);
+      console.log(`  - High: ${counts.high}`);
+      console.log(`  - Moderate: ${counts.moderate}`);
+      console.log(`  - Low: ${counts.low}`);
+      console.log(`[SECURITY] Audit log: ${AUDIT_LOG_FILE}`);
       
-      const counts = {
-        critical: vulnList.filter(v => vulnerabilities[v].severity === "critical").length,
-        high: vulnList.filter(v => vulnerabilities[v].severity === "high").length,
-        moderate: vulnList.filter(v => vulnerabilities[v].severity === "moderate").length,
-        low: vulnList.filter(v => vulnerabilities[v].severity === "low").length
-      };
-      
-      const total = counts.critical + counts.high + counts.moderate + counts.low;
-      
-      if (total > 0) {
-        console.log(`[SECURITY] Audit complete: ${total} vulnerabilities found`);
-        console.log(`  - Critical: ${counts.critical}`);
-        console.log(`  - High: ${counts.high}`);
-        console.log(`  - Moderate: ${counts.moderate}`);
-        console.log(`  - Low: ${counts.low}`);
-        
-        if (counts.critical > 0 || counts.high > 5) {
-          addSecurityAlert(
-            "npm_vulnerability",
-            `Dependency audit found ${counts.critical} critical and ${counts.high} high vulnerabilities`,
-            counts.critical > 0 ? "critical" : "high"
-          );
-          console.log("[SECURITY] ⚠️  Run 'npm audit fix' to address vulnerabilities");
-        }
-      } else {
-        console.log("[SECURITY] ✓ No vulnerabilities found in dependencies");
+      if (counts.critical > 0 || counts.high > 5) {
+        addSecurityAlert(
+          "npm_vulnerability",
+          `Backend dependency audit found ${counts.critical} critical and ${counts.high} high vulnerabilities. See ${AUDIT_LOG_FILE}`,
+          counts.critical > 0 ? "critical" : "high"
+        );
+        console.log("[SECURITY] ⚠️  Run 'cd backend && npm audit fix' to address vulnerabilities");
       }
-    } catch (parseError) {
-      console.log("[SECURITY] Audit check completed (no vulnerabilities or npm audit unavailable)");
+    } else {
+      console.log("[SECURITY] ✓ No vulnerabilities found in backend dependencies");
     }
-  });
+  } else {
+    console.log("[SECURITY] Backend audit check completed (no vulnerabilities or npm audit unavailable)");
+  }
 };
 
 // Run security audit after server starts

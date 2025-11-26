@@ -57,12 +57,19 @@ If you discover a security vulnerability in WorldRisk Nexus Coms, please report 
 The backend automatically runs security checks:
 ```
 [SECURITY] Running automated dependency audit...
-[SECURITY] Audit complete: X vulnerabilities found
+[SECURITY] Backend audit: X vulnerabilities found
   - Critical: X
   - High: X
   - Moderate: X
   - Low: X
+[SECURITY] Audit log: backend/logs/npm-audit.log
 ```
+
+### Audit Log File
+All npm audit results are persisted to `backend/logs/npm-audit.log` with:
+- Timestamp of each audit run
+- Severity breakdown (critical/high/moderate/low)
+- Raw JSON output for detailed analysis
 
 ### Security Dashboard Features
 Access via Admin Panel > Security tab:

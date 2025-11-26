@@ -4,6 +4,12 @@
 Production-ready mobile chat application built with Expo React Native, using Stream (getstream.io) for chat, messaging, and video functionality. Successfully migrated from custom Supabase/Socket.io backend to Stream's infrastructure.
 
 ## Recent Changes (November 26, 2025)
+- ✅ **Automated Dependency Vulnerability Monitoring**: npm audit runs on server startup
+  - Scans backend npm dependencies for known vulnerabilities
+  - Logs severity breakdown (critical/high/moderate/low)
+  - Persists results to `backend/logs/npm-audit.log`
+  - Auto-generates security alerts for critical/high vulnerabilities
+  - Documentation: See SECURITY.md and README.md Security section
 - ✅ **Security Dashboard**: Comprehensive security monitoring and scanning features
   - Secret Scanner: Scans codebase for exposed API keys, passwords, and sensitive data
   - NPM Dependency Audit: Checks for vulnerable dependencies with severity breakdown
