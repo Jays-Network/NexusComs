@@ -227,19 +227,26 @@ if (process.env.BREVO_API_KEY) {
 // ============= SECURITY HARDENING =============
 
 // Helmet - Security headers (CSP, X-Frame-Options, X-XSS-Protection, etc.)
+// Helmet security headers - disabled for admin UI compatibility
+// TODO: Re-enable with proper CSP configuration for production
+// app.use(helmet({
+//   contentSecurityPolicy: {
+//     directives: {
+//       defaultSrc: ["'self'"],
+//       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+//       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+//       fontSrc: ["'self'", "https://fonts.gstatic.com"],
+//       imgSrc: ["'self'", "data:", "https:"],
+//       connectSrc: ["'self'", "https://api.brevo.com", "wss:", "https:"],
+//     }
+//   },
+//   crossOriginEmbedderPolicy: false,
+//   crossOriginResourcePolicy: { policy: "cross-origin" }
+// }));
+
+// Use helmet with CSP disabled for now (admin UI uses inline scripts)
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.brevo.com", "wss:", "https:"],
-    }
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  contentSecurityPolicy: false
 }));
 
 // CORS - Restrictive configuration
@@ -273,6 +280,7 @@ const generalLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Disable validation to avoid X-Forwarded-For errors in dev
 });
 app.use('/api/', generalLimiter);
 
@@ -283,6 +291,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many authentication attempts, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Disable validation to avoid X-Forwarded-For errors in dev
   handler: (req, res, next, options) => {
     addSecurityAlert('rate_limit', `Auth rate limit exceeded for IP: ${req.ip}`, 'medium');
     res.status(429).json(options.message);
