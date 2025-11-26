@@ -456,10 +456,10 @@ app.post("/api/auth/verify-code", async (req, res) => {
       return res.status(400).json({ error: "Invalid code" });
     }
 
-    // Get user (case-insensitive lookup)
+    // Get user (case-insensitive lookup) - include billing_plan and permissions for JWT
     const { data: users, error: userError } = await supabase
       .from("users")
-      .select("id, email, username")
+      .select("id, email, username, billing_plan, permissions, role")
       .ilike("email", normalizedEmail)
       .single();
 
@@ -467,9 +467,16 @@ app.post("/api/auth/verify-code", async (req, res) => {
       return res.status(401).json({ error: "User not found" });
     }
 
-    // Generate session token
+    // Generate session token with full user data including billing_plan and permissions
     const token = jwt.sign(
-      { id: users.id, email: users.email, username: users.username },
+      { 
+        id: users.id, 
+        email: users.email, 
+        username: users.username,
+        billing_plan: users.billing_plan || 'basic',
+        permissions: users.permissions || {},
+        role: users.role || 'user'
+      },
       process.env.SESSION_SECRET,
       { expiresIn: "7d" },
     );
@@ -485,7 +492,7 @@ app.post("/api/auth/verify-code", async (req, res) => {
 
     res.json({
       token,
-      user: { id: users.id, email: users.email, username: users.username },
+      user: { id: users.id, email: users.email, username: users.username, billing_plan: users.billing_plan },
     });
   } catch (error) {
     console.error("Verify code error:", error);
@@ -506,11 +513,11 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(400).json({ error: "Username and password required" });
     }
 
-    // Get user from Supabase by username or email
+    // Get user from Supabase by username or email - include billing_plan and permissions for JWT
     console.log("🔍 [LOGIN] Querying Supabase for user:", loginIdentifier);
     let query = supabase
       .from("users")
-      .select("id, email, password_hash, username");
+      .select("id, email, password_hash, username, billing_plan, permissions, role");
     
     // Try username first, then email if it looks like an email
     if (loginIdentifier.includes('@')) {
@@ -543,10 +550,18 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Generate session token
+    // Generate session token with billing_plan and permissions
     console.log("🎫 [LOGIN] Generating session token for user:", username);
+    console.log("📋 [LOGIN] User billing_plan:", users.billing_plan);
     const token = jwt.sign(
-      { id: users.id, email: users.email, username: users.username },
+      { 
+        id: users.id, 
+        email: users.email, 
+        username: users.username,
+        billing_plan: users.billing_plan || 'basic',
+        permissions: users.permissions || {},
+        role: users.role || 'user'
+      },
       process.env.SESSION_SECRET,
       { expiresIn: "7d" },
     );
@@ -557,12 +572,12 @@ app.post("/api/auth/login", async (req, res) => {
       .update({ last_login: new Date().toISOString() })
       .eq("id", users.id);
 
-    console.log("✅ [LOGIN] Successful login for user:", username);
+    console.log("✅ [LOGIN] Successful login for user:", username, "billing_plan:", users.billing_plan);
     addLog("INFO", "Backend", "User logged in successfully", username);
     
     res.json({
       token,
-      user: { id: users.id, email: users.email, username: users.username },
+      user: { id: users.id, email: users.email, username: users.username, billing_plan: users.billing_plan },
     });
   } catch (error) {
     console.error("❌ [LOGIN] Unexpected error:", error);
