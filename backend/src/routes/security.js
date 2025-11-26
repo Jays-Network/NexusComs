@@ -19,8 +19,26 @@ const SECRET_PATTERNS = [
   { name: 'Hardcoded Secret', pattern: /(?:secret|token|auth)\s*[:=]\s*['""]([a-zA-Z0-9_\-]{16,})['""]?/gi, severity: 'medium' }
 ];
 
-const EXCLUDE_DIRS = ['node_modules', 'build', 'dist', '.git', '.next', 'coverage', '__pycache__', 'logs'];
+const EXCLUDE_DIRS = ['node_modules', 'build', 'dist', '.git', '.next', 'coverage', '__pycache__', 'logs', '.cache', '.config', '.replit'];
 const EXCLUDE_FILES = ['.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot', '.mp3', '.mp4', '.wav'];
+
+// Files that contain example/placeholder values (not real secrets)
+const EXCLUDE_EXAMPLE_FILES = ['.env.example', '.env.sample', '.env.template'];
+
+// Patterns that indicate false positives (documentation, code patterns, form fields)
+const FALSE_POSITIVE_PATTERNS = [
+  /type\s*=\s*["']password["']/i,                    // HTML input type="password"
+  /placeholder\s*=\s*["'][^"']*password/i,           // Form placeholder text
+  /your[_-]?\w*[_-]?here/i,                          // Placeholder like "your_api_key_here"
+  /example[_-]?\w*[_-]?key/i,                        // Example keys in docs
+  /const\s+SECRET_PATTERNS/i,                         // Our own pattern definitions
+  /pattern:\s*\/.*\/[gim]*/i,                        // Regex pattern definitions
+  /bcrypt\.hash|bcrypt\.compare/i,                   // Password hashing code
+  /password_hash|tempPassword|hashedPassword/i,      // Password variable names in code
+  /Authorization.*Bearer.*\${/i,                     // Template literal for auth headers
+  /Bearer.*token/i,                                   // Documentation about Bearer tokens
+  /curl.*-H.*Bearer/i,                               // Example curl commands
+];
 
 function maskSecret(value) {
   if (!value || value.length < 8) return '••••••••';
@@ -51,13 +69,47 @@ function scanDirectory(dir, results = []) {
   return results;
 }
 
+function isFalsePositive(line, filePath) {
+  // Check if line matches any false positive pattern
+  for (const pattern of FALSE_POSITIVE_PATTERNS) {
+    if (pattern.test(line)) {
+      return true;
+    }
+  }
+  
+  // Check if file is an example/template file
+  const fileName = path.basename(filePath);
+  if (EXCLUDE_EXAMPLE_FILES.includes(fileName)) {
+    return true;
+  }
+  
+  // Check if it's a markdown documentation file with example values
+  if (filePath.endsWith('.md') && (
+    line.includes('your-') || 
+    line.includes('example') || 
+    line.includes('placeholder') ||
+    line.includes('_here')
+  )) {
+    return true;
+  }
+  
+  return false;
+}
+
 function scanFile(filePath, results) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
     const lines = content.split('\n');
     const relativePath = path.relative(process.cwd(), filePath);
+    const fileName = path.basename(filePath);
     
-    if (filePath.includes('.env')) {
+    // Skip example/template .env files entirely
+    if (EXCLUDE_EXAMPLE_FILES.includes(fileName)) {
+      return;
+    }
+    
+    // Only flag actual .env files (not .env.example)
+    if (fileName === '.env' && !filePath.includes('.env.')) {
       results.push({
         file: relativePath,
         line: 0,
@@ -69,21 +121,39 @@ function scanFile(filePath, results) {
     }
     
     lines.forEach((line, index) => {
+      // Skip lines that are clearly false positives
+      if (isFalsePositive(line, filePath)) {
+        return;
+      }
+      
       for (const { name, pattern, severity } of SECRET_PATTERNS) {
         pattern.lastIndex = 0;
         const match = pattern.exec(line);
         if (match) {
+          // Skip environment variable references
           const isEnvRef = line.includes('process.env') || line.includes('ENV[') || line.includes('${');
-          if (!isEnvRef) {
-            results.push({
-              file: relativePath,
-              line: index + 1,
-              type: name,
-              severity: severity,
-              match: maskSecret(match[1] || match[0]),
-              remediation: `Move ${name} to environment variables`
-            });
+          if (isEnvRef) {
+            continue;
           }
+          
+          // Skip HTML form elements and CSS
+          if (line.includes('type=') && line.includes('input')) {
+            continue;
+          }
+          
+          // Skip regex pattern definitions (our own scanner patterns)
+          if (line.includes('pattern:') && line.includes('/')) {
+            continue;
+          }
+          
+          results.push({
+            file: relativePath,
+            line: index + 1,
+            type: name,
+            severity: severity,
+            match: maskSecret(match[1] || match[0]),
+            remediation: `Move ${name} to environment variables`
+          });
         }
       }
     });
