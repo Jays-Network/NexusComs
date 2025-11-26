@@ -324,23 +324,33 @@ const sessionMiddleware = (req, res, next) => {
 // Admin-only middleware (for security dashboard write operations)
 const adminOnlyMiddleware = (req, res, next) => {
   // Check if user has admin role (from JWT or database)
-  // For now, we restrict write operations to users with admin permission
   if (!req.user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   
   // Check permissions from JWT payload
   const permissions = req.user.permissions || {};
+  const billingPlan = (req.user.billing_plan || '').toLowerCase();
+  
+  // Users with admin access:
+  // 1. Explicit admin/superAdmin permission
+  // 2. Role is 'admin'
+  // 3. Executive billing plan (highest tier)
+  // 4. Has can_access_cms permission (CMS admins)
+  // 5. Has can_allocate_permissions (permission managers)
   const isAdmin = permissions.admin === true || 
                   permissions.superAdmin === true || 
-                  req.user.role === 'admin';
+                  req.user.role === 'admin' ||
+                  billingPlan === 'executive' ||
+                  permissions.can_access_cms === true ||
+                  permissions.can_allocate_permissions === true;
   
   // GET requests allowed for all authenticated users (read-only)
   if (req.method === 'GET') {
     return next();
   }
   
-  // POST/DELETE (write) operations require admin
+  // POST/DELETE (write) operations require admin-level access
   if (!isAdmin) {
     addSecurityAlert('unauthorized_access', `Non-admin user ${req.user.email || req.user.id} attempted security write operation`, 'medium');
     return res.status(403).json({ error: "Admin access required for this operation" });
