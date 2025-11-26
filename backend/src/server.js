@@ -130,11 +130,14 @@ app.post("/api/auth/send-code", async (req, res) => {
       return res.status(400).json({ error: "Email required" });
     }
 
+    // Normalize email to lowercase for consistent storage
+    const normalizedEmail = email.toLowerCase();
+
     // Check if user exists (case-insensitive email lookup)
     const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, email, username")
-      .ilike("email", email)
+      .ilike("email", normalizedEmail)
       .single();
 
     if (userError || !users) {
@@ -145,8 +148,8 @@ app.post("/api/auth/send-code", async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store code
-    verificationCodes.set(email, { code, expiresAt, attempts: 0 });
+    // Store code with normalized email
+    verificationCodes.set(normalizedEmail, { code, expiresAt, attempts: 0 });
 
     // Send email
     try {
@@ -180,21 +183,24 @@ app.post("/api/auth/verify-code", async (req, res) => {
       return res.status(400).json({ error: "Email and code required" });
     }
 
+    // Normalize email to lowercase
+    const normalizedEmail = email.toLowerCase();
+
     // Check code
-    const stored = verificationCodes.get(email);
+    const stored = verificationCodes.get(normalizedEmail);
     if (!stored) {
       return res.status(400).json({ error: "No code sent for this email. Request a new one." });
     }
 
     // Check expiry
     if (Date.now() > stored.expiresAt) {
-      verificationCodes.delete(email);
+      verificationCodes.delete(normalizedEmail);
       return res.status(400).json({ error: "Code expired. Request a new one." });
     }
 
     // Check attempts (max 5)
     if (stored.attempts >= 5) {
-      verificationCodes.delete(email);
+      verificationCodes.delete(normalizedEmail);
       return res.status(400).json({ error: "Too many attempts. Request a new code." });
     }
 
@@ -204,11 +210,11 @@ app.post("/api/auth/verify-code", async (req, res) => {
       return res.status(400).json({ error: "Invalid code" });
     }
 
-    // Get user
+    // Get user (case-insensitive lookup)
     const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, email, username")
-      .eq("email", email)
+      .ilike("email", normalizedEmail)
       .single();
 
     if (userError || !users) {
@@ -229,7 +235,7 @@ app.post("/api/auth/verify-code", async (req, res) => {
       .eq("id", users.id);
 
     // Clear code
-    verificationCodes.delete(email);
+    verificationCodes.delete(normalizedEmail);
 
     res.json({
       token,
@@ -262,7 +268,8 @@ app.post("/api/auth/login", async (req, res) => {
     
     // Try username first, then email if it looks like an email
     if (loginIdentifier.includes('@')) {
-      query = query.eq("email", loginIdentifier);
+      // Case-insensitive email lookup
+      query = query.ilike("email", loginIdentifier.toLowerCase());
     } else {
       query = query.eq("username", loginIdentifier);
     }
@@ -418,11 +425,11 @@ app.post("/api/auth/request-reset", async (req, res) => {
       return res.status(400).json({ error: "Email required" });
     }
 
-    // Find user by email only
+    // Find user by email only (case-insensitive)
     const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, email, username")
-      .eq("email", email)
+      .ilike("email", email.toLowerCase())
       .single();
 
     if (userError || !users) {
