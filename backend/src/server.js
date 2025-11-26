@@ -130,11 +130,11 @@ app.post("/api/auth/send-code", async (req, res) => {
       return res.status(400).json({ error: "Email required" });
     }
 
-    // Check if user exists
+    // Check if user exists (case-insensitive email lookup)
     const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, email, username")
-      .eq("email", email)
+      .ilike("email", email)
       .single();
 
     if (userError || !users) {
