@@ -3,7 +3,22 @@
 ## Overview
 Production-ready mobile chat application built with Expo React Native, using Stream (getstream.io) for chat, messaging, and video functionality. Successfully migrated from custom Supabase/Socket.io backend to Stream's infrastructure.
 
-## Recent Changes (November 25, 2025)
+## Recent Changes (November 26, 2025)
+- ✅ **Security Dashboard**: Comprehensive security monitoring and scanning features
+  - Secret Scanner: Scans codebase for exposed API keys, passwords, and sensitive data
+  - NPM Dependency Audit: Checks for vulnerable dependencies with severity breakdown
+  - API Traffic Monitor: Real-time request tracking with error rate monitoring
+  - System Integrity Check: File hash verification for critical backend files
+  - Security Recommendations: Automatic security suggestions based on configuration
+  - Security Alerts: Centralized alerting system with acknowledge/clear functionality
+  - Access via "Security" tab in admin dashboard sidebar
+- ✅ **Case-Insensitive Email Login**: All email lookups normalized to lowercase
+  - Fixed send-code, verify-code, login, and password-reset endpoints
+- ✅ **Database Verification**: Added `/api/db-check` endpoint with dashboard integration
+  - Verifies all 7 tables with row counts and error reporting
+  - "Run Database Check" button in dashboard Supabase card
+
+## Previous Changes (November 25, 2025)
 - ✅ **Stream Chat Login Fixed**: Backend now generates real JWT tokens using Stream SDK
   - Fixed critical bug where backend was returning mock tokens instead of real JWT tokens
   - Backend uses `StreamChat.getInstance()` with `createToken()` for proper token generation
@@ -80,7 +95,10 @@ Production-ready mobile chat application built with Expo React Native, using Str
 
 ### Backend
 - `backend/src/server.js`: Express server with authentication endpoints
-- `backend/public/index.html`: Web UI for testing authentication
+- `backend/src/routes/security.js`: Security dashboard API routes
+- `backend/src/middleware/securityMonitor.js`: API traffic monitoring middleware
+- `backend/src/utils/alerts.js`: Security alerts management utility
+- `backend/public/index.html`: Web UI for testing authentication and admin dashboard
 - `start-backend.sh`: Backend server startup script
 - `start-dev.sh`: Run both frontend and backend concurrently
 

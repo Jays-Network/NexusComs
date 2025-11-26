@@ -8,6 +8,10 @@ const bcrypt = require("bcrypt");
 const https = require("https");
 const { StreamChat } = require("stream-chat");
 
+// Security imports
+const securityRoutes = require("./routes/security");
+const { securityMonitor } = require("./middleware/securityMonitor");
+
 dotenv.config();
 
 // Initialize Stream Chat server client for token generation
@@ -98,6 +102,9 @@ if (process.env.BREVO_API_KEY) {
 app.use(cors());
 app.use(express.json());
 
+// Security monitoring middleware (must be before routes)
+app.use(securityMonitor);
+
 // Serve static CMS files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -115,6 +122,9 @@ const sessionMiddleware = (req, res, next) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 };
+
+// Mount security routes (PROTECTED - requires authentication)
+app.use('/api/security', sessionMiddleware, securityRoutes);
 
 // ============= AUTH ENDPOINTS =============
 

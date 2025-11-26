@@ -620,6 +620,7 @@
                     <div class="nav-item" onclick="switchSection('groups')">Groups & Subgroups</div>
                     <div class="nav-item" onclick="switchSection('emergency-groups')">Emergency Groups</div>
                     <div class="nav-item" onclick="switchSection('tracking')">Tracking</div>
+                    <div class="nav-item" onclick="switchSection('security'); loadSecurityDashboard();">Security</div>
                 </div>
             </div>
 
@@ -1132,6 +1133,135 @@
                                     <tr><td colspan="5" class="loading">Fetching tracked users...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECURITY SECTION -->
+                <div id="security" class="section">
+                    <div class="section-content">
+                        <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">Security Dashboard</h2>
+                        
+                        <!-- Security Overview Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Security Score</p>
+                                <h3 style="font-size: 32px; color: #4CAF50;" id="securityScore">--</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Active Alerts</p>
+                                <h3 style="font-size: 32px; color: #FFB84D;" id="activeAlerts">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">API Requests/min</p>
+                                <h3 style="font-size: 32px; color: #D4AF37;" id="apiRpm">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Error Rate</p>
+                                <h3 style="font-size: 32px; color: #4CAF50;" id="errorRate">0%</h3>
+                            </div>
+                        </div>
+
+                        <!-- Security Panels Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                            
+                            <!-- Secrets Scanner Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">Secrets Scanner</h3>
+                                    <button onclick="runSecretScan()" id="secretScanBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                                        Run Scan
+                                    </button>
+                                </div>
+                                <div id="secretScanResults" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; max-height: 250px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                                    <p style="color: #666;">Click "Run Scan" to check for exposed secrets...</p>
+                                </div>
+                            </div>
+
+                            <!-- Dependency Audit Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">Dependency Audit</h3>
+                                    <button onclick="runNpmAudit()" id="npmAuditBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                                        Run Audit
+                                    </button>
+                                </div>
+                                <div id="npmAuditResults" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; max-height: 250px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                                    <p style="color: #666;">Click "Run Audit" to check dependencies for vulnerabilities...</p>
+                                </div>
+                            </div>
+
+                            <!-- API Traffic Monitor Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">API Traffic Monitor</h3>
+                                    <button onclick="refreshTrafficMetrics()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Refresh
+                                    </button>
+                                </div>
+                                <div id="trafficMetrics" style="font-size: 13px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                                        <div style="background: #1a1a1a; padding: 12px; border-radius: 4px;">
+                                            <p style="color: #888; font-size: 11px; margin-bottom: 4px;">Last 10 min</p>
+                                            <p style="color: #D4AF37; font-weight: 600;"><span id="traffic10min">0</span> requests</p>
+                                        </div>
+                                        <div style="background: #1a1a1a; padding: 12px; border-radius: 4px;">
+                                            <p style="color: #888; font-size: 11px; margin-bottom: 4px;">Last 60 min</p>
+                                            <p style="color: #D4AF37; font-weight: 600;"><span id="traffic60min">0</span> requests</p>
+                                        </div>
+                                    </div>
+                                    <div style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+                                        <p style="color: #888; font-size: 11px; margin-bottom: 8px;">Top Endpoints:</p>
+                                        <div id="topEndpoints" style="font-size: 11px; color: #b0b0b0;">
+                                            <p>No traffic data yet...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- System Integrity Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">System Integrity</h3>
+                                    <button onclick="checkIntegrity()" id="integrityBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                                        Check
+                                    </button>
+                                </div>
+                                <div id="integrityResults" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; max-height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                                    <p style="color: #666;">Click "Check" to verify file integrity...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations Panel -->
+                        <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="color: #D4AF37; margin: 0;">Security Recommendations</h3>
+                                <button onclick="loadRecommendations()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                    Refresh
+                                </button>
+                            </div>
+                            <div id="recommendationsPanel" style="max-height: 300px; overflow-y: auto;">
+                                <p style="color: #666;">Loading recommendations...</p>
+                            </div>
+                        </div>
+
+                        <!-- Security Alerts Panel -->
+                        <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="color: #D4AF37; margin: 0;">Security Alerts</h3>
+                                <div>
+                                    <button onclick="clearSecurityAlerts()" style="background: #FF6B6B; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-right: 8px;">
+                                        Clear All
+                                    </button>
+                                    <button onclick="loadSecurityAlerts()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="alertsPanel" style="max-height: 300px; overflow-y: auto;">
+                                <p style="color: #666;">No alerts...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3184,6 +3314,354 @@
                 loadAccounts();
             }
         };
+
+        // ==================== SECURITY DASHBOARD FUNCTIONS ====================
+
+        // Load Security Dashboard
+        async function loadSecurityDashboard() {
+            console.log('Loading security dashboard...');
+            try {
+                const response = await fetch('/api/security/status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update overview cards
+                    document.getElementById('securityScore').textContent = data.securityScore || '--';
+                    document.getElementById('activeAlerts').textContent = data.activeAlerts || 0;
+                    document.getElementById('apiRpm').textContent = data.requestsPerMinute || 0;
+                    
+                    const errorRate = data.errorRate || 0;
+                    const errorRateEl = document.getElementById('errorRate');
+                    errorRateEl.textContent = errorRate.toFixed(1) + '%';
+                    errorRateEl.style.color = errorRate > 5 ? '#FF6B6B' : errorRate > 1 ? '#FFB84D' : '#4CAF50';
+                    
+                    // Update score color
+                    const scoreEl = document.getElementById('securityScore');
+                    if (data.securityScore) {
+                        scoreEl.style.color = data.securityScore >= 80 ? '#4CAF50' : data.securityScore >= 60 ? '#FFB84D' : '#FF6B6B';
+                    }
+                }
+                
+                // Load other panels
+                await Promise.all([
+                    loadSecurityAlerts(),
+                    loadRecommendations(),
+                    refreshTrafficMetrics()
+                ]);
+            } catch (error) {
+                console.error('Failed to load security dashboard:', error);
+            }
+        }
+
+        // Run Secret Scan
+        async function runSecretScan() {
+            const btn = document.getElementById('secretScanBtn');
+            const resultsDiv = document.getElementById('secretScanResults');
+            
+            btn.disabled = true;
+            btn.textContent = 'Scanning...';
+            resultsDiv.innerHTML = '<p style="color: #D4AF37;">Scanning files for exposed secrets...</p>';
+            
+            try {
+                const response = await fetch('/api/security/scan-secrets', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (data.findings && data.findings.length > 0) {
+                    resultsDiv.innerHTML = data.findings.map(f => `
+                        <div style="margin-bottom: 12px; padding: 8px; background: ${f.severity === 'high' ? 'rgba(255,107,107,0.1)' : 'rgba(255,184,77,0.1)'}; border-left: 3px solid ${f.severity === 'high' ? '#FF6B6B' : '#FFB84D'}; border-radius: 4px;">
+                            <p style="color: ${f.severity === 'high' ? '#FF6B6B' : '#FFB84D'}; font-weight: 600; margin-bottom: 4px;">${f.type}</p>
+                            <p style="color: #888; font-size: 11px;">File: ${f.file}${f.line ? ', Line: ' + f.line : ''}</p>
+                            ${f.suggestion ? `<p style="color: #b0b0b0; font-size: 11px; margin-top: 4px;">${f.suggestion}</p>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <span style="color: #4CAF50; font-size: 24px;">&#10003;</span>
+                            <p style="color: #4CAF50; margin-top: 8px;">No exposed secrets found</p>
+                            <p style="color: #666; font-size: 11px; margin-top: 4px;">Scanned at ${new Date().toLocaleTimeString()}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: #FF6B6B;">Scan failed: ${error.message}</p>`;
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Run Scan';
+        }
+
+        // Run NPM Audit
+        async function runNpmAudit() {
+            const btn = document.getElementById('npmAuditBtn');
+            const resultsDiv = document.getElementById('npmAuditResults');
+            
+            btn.disabled = true;
+            btn.textContent = 'Auditing...';
+            resultsDiv.innerHTML = '<p style="color: #D4AF37;">Checking dependencies for vulnerabilities...</p>';
+            
+            try {
+                const response = await fetch('/api/security/npm-audit', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                const summary = data.severityCounts || data.summary || { critical: 0, high: 0, moderate: 0, low: 0 };
+                const hasVulns = summary.critical > 0 || summary.high > 0 || summary.moderate > 0 || summary.low > 0;
+                
+                resultsDiv.innerHTML = `
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center;">
+                            <div style="background: ${summary.critical > 0 ? 'rgba(255,107,107,0.2)' : '#1a1a1a'}; padding: 8px; border-radius: 4px;">
+                                <p style="color: #FF6B6B; font-size: 18px; font-weight: 600;">${summary.critical || 0}</p>
+                                <p style="color: #888; font-size: 10px;">Critical</p>
+                            </div>
+                            <div style="background: ${summary.high > 0 ? 'rgba(255,107,107,0.1)' : '#1a1a1a'}; padding: 8px; border-radius: 4px;">
+                                <p style="color: #FF8C8C; font-size: 18px; font-weight: 600;">${summary.high || 0}</p>
+                                <p style="color: #888; font-size: 10px;">High</p>
+                            </div>
+                            <div style="background: ${summary.moderate > 0 ? 'rgba(255,184,77,0.1)' : '#1a1a1a'}; padding: 8px; border-radius: 4px;">
+                                <p style="color: #FFB84D; font-size: 18px; font-weight: 600;">${summary.moderate || 0}</p>
+                                <p style="color: #888; font-size: 10px;">Moderate</p>
+                            </div>
+                            <div style="background: #1a1a1a; padding: 8px; border-radius: 4px;">
+                                <p style="color: #888; font-size: 18px; font-weight: 600;">${summary.low || 0}</p>
+                                <p style="color: #888; font-size: 10px;">Low</p>
+                            </div>
+                        </div>
+                    </div>
+                    ${!hasVulns ? `
+                        <div style="text-align: center; padding: 12px;">
+                            <span style="color: #4CAF50; font-size: 20px;">&#10003;</span>
+                            <p style="color: #4CAF50; margin-top: 4px; font-size: 13px;">No vulnerabilities found</p>
+                        </div>
+                    ` : `
+                        <p style="color: #b0b0b0; font-size: 11px;">${data.recommendation || "Run 'npm audit fix' to automatically fix issues"}</p>
+                    `}
+                    <p style="color: #666; font-size: 10px; margin-top: 8px;">Audited at ${new Date().toLocaleTimeString()}</p>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: #FF6B6B;">Audit failed: ${error.message}</p>`;
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Run Audit';
+        }
+
+        // Refresh Traffic Metrics
+        async function refreshTrafficMetrics() {
+            try {
+                const response = await fetch('/api/security/traffic', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const metrics = data.metrics || data;
+                    
+                    const traffic10 = metrics.last10Minutes?.requests || metrics.last10min?.requests || 0;
+                    const traffic60 = metrics.last60Minutes?.requests || metrics.last60min?.requests || 0;
+                    
+                    document.getElementById('traffic10min').textContent = traffic10;
+                    document.getElementById('traffic60min').textContent = traffic60;
+                    
+                    const endpointsDiv = document.getElementById('topEndpoints');
+                    const topEndpoints = data.topEndpoints || metrics.topEndpoints || [];
+                    if (topEndpoints.length > 0) {
+                        endpointsDiv.innerHTML = topEndpoints.slice(0, 5).map(e => `
+                            <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #333;">
+                                <span style="color: #b0b0b0;">${e.endpoint}</span>
+                                <span style="color: #D4AF37;">${e.count}</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        endpointsDiv.innerHTML = '<p style="color: #666;">No traffic data yet...</p>';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load traffic metrics:', error);
+            }
+        }
+
+        // Check System Integrity
+        async function checkIntegrity() {
+            const btn = document.getElementById('integrityBtn');
+            const resultsDiv = document.getElementById('integrityResults');
+            
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            resultsDiv.innerHTML = '<p style="color: #D4AF37;">Verifying file integrity...</p>';
+            
+            try {
+                const response = await fetch('/api/security/integrity', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                const files = data.files || data.checks || [];
+                
+                if (files.length > 0) {
+                    resultsDiv.innerHTML = files.map(check => {
+                        const status = check.status || 'unknown';
+                        const isOk = status === 'ok' || status === 'unchanged';
+                        const isWarning = status === 'warning' || status === 'modified' || status === 'new';
+                        const isMissing = status === 'missing' || status === 'error';
+                        const statusColor = isOk ? '#4CAF50' : isWarning ? '#FFB84D' : '#FF6B6B';
+                        const icon = isOk ? '&#10003;' : isWarning ? '&#9888;' : '&#10007;';
+                        const fileName = check.file || check.name || 'Unknown file';
+                        
+                        return `
+                        <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #333;">
+                            <span style="color: ${statusColor}; margin-right: 8px;">${icon}</span>
+                            <span style="color: #b0b0b0; flex: 1; font-size: 11px;">${fileName}</span>
+                            <span style="color: ${statusColor}; font-size: 10px;">${status}</span>
+                        </div>
+                    `}).join('');
+                    
+                    if (data.anomalies > 0) {
+                        resultsDiv.innerHTML += `<p style="color: #FFB84D; margin-top: 12px; font-size: 11px;">${data.anomalies} file(s) modified since last check</p>`;
+                    }
+                } else {
+                    resultsDiv.innerHTML = '<p style="color: #666;">No files to check</p>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: #FF6B6B;">Check failed: ${error.message}</p>`;
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Check';
+        }
+
+        // Load Security Recommendations
+        async function loadRecommendations() {
+            const panel = document.getElementById('recommendationsPanel');
+            
+            try {
+                const response = await fetch('/api/security/recommendations', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.recommendations && data.recommendations.length > 0) {
+                        panel.innerHTML = data.recommendations.map(rec => {
+                            const priority = rec.priority || 'medium';
+                            const priorityColor = priority === 'critical' ? '#FF6B6B' : priority === 'high' ? '#FF8C8C' : priority === 'medium' ? '#FFB84D' : '#4CAF50';
+                            const title = rec.issue || rec.title || rec.category || 'Security Issue';
+                            const description = rec.recommendation || rec.description || '';
+                            const action = rec.impact || rec.action || '';
+                            
+                            return `
+                            <div style="background: #1a1a1a; border: 1px solid #404040; border-left: 3px solid ${priorityColor}; border-radius: 6px; padding: 16px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                    <h4 style="color: #FFFFFF; margin: 0; font-size: 14px;">${title}</h4>
+                                    <span style="background: ${priorityColor}; color: ${priority === 'high' || priority === 'critical' ? 'white' : '#1a1a1a'}; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600;">
+                                        ${priority.toUpperCase()}
+                                    </span>
+                                </div>
+                                <p style="color: #888; font-size: 12px; margin: 0;">${description}</p>
+                                ${action ? `<p style="color: #D4AF37; font-size: 11px; margin-top: 8px;">Impact: ${action}</p>` : ''}
+                            </div>
+                        `}).join('');
+                    } else {
+                        panel.innerHTML = `
+                            <div style="text-align: center; padding: 40px;">
+                                <span style="color: #4CAF50; font-size: 32px;">&#10003;</span>
+                                <p style="color: #4CAF50; margin-top: 12px; font-size: 16px;">All security recommendations met!</p>
+                                <p style="color: #666; font-size: 12px; margin-top: 4px;">Your system follows security best practices</p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                panel.innerHTML = `<p style="color: #FF6B6B;">Failed to load recommendations</p>`;
+            }
+        }
+
+        // Load Security Alerts
+        async function loadSecurityAlerts() {
+            const panel = document.getElementById('alertsPanel');
+            
+            try {
+                const response = await fetch('/api/security/alerts', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update active alerts count
+                    const activeCount = (data.alerts || []).filter(a => !a.acknowledged).length;
+                    document.getElementById('activeAlerts').textContent = activeCount;
+                    
+                    if (data.alerts && data.alerts.length > 0) {
+                        panel.innerHTML = data.alerts.map(alert => `
+                            <div style="background: #1a1a1a; border: 1px solid #404040; border-left: 3px solid ${alert.severity === 'critical' ? '#FF6B6B' : alert.severity === 'warning' ? '#FFB84D' : '#4CAF50'}; border-radius: 6px; padding: 12px; margin-bottom: 8px; ${alert.acknowledged ? 'opacity: 0.6;' : ''}">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <span style="color: ${alert.severity === 'critical' ? '#FF6B6B' : alert.severity === 'warning' ? '#FFB84D' : '#4CAF50'}; font-weight: 600; font-size: 13px;">${alert.type}</span>
+                                        <p style="color: #888; font-size: 11px; margin: 4px 0 0 0;">${alert.message}</p>
+                                        <p style="color: #666; font-size: 10px; margin-top: 4px;">${new Date(alert.timestamp).toLocaleString()}</p>
+                                    </div>
+                                    ${!alert.acknowledged ? `
+                                        <button onclick="acknowledgeAlert('${alert.id}')" style="background: transparent; border: 1px solid #404040; color: #888; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;">
+                                            Ack
+                                        </button>
+                                    ` : '<span style="color: #666; font-size: 10px;">Acknowledged</span>'}
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        panel.innerHTML = `
+                            <div style="text-align: center; padding: 40px;">
+                                <span style="color: #4CAF50; font-size: 24px;">&#10003;</span>
+                                <p style="color: #4CAF50; margin-top: 8px;">No security alerts</p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                panel.innerHTML = `<p style="color: #FF6B6B;">Failed to load alerts</p>`;
+            }
+        }
+
+        // Acknowledge Alert
+        async function acknowledgeAlert(alertId) {
+            try {
+                await fetch(`/api/security/alerts/${alertId}/acknowledge`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                loadSecurityAlerts();
+            } catch (error) {
+                console.error('Failed to acknowledge alert:', error);
+            }
+        }
+
+        // Clear All Security Alerts
+        async function clearSecurityAlerts() {
+            if (!confirm('Are you sure you want to clear all security alerts?')) return;
+            
+            try {
+                await fetch('/api/security/alerts', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                loadSecurityAlerts();
+            } catch (error) {
+                alert('Failed to clear alerts: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
