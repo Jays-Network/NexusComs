@@ -11,8 +11,56 @@ const { StreamChat } = require("stream-chat");
 // Security imports
 const securityRoutes = require("./routes/security");
 const { securityMonitor } = require("./middleware/securityMonitor");
+const { exec } = require("child_process");
+const { addSecurityAlert } = require("./utils/alerts");
 
 dotenv.config();
+
+// Automated dependency vulnerability audit on startup
+const runStartupSecurityAudit = () => {
+  console.log("[SECURITY] Running automated dependency audit...");
+  
+  exec("npm audit --json 2>/dev/null", { cwd: path.join(__dirname, "../.."), timeout: 60000 }, (error, stdout) => {
+    try {
+      const auditData = JSON.parse(stdout || "{}");
+      const vulnerabilities = auditData.vulnerabilities || {};
+      const vulnList = Object.keys(vulnerabilities);
+      
+      const counts = {
+        critical: vulnList.filter(v => vulnerabilities[v].severity === "critical").length,
+        high: vulnList.filter(v => vulnerabilities[v].severity === "high").length,
+        moderate: vulnList.filter(v => vulnerabilities[v].severity === "moderate").length,
+        low: vulnList.filter(v => vulnerabilities[v].severity === "low").length
+      };
+      
+      const total = counts.critical + counts.high + counts.moderate + counts.low;
+      
+      if (total > 0) {
+        console.log(`[SECURITY] Audit complete: ${total} vulnerabilities found`);
+        console.log(`  - Critical: ${counts.critical}`);
+        console.log(`  - High: ${counts.high}`);
+        console.log(`  - Moderate: ${counts.moderate}`);
+        console.log(`  - Low: ${counts.low}`);
+        
+        if (counts.critical > 0 || counts.high > 5) {
+          addSecurityAlert(
+            "npm_vulnerability",
+            `Dependency audit found ${counts.critical} critical and ${counts.high} high vulnerabilities`,
+            counts.critical > 0 ? "critical" : "high"
+          );
+          console.log("[SECURITY] ⚠️  Run 'npm audit fix' to address vulnerabilities");
+        }
+      } else {
+        console.log("[SECURITY] ✓ No vulnerabilities found in dependencies");
+      }
+    } catch (parseError) {
+      console.log("[SECURITY] Audit check completed (no vulnerabilities or npm audit unavailable)");
+    }
+  });
+};
+
+// Run security audit after server starts
+setTimeout(runStartupSecurityAudit, 3000);
 
 // Initialize Stream Chat server client for token generation
 let streamServerClient = null;

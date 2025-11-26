@@ -67,6 +67,7 @@ world-risk/
 ├── App.tsx                    # Root application component
 ├── app.json                   # Expo configuration
 ├── package.json               # Frontend dependencies
+├── SECURITY.md                # Security policy and practices
 │
 ├── screens/                   # Application screens
 │   ├── LoginScreen.tsx       # User authentication
@@ -88,9 +89,15 @@ world-risk/
 │
 ├── backend/                   # Backend server
 │   ├── src/
-│   │   └── server.js         # Express server
+│   │   ├── server.js         # Express server (auto npm audit on start)
+│   │   ├── routes/
+│   │   │   └── security.js   # Security dashboard API
+│   │   ├── middleware/
+│   │   │   └── securityMonitor.js  # API traffic monitoring
+│   │   └── utils/
+│   │       └── alerts.js     # Security alerts system
 │   ├── public/
-│   │   └── index.html        # Web UI
+│   │   └── index.html        # Admin dashboard UI
 │   └── package.json          # Backend dependencies
 │
 ├── docs/                      # Documentation
@@ -302,10 +309,58 @@ Secure authentication architecture:
 
 ## Security
 
+### Security Practices
 - Never commit `.env` files or API secrets
 - Use environment variables for all sensitive data
 - Keep dependencies updated regularly
 - Review security advisories in GitHub
+
+### Automated Dependency Vulnerability Monitoring
+
+This project implements automated security scanning to detect vulnerable dependencies:
+
+#### On Server Startup
+- **Automatic npm audit**: Runs on every backend server start
+- Logs vulnerability summary with severity counts (critical/high/moderate/low)
+- Creates security alerts for critical or high-severity vulnerabilities
+
+#### Security Dashboard (Admin Panel)
+Access the Security Dashboard at `http://localhost:3000` after logging in:
+
+- **Secrets Scanner**: Scans codebase for exposed API keys, passwords, credentials
+- **NPM Dependency Audit**: On-demand vulnerability scanning with severity breakdown
+- **API Traffic Monitor**: Real-time request tracking and error rate monitoring
+- **System Integrity Check**: File hash verification for critical backend files
+- **Security Recommendations**: Automated security suggestions
+- **Security Alerts**: Centralized alerting system
+
+#### Manual Vulnerability Scanning
+```bash
+# Run npm audit manually
+cd backend && npm audit
+
+# Auto-fix vulnerabilities where possible
+npm audit fix
+
+# View detailed vulnerability report
+npm audit --json
+```
+
+#### CI/CD Integration (Recommended)
+Add to your CI pipeline for automated scanning on every push:
+```yaml
+# GitHub Actions example
+- name: Security Audit
+  run: |
+    npm audit --audit-level=high
+    cd backend && npm audit --audit-level=high
+```
+
+### Security Files
+- `backend/src/routes/security.js` - Security API endpoints
+- `backend/src/middleware/securityMonitor.js` - API traffic monitoring
+- `backend/src/utils/alerts.js` - Security alert management
+- `SECURITY.md` - Security policy and vulnerability reporting
 
 ## License
 
@@ -321,5 +376,5 @@ For support and questions:
 ---
 
 **Version:** 1.0  
-**Last Updated:** November 20, 2025  
+**Last Updated:** November 26, 2025  
 **Maintainer:** WorldRisk Nexus Coms Team
