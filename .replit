@@ -94,6 +94,10 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 8081
 
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node backend/src/server.js"
+
 [[workflows.workflow]]
 name = "Backend Server"
 mode = "sequential"
