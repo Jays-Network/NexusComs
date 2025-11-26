@@ -155,6 +155,9 @@ if (process.env.STREAM_API_KEY && process.env.STREAM_API_SECRET) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - required for rate limiting to work correctly behind Replit's proxy
+app.set('trust proxy', 1);
+
 // Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL,
