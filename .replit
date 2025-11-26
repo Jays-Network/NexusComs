@@ -25,6 +25,10 @@ localPort = 34289
 externalPort = 5173
 
 [[ports]]
+localPort = 35709
+externalPort = 6800
+
+[[ports]]
 localPort = 37727
 externalPort = 6000
 
@@ -87,7 +91,7 @@ args = "Start application"
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
-mode = "sequential"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
