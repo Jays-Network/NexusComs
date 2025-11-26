@@ -31,6 +31,9 @@ WorldRisk Nexus Coms is an enterprise-grade mobile communication platform design
 - **Protected API Secrets**: Stream API secret never exposed to clients
 - **User Validation**: Sanitized user IDs and input validation
 - **Production Ready**: Proper authentication flow with JWT tokens
+- **Helmet Security Headers**: CSP, X-Frame-Options, XSS protection
+- **Rate Limiting**: Protection against brute force attacks
+- **CORS Restrictions**: Configurable origin whitelist
 
 ### User Experience
 - **iOS 26 Liquid Glass UI**: Modern, native-feeling interface design

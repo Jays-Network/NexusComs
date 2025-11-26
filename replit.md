@@ -4,6 +4,12 @@
 Production-ready mobile chat application built with Expo React Native, using Stream (getstream.io) for chat, messaging, and video functionality. Successfully migrated from custom Supabase/Socket.io backend to Stream's infrastructure.
 
 ## Recent Changes (November 26, 2025)
+- ✅ **Runtime Security Hardening**: Complete Express.js security middleware
+  - Helmet security headers (CSP, X-Frame-Options, XSS protection, etc.)
+  - Rate limiting on auth endpoints (20 attempts/15 min)
+  - Rate limiting on general API (1000 requests/15 min)
+  - Restrictive CORS with configurable origins (CORS_ORIGINS env var)
+  - Body-size limits (10mb max)
 - ✅ **Automated Dependency Vulnerability Monitoring**: npm audit runs on server startup
   - Scans backend npm dependencies for known vulnerabilities
   - Logs severity breakdown (critical/high/moderate/low)

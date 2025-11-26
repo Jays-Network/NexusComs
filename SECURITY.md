@@ -132,7 +132,96 @@ npm audit --json
 npm audit --audit-level=high
 ```
 
+## Incident Response Process
+
+### Severity Levels
+| Level | Description | Response Time | Examples |
+|-------|-------------|---------------|----------|
+| **Critical** | Active breach or data exposure | Immediate (< 1 hour) | Exposed credentials, active attack |
+| **High** | Potential breach or major vulnerability | < 4 hours | Critical npm vulnerability, auth bypass |
+| **Medium** | Security weakness or anomaly | < 24 hours | Suspicious patterns, high error rates |
+| **Low** | Minor issue or improvement needed | < 1 week | Configuration recommendations |
+
+### Response Steps
+1. **Identify**: Review security alerts in dashboard, check logs
+2. **Contain**: Disable affected endpoints, rotate compromised credentials
+3. **Investigate**: Analyze traffic logs, audit trail, check for data exposure
+4. **Remediate**: Apply fixes, update dependencies, patch vulnerabilities
+5. **Document**: Record incident details, timeline, actions taken
+6. **Review**: Post-incident analysis, update procedures if needed
+
+### Contact
+- For security incidents, notify the development team immediately
+- For external vulnerability reports, follow responsible disclosure (see above)
+
+## Secret Rotation Procedures
+
+### Regular Rotation Schedule
+| Secret | Rotation Frequency | Owner |
+|--------|-------------------|-------|
+| SESSION_SECRET | Every 90 days | Backend Admin |
+| STREAM_API_SECRET | On compromise only | Stream.io Dashboard |
+| SUPABASE_SERVICE_ROLE_KEY | On compromise only | Supabase Dashboard |
+| BREVO_API_KEY | Every 90 days | Brevo Dashboard |
+
+### Rotation Steps
+1. **Generate new secret** in the respective service dashboard
+2. **Update Replit Secrets** with new value
+3. **Restart backend server** to load new secrets
+4. **Verify** all functionality works with new credentials
+5. **Revoke old secret** after confirming new one works
+
+### Emergency Rotation (On Compromise)
+1. **Immediately** revoke/regenerate the compromised secret
+2. Update Replit Secrets
+3. Restart all affected services
+4. Check logs for unauthorized access during exposure window
+5. Create security alert documenting the incident
+
+## Audit Schedule
+
+### Daily (Automated)
+- npm audit on server startup
+- API traffic monitoring
+- Authentication failure tracking
+
+### Weekly (Manual Review)
+- Review security dashboard alerts
+- Check for new npm vulnerabilities
+- Review access logs for anomalies
+
+### Monthly
+- Full secret rotation review
+- Dependency update assessment
+- Security configuration audit
+
+### Quarterly
+- Penetration testing (recommended)
+- Security policy review
+- Incident response drill
+
+## Log Retention Policy
+
+| Log Type | Retention Period | Location |
+|----------|-----------------|----------|
+| npm-audit.log | 90 days | `backend/logs/npm-audit.log` |
+| security-alerts.log | 90 days | `backend/logs/security-alerts.log` |
+| In-memory traffic | 1 hour | Memory (auto-cleanup) |
+| In-memory alerts | 500 max entries | Memory |
+
+### Log Management
+- Logs older than 90 days should be archived or deleted
+- Sensitive data is never logged (passwords, tokens, API keys)
+- Logs are stored locally and not transmitted externally
+
 ## Version History
+
+- **1.1** (November 2025): Enhanced security hardening
+  - Added helmet security headers
+  - Implemented rate limiting on auth endpoints
+  - Configured restrictive CORS
+  - Added body-size limits
+  - Documented incident response and secret rotation
 
 - **1.0** (November 2025): Initial security implementation
   - Automated npm audit on startup

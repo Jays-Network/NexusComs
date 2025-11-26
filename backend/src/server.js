@@ -7,6 +7,8 @@ const { createClient } = require("@supabase/supabase-js");
 const bcrypt = require("bcrypt");
 const https = require("https");
 const { StreamChat } = require("stream-chat");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 // Security imports
 const securityRoutes = require("./routes/security");
@@ -219,8 +221,71 @@ if (process.env.BREVO_API_KEY) {
   );
 }
 
-app.use(cors());
-app.use(express.json());
+// ============= SECURITY HARDENING =============
+
+// Helmet - Security headers (CSP, X-Frame-Options, X-XSS-Protection, etc.)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.brevo.com", "wss:", "https:"],
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS - Restrictive configuration
+const allowedOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',') 
+  : ['http://localhost:8081', 'http://localhost:3000', 'https://localhost:8081'];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Body parser with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting - General API
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // 1000 requests per window
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', generalLimiter);
+
+// Rate limiting - Authentication endpoints (stricter)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 auth attempts per window
+  message: { error: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    addSecurityAlert('rate_limit', `Auth rate limit exceeded for IP: ${req.ip}`, 'medium');
+    res.status(429).json(options.message);
+  }
+});
+app.use('/api/auth/', authLimiter);
 
 // Security monitoring middleware (must be before routes)
 app.use(securityMonitor);
@@ -243,8 +308,36 @@ const sessionMiddleware = (req, res, next) => {
   }
 };
 
-// Mount security routes (PROTECTED - requires authentication)
-app.use('/api/security', sessionMiddleware, securityRoutes);
+// Admin-only middleware (for security dashboard write operations)
+const adminOnlyMiddleware = (req, res, next) => {
+  // Check if user has admin role (from JWT or database)
+  // For now, we restrict write operations to users with admin permission
+  if (!req.user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  // Check permissions from JWT payload
+  const permissions = req.user.permissions || {};
+  const isAdmin = permissions.admin === true || 
+                  permissions.superAdmin === true || 
+                  req.user.role === 'admin';
+  
+  // GET requests allowed for all authenticated users (read-only)
+  if (req.method === 'GET') {
+    return next();
+  }
+  
+  // POST/DELETE (write) operations require admin
+  if (!isAdmin) {
+    addSecurityAlert('unauthorized_access', `Non-admin user ${req.user.email || req.user.id} attempted security write operation`, 'medium');
+    return res.status(403).json({ error: "Admin access required for this operation" });
+  }
+  
+  next();
+};
+
+// Mount security routes (PROTECTED - requires authentication + admin for writes)
+app.use('/api/security', sessionMiddleware, adminOnlyMiddleware, securityRoutes);
 
 // ============= AUTH ENDPOINTS =============
 
