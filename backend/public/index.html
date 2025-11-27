@@ -1338,8 +1338,15 @@
                     <input type="text" id="groupDescription" placeholder="Enter group description (optional)">
                 </div>
                 <div class="form-group">
+                    <label for="parentGroupId">Parent Group (Optional)</label>
+                    <select id="parentGroupId" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                        <option value="">-- No Parent (Main Group) --</option>
+                    </select>
+                    <p style="color: #808080; font-size: 12px; margin-top: 4px;">Leave empty to create a main group, or select a parent to create a subgroup</p>
+                </div>
+                <div class="form-group">
                     <label>Select Members</label>
-                    <div id="groupMembersContainer" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+                    <div id="groupMembersContainer" style="max-height: 200px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
                         <p style="color: #808080; text-align: center; padding: 20px;">Loading users...</p>
                     </div>
                 </div>
@@ -2502,14 +2509,55 @@
             `).join('');
         }
 
+        // Groups data cache
+        let allGroups = [];
+
+        async function fetchAllGroups() {
+            try {
+                const response = await fetch('/api/groups', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch groups');
+                allGroups = await response.json();
+                return allGroups;
+            } catch (error) {
+                console.error('Error fetching groups:', error);
+                return [];
+            }
+        }
+
+        function renderParentGroupDropdown() {
+            const select = document.getElementById('parentGroupId');
+            select.innerHTML = '<option value="">-- No Parent (Main Group) --</option>';
+            
+            // Build hierarchical options
+            function addGroupOptions(groups, level = 0) {
+                const mainGroups = groups.filter(g => !g.parent_group_id);
+                mainGroups.forEach(group => {
+                    const indent = '\u00A0'.repeat(level * 4);
+                    select.innerHTML += `<option value="${group.id}">${indent}${group.name}</option>`;
+                    // Add child groups
+                    const children = groups.filter(g => g.parent_group_id === group.id);
+                    children.forEach(child => {
+                        const childIndent = '\u00A0'.repeat((level + 1) * 4);
+                        select.innerHTML += `<option value="${child.id}">${childIndent}└─ ${child.name}</option>`;
+                    });
+                });
+            }
+            
+            addGroupOptions(allGroups);
+        }
+
         async function openAddGroupModal() {
             document.getElementById('groupError').style.display = 'none';
             document.getElementById('groupName').value = '';
             document.getElementById('groupDescription').value = '';
+            document.getElementById('parentGroupId').value = '';
             
-            // Fetch users
-            await fetchAvailableUsers();
+            // Fetch users and groups
+            await Promise.all([fetchAvailableUsers(), fetchAllGroups()]);
             renderMembersCheckboxes('groupMembersContainer', 'group');
+            renderParentGroupDropdown();
             
             document.getElementById('groupModal').classList.add('active');
         }
@@ -2521,6 +2569,7 @@
         async function createGroup() {
             const name = document.getElementById('groupName').value.trim();
             const description = document.getElementById('groupDescription').value.trim();
+            const parentGroupId = document.getElementById('parentGroupId').value;
             const errorDiv = document.getElementById('groupError');
             const btn = event.target;
 
@@ -2547,6 +2596,7 @@
                     body: JSON.stringify({
                         name,
                         description,
+                        parentGroupId: parentGroupId || null,
                         memberIds
                     })
                 });
@@ -2559,7 +2609,7 @@
 
                 alert('Group created successfully!');
                 closeGroupModal();
-                // Optionally refresh groups list here
+                loadGroups(); // Refresh the groups table
             } catch (error) {
                 errorDiv.textContent = error.message;
                 errorDiv.style.display = 'block';
@@ -2567,6 +2617,82 @@
                 btn.disabled = false;
                 btn.textContent = 'Create Group';
             }
+        }
+
+        async function loadGroups() {
+            await fetchAllGroups();
+            renderGroupsTable();
+        }
+
+        function renderGroupsTable() {
+            const tbody = document.querySelector('#groups table tbody');
+            if (!tbody) return;
+
+            if (allGroups.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">No groups found. Create your first group!</td></tr>';
+                return;
+            }
+
+            // Build hierarchical structure
+            const mainGroups = allGroups.filter(g => !g.parent_group_id);
+            let html = '';
+
+            function renderGroup(group, level = 0) {
+                const indent = level > 0 ? '&nbsp;'.repeat(level * 4) + '└─ ' : '';
+                const parentName = group.parent_group_id 
+                    ? allGroups.find(g => g.id === group.parent_group_id)?.name || '-'
+                    : '-';
+                const memberCount = group.member_count || 0;
+                const createdDate = new Date(group.created_at).toLocaleDateString();
+                
+                html += `
+                    <tr data-group-id="${group.id}">
+                        <td style="font-weight: ${level === 0 ? '600' : '400'}; color: ${level === 0 ? '#D4AF37' : '#FFFFFF'};">${indent}${group.name}</td>
+                        <td>${parentName}</td>
+                        <td>${memberCount}</td>
+                        <td>${level === 0 ? 'Main Group' : 'Subgroup'}</td>
+                        <td>${createdDate}</td>
+                        <td>
+                            <button onclick="editGroup(${group.id})" style="background: #4CAF50; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Edit</button>
+                            <button onclick="deleteGroup(${group.id})" style="background: #FF6B6B; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
+                        </td>
+                    </tr>
+                `;
+                
+                // Render children
+                const children = allGroups.filter(g => g.parent_group_id === group.id);
+                children.forEach(child => renderGroup(child, level + 1));
+            }
+
+            mainGroups.forEach(group => renderGroup(group));
+            tbody.innerHTML = html;
+        }
+
+        async function deleteGroup(groupId) {
+            if (!confirm('Are you sure you want to delete this group? This will also delete all subgroups.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/groups/${groupId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to delete group');
+                }
+
+                alert('Group deleted successfully!');
+                loadGroups();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function editGroup(groupId) {
+            alert('Edit group feature coming soon. Group ID: ' + groupId);
         }
 
         async function openAddEmergencyGroupModal() {
@@ -3306,12 +3432,14 @@
             });
         }
 
-        // Load accounts when accounts section is shown
+        // Load accounts/groups when sections are shown
         const originalSwitchSection = switchSection;
         switchSection = function(sectionId) {
             originalSwitchSection(sectionId);
             if (sectionId === 'accounts') {
                 loadAccounts();
+            } else if (sectionId === 'groups') {
+                loadGroups();
             }
         };
 

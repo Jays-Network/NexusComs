@@ -1367,22 +1367,109 @@ app.post("/api/groups", sessionMiddleware, async (req, res) => {
   }
 });
 
-// Get all groups
+// Get all groups with member counts
 app.get("/api/groups", sessionMiddleware, async (req, res) => {
   try {
+    // Get groups with member counts
     const { data: groups, error } = await supabase
       .from("groups")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select(`
+        *,
+        group_members(count)
+      `)
+      .order("created_at", { ascending: true });
 
     if (error) {
+      console.error("Fetch groups error:", error);
       return res.status(500).json({ error: "Failed to fetch groups" });
     }
 
-    res.json(groups || []);
+    // Transform to include member_count
+    const groupsWithCounts = (groups || []).map(g => ({
+      ...g,
+      member_count: g.group_members?.[0]?.count || 0,
+      group_members: undefined
+    }));
+
+    res.json(groupsWithCounts);
   } catch (error) {
     console.error("Fetch groups error:", error);
     res.status(500).json({ error: "Failed to fetch groups" });
+  }
+});
+
+// Delete a group (and its subgroups)
+app.delete("/api/groups/:groupId", sessionMiddleware, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    // First, recursively find all subgroups to delete
+    async function getSubgroupIds(parentId) {
+      const { data: children } = await supabase
+        .from("groups")
+        .select("id")
+        .eq("parent_group_id", parentId);
+      
+      let allIds = [];
+      if (children && children.length > 0) {
+        for (const child of children) {
+          allIds.push(child.id);
+          const childSubgroups = await getSubgroupIds(child.id);
+          allIds = allIds.concat(childSubgroups);
+        }
+      }
+      return allIds;
+    }
+
+    const subgroupIds = await getSubgroupIds(groupId);
+    const allGroupIds = [parseInt(groupId), ...subgroupIds];
+
+    // Delete Stream channels for all groups
+    if (streamServerClient) {
+      for (const gId of allGroupIds) {
+        try {
+          const channel = streamServerClient.channel('team', `group-${gId}`);
+          await channel.delete();
+          console.log(`Deleted Stream channel for group ${gId}`);
+        } catch (streamError) {
+          console.warn(`Could not delete Stream channel for group ${gId}:`, streamError.message);
+        }
+      }
+    }
+
+    // Delete group_members for all groups
+    const { error: memberError } = await supabase
+      .from("group_members")
+      .delete()
+      .in("group_id", allGroupIds);
+
+    if (memberError) {
+      console.warn("Error deleting group members:", memberError);
+    }
+
+    // Delete subgroups first (due to foreign key constraint)
+    for (const subId of subgroupIds.reverse()) {
+      await supabase.from("groups").delete().eq("id", subId);
+    }
+
+    // Delete the main group
+    const { error: deleteError } = await supabase
+      .from("groups")
+      .delete()
+      .eq("id", groupId);
+
+    if (deleteError) {
+      console.error("Delete group error:", deleteError);
+      addLog("ERROR", "Groups", "Failed to delete group", deleteError.message);
+      return res.status(500).json({ error: "Failed to delete group" });
+    }
+
+    addLog("INFO", "Groups", `Deleted group ${groupId} and ${subgroupIds.length} subgroups`);
+    res.json({ message: "Group deleted successfully", deletedGroups: allGroupIds.length });
+  } catch (error) {
+    console.error("Delete group error:", error);
+    addLog("ERROR", "Groups", "Server error deleting group", error.message);
+    res.status(500).json({ error: "Failed to delete group" });
   }
 });
 
