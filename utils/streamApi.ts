@@ -1,8 +1,13 @@
 // Backend hosted on Replit, frontend on Expo.dev
 // Safe API URL initialization - never parse undefined
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 function getApiUrl(): string {
+  // Get the Expo manifest/config to detect development mode
+  const manifest = Constants.expoConfig || Constants.manifest2 || Constants.manifest;
+  const debuggerHost = Constants.expoGoConfig?.debuggerHost || (manifest as any)?.debuggerHost;
+  
   // For web development, use the dev domain backend (port 3003 is mapped to local 3000)
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const hostname = window.location?.hostname || '';
@@ -15,12 +20,32 @@ function getApiUrl(): string {
     }
   }
   
+  // For mobile (Android/iOS) in Expo Go development mode
+  // The debuggerHost will be something like "hostname:port"
+  if (debuggerHost && (Platform.OS === 'android' || Platform.OS === 'ios')) {
+    // Extract hostname from debuggerHost (format: hostname:port)
+    const hostMatch = debuggerHost.match(/^([^:]+)/);
+    if (hostMatch) {
+      const host = hostMatch[1];
+      // Check if it's a Replit dev domain
+      if (host.includes('replit.dev') || host.includes('repl.co') || host.includes('worf.replit.dev')) {
+        // Backend is on port 3003
+        const backendUrl = `https://${host}:3003`;
+        console.log('🌐 [streamApi] Using mobile dev backend URL:', backendUrl);
+        return backendUrl;
+      }
+    }
+  }
+  
   // For production or native apps, use the configured URL
   if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
-    return process.env.EXPO_PUBLIC_API_URL.trim();
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL.trim();
+    console.log('🌐 [streamApi] Using configured API URL:', apiUrl);
+    return apiUrl;
   }
   
   // Default fallback
+  console.log('🌐 [streamApi] Using default localhost fallback');
   return 'http://localhost:3000';
 }
 
