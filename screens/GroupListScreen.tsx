@@ -8,12 +8,12 @@ import { Channel } from 'stream-chat';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useStreamAuth } from '@/utils/streamAuth';
-import { ChatsStackParamList } from '@/navigation/ChatsStackNavigator';
+import { GroupsStackParamList } from '@/navigation/GroupsStackNavigator';
 import { AppHeader } from '@/components/AppHeader';
 import { fetchGroups, Group } from '@/utils/streamApi';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
-type NavigationProp = NativeStackNavigationProp<ChatsStackParamList>;
+type NavigationProp = NativeStackNavigationProp<GroupsStackParamList>;
 
 interface HierarchicalGroup extends Group {
   level: number;
@@ -162,7 +162,7 @@ export default function GroupListScreen() {
     const channelId = channel.id ?? channel.cid ?? '';
     const channelName = (channel.data as { name?: string })?.name || 'Chat';
     
-    navigation.navigate('ChatRoom', {
+    navigation.navigate('GroupChatRoom', {
       channelId,
       channelName,
     });

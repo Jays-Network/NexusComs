@@ -3,7 +3,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet } from "react-native";
-import ChatsStackNavigator from "@/navigation/ChatsStackNavigator";
+import DirectChatsStackNavigator from "@/navigation/DirectChatsStackNavigator";
+import GroupsStackNavigator from "@/navigation/GroupsStackNavigator";
 import EmergencyStackNavigator from "@/navigation/EmergencyStackNavigator";
 import SettingsStackNavigator from "@/navigation/SettingsStackNavigator";
 import ContactsStackNavigator from "@/navigation/ContactsStackNavigator";
@@ -13,6 +14,7 @@ import { Colors } from "@/constants/theme";
 
 export type MainTabParamList = {
   ChatsTab: undefined;
+  GroupsTab: undefined;
   AlertsTab: undefined;
   ContactsTab: undefined;
   CallLogTab: undefined;
@@ -52,11 +54,21 @@ export default function MainTabNavigator() {
     >
       <Tab.Screen
         name="ChatsTab"
-        component={ChatsStackNavigator}
+        component={DirectChatsStackNavigator}
         options={{
           title: "Chats",
           tabBarIcon: ({ color, size }) => (
             <Feather name="message-circle" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="GroupsTab"
+        component={GroupsStackNavigator}
+        options={{
+          title: "Groups",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" size={size} color={color} />
           ),
         }}
       />
@@ -77,7 +89,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Contacts",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="users" size={size} color={color} />
+            <Feather name="book" size={size} color={color} />
           ),
         }}
       />
