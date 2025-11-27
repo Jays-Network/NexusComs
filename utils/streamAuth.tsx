@@ -21,6 +21,7 @@ interface StreamAuthContextType {
   user: User | null;
   chatClient: StreamChat | null;
   isLoading: boolean;
+  authToken: string | null;
   login: (userId: string, userName: string, userImage?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -33,6 +34,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [chatClient, setChatClient] = useState<StreamChat | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
     initializeAuth();
@@ -42,7 +44,12 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('🔍 [streamAuth.tsx] Initializing authentication...');
     try {
       const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
+      const storedToken = await AsyncStorage.getItem('@session_token');
       console.log('📦 Stored user found:', !!storedUser);
+      
+      if (storedToken) {
+        setAuthToken(storedToken);
+      }
       
       if (storedUser) {
         console.log('🔄 Restoring user session...');
@@ -130,6 +137,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Store session token for API calls
       await AsyncStorage.setItem('@session_token', sessionToken);
+      setAuthToken(sessionToken);
       
       // CRITICAL: Pass the email to create a proper Stream ID (e.g., jullian_worldriskglobal_com)
       // The backend will sanitize the email to create the stream_id
@@ -145,8 +153,10 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
       await disconnectStreamUser();
       await disconnectVideoUser();
       await AsyncStorage.removeItem(STORAGE_KEY);
+      await AsyncStorage.removeItem('@session_token');
       setUser(null);
       setChatClient(null);
+      setAuthToken(null);
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -154,7 +164,7 @@ export const StreamAuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <StreamAuthContext.Provider value={{ user, chatClient, isLoading, login, logout }}>
+    <StreamAuthContext.Provider value={{ user, chatClient, isLoading, authToken, login, logout }}>
       {children}
     </StreamAuthContext.Provider>
   );

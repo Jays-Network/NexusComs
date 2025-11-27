@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -7,15 +7,60 @@ import { ScreenKeyboardAwareScrollView } from '@/components/ScreenKeyboardAwareS
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useStreamAuth } from '@/utils/streamAuth';
-import { getChatClient } from '@/utils/streamClient';
+import { fetchGroups, createGroup, Group } from '@/utils/streamApi';
 
 export default function CreateGroupScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
-  const { user } = useStreamAuth();
+  const { user, authToken } = useStreamAuth();
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
+  const [parentGroupId, setParentGroupId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingGroups, setIsFetchingGroups] = useState(true);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [showParentPicker, setShowParentPicker] = useState(false);
+
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  async function loadGroups() {
+    if (!authToken) {
+      setIsFetchingGroups(false);
+      return;
+    }
+    
+    try {
+      const fetchedGroups = await fetchGroups(authToken);
+      setGroups(fetchedGroups);
+    } catch (error) {
+      console.warn('Failed to fetch groups:', error);
+    } finally {
+      setIsFetchingGroups(false);
+    }
+  }
+
+  function getParentGroupName(): string {
+    if (!parentGroupId) return 'None (Main Group)';
+    const parent = groups.find(g => g.id === parentGroupId);
+    return parent?.name || 'Unknown';
+  }
+
+  function buildHierarchicalGroups(): { group: Group; level: number }[] {
+    const result: { group: Group; level: number }[] = [];
+    
+    function addGroup(group: Group, level: number) {
+      result.push({ group, level });
+      const children = groups.filter(g => g.parent_group_id === group.id);
+      children.forEach(child => addGroup(child, level + 1));
+    }
+    
+    const mainGroups = groups.filter(g => !g.parent_group_id);
+    mainGroups.forEach(g => addGroup(g, 0));
+    
+    return result;
+  }
 
   async function handleCreateGroup() {
     if (!groupName.trim()) {
@@ -23,28 +68,18 @@ export default function CreateGroupScreen() {
       return;
     }
 
-    if (!user) {
+    if (!user || !authToken) {
       Alert.alert('Error', 'You must be logged in to create a group');
       return;
     }
 
     setIsLoading(true);
     try {
-      const chatClient = getChatClient();
-      if (!chatClient) {
-        throw new Error('Chat client not available');
-      }
-      
-      const channelId = groupName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
-      
-      const channel = chatClient.channel('messaging', channelId, {
+      await createGroup(authToken, {
         name: groupName.trim(),
-        description: description.trim(),
-        members: [user.id],
-        created_by_id: user.id,
+        description: description.trim() || undefined,
+        parentGroupId: parentGroupId,
       });
-
-      await channel.create();
       
       Alert.alert('Success', 'Group created successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -104,6 +139,80 @@ export default function CreateGroupScreen() {
               textAlignVertical="top"
               editable={!isLoading}
             />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <ThemedText style={[styles.label, { color: theme.textSecondary }]}>Parent Group (Optional)</ThemedText>
+            <Pressable
+              onPress={() => setShowParentPicker(!showParentPicker)}
+              disabled={isFetchingGroups || isLoading}
+              style={[styles.pickerButton, { 
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              }]}
+            >
+              {isFetchingGroups ? (
+                <ActivityIndicator size="small" color={theme.textSecondary} />
+              ) : (
+                <>
+                  <ThemedText style={{ color: parentGroupId ? theme.text : theme.textSecondary }}>
+                    {getParentGroupName()}
+                  </ThemedText>
+                  <Feather 
+                    name={showParentPicker ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color={theme.textSecondary} 
+                  />
+                </>
+              )}
+            </Pressable>
+            <ThemedText style={[styles.helperText, { color: theme.textSecondary }]}>
+              Leave empty to create a main group, or select a parent to create a subgroup
+            </ThemedText>
+
+            {showParentPicker ? (
+              <View style={[styles.pickerList, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+                  <Pressable
+                    onPress={() => {
+                      setParentGroupId(null);
+                      setShowParentPicker(false);
+                    }}
+                    style={[
+                      styles.pickerItem,
+                      !parentGroupId && { backgroundColor: theme.primary + '20' }
+                    ]}
+                  >
+                    <ThemedText style={[styles.pickerItemText, !parentGroupId && { color: theme.primary }]}>
+                      None (Main Group)
+                    </ThemedText>
+                  </Pressable>
+                  
+                  {buildHierarchicalGroups().map(({ group, level }) => (
+                    <Pressable
+                      key={group.id}
+                      onPress={() => {
+                        setParentGroupId(group.id);
+                        setShowParentPicker(false);
+                      }}
+                      style={[
+                        styles.pickerItem,
+                        { paddingLeft: Spacing.lg + (level * 16) },
+                        parentGroupId === group.id && { backgroundColor: theme.primary + '20' }
+                      ]}
+                    >
+                      <ThemedText style={[
+                        styles.pickerItemText, 
+                        level > 0 && { color: theme.textSecondary },
+                        parentGroupId === group.id && { color: theme.primary }
+                      ]}>
+                        {level > 0 ? '└─ ' : ''}{group.name}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
           </View>
 
           <Pressable
@@ -175,6 +284,35 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
     paddingTop: Spacing.lg,
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+  },
+  helperText: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  pickerList: {
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  pickerScroll: {
+    maxHeight: 200,
+  },
+  pickerItem: {
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  pickerItemText: {
+    fontSize: 15,
   },
   createButton: {
     flexDirection: 'row',
