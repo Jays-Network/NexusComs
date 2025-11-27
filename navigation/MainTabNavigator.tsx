@@ -96,6 +96,8 @@ export default function MainTabNavigator() {
         component={SettingsStackNavigator}
         options={{
           tabBarButton: () => null,
+          tabBarStyle: { display: 'none' },
+          tabBarItemStyle: { display: 'none' },
         }}
       />
     </Tab.Navigator>
