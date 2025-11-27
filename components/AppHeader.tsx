@@ -35,12 +35,12 @@ export function AppHeader({ onMenuPress }: AppHeaderProps) {
         {/* Left: Logo + Title */}
         <View style={styles.leftSection}>
           <Image
-            source={require("../assets/images/icon.png")}
+            source={require("../assets/images/world-risk-logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
           <View>
-            <Text style={[styles.appName, { color: theme.text }]}>NexusComs</Text>
+            <Text style={[styles.appName, { color: theme.text }]}>World Risk</Text>
             {user && <Text style={[styles.userName, { color: theme.textSecondary }]}>{user.name}</Text>}
           </View>
         </View>
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   logo: {
-    width: 40,
+    width: 80,
     height: 40,
   },
   appName: {
