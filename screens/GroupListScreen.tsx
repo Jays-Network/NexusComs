@@ -81,7 +81,7 @@ export default function GroupListScreen() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showGroupTree, setShowGroupTree] = useState(false);
+  const [showGroupTree, setShowGroupTree] = useState(true);
 
   const loadGroups = async () => {
     if (!authToken) {
@@ -104,6 +104,18 @@ export default function GroupListScreen() {
     useCallback(() => {
       loadGroups();
     }, [authToken])
+  );
+
+  // Auto-expand top-level groups on first load
+  useFocusEffect(
+    useCallback(() => {
+      if (groups.length > 0 && expandedGroups.size === 0) {
+        const topLevelIds = groups
+          .filter(g => !g.parent_group_id)
+          .map(g => g.id);
+        setExpandedGroups(new Set(topLevelIds));
+      }
+    }, [groups])
   );
 
   const handleRefresh = () => {
@@ -152,9 +164,11 @@ export default function GroupListScreen() {
   const handleGroupPress = (group: HierarchicalGroup) => {
     if (group.hasChildren) {
       toggleExpand(group.id);
-    } else {
+    } else if (group.stream_channel_id) {
       setSelectedGroup(group);
       setShowGroupTree(false);
+    } else {
+      setSelectedGroup(group);
     }
   };
 
@@ -247,39 +261,50 @@ export default function GroupListScreen() {
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
       <AppHeader />
       
-      {hasGroups && !isLoadingGroups ? (
-        <View style={[styles.filterBar, { borderBottomColor: theme.border }]}>
-          <Pressable
-            onPress={() => setShowGroupTree(!showGroupTree)}
-            style={[styles.filterButton, { backgroundColor: theme.surface }]}
+      <View style={[styles.filterBar, { borderBottomColor: theme.border }]}>
+        <Pressable
+          onPress={() => setShowGroupTree(!showGroupTree)}
+          style={[styles.filterButton, { backgroundColor: theme.surface }]}
+        >
+          <Feather name="layers" size={16} color={theme.primary} />
+          <Text style={[styles.filterText, { color: theme.text }]} numberOfLines={1}>
+            {selectedGroup ? selectedGroup.name : 'All Groups'}
+          </Text>
+          <Feather 
+            name={showGroupTree ? "chevron-up" : "chevron-down"} 
+            size={16} 
+            color={theme.textSecondary} 
+          />
+        </Pressable>
+        
+        {selectedGroup ? (
+          <Pressable 
+            onPress={clearGroupFilter}
+            style={[styles.clearFilterButton, { backgroundColor: theme.surface }]}
           >
-            <Feather name="layers" size={16} color={theme.primary} />
-            <Text style={[styles.filterText, { color: theme.text }]} numberOfLines={1}>
-              {selectedGroup ? selectedGroup.name : 'All Groups'}
-            </Text>
-            <Feather 
-              name={showGroupTree ? "chevron-up" : "chevron-down"} 
-              size={16} 
-              color={theme.textSecondary} 
-            />
+            <Feather name="x" size={16} color={theme.textSecondary} />
           </Pressable>
-          
-          {selectedGroup ? (
-            <Pressable 
-              onPress={clearGroupFilter}
-              style={[styles.clearFilterButton, { backgroundColor: theme.surface }]}
-            >
-              <Feather name="x" size={16} color={theme.textSecondary} />
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
+        ) : null}
+      </View>
       
       {showGroupTree ? (
         <View style={[styles.groupTreeContainer, { backgroundColor: theme.backgroundRoot }]}>
           {isLoadingGroups ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={theme.primary} />
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                Loading groups...
+              </Text>
+            </View>
+          ) : hierarchicalGroups.length === 0 ? (
+            <View style={styles.emptyGroupsContainer}>
+              <Feather name="users" size={48} color={theme.textSecondary} />
+              <Text style={[styles.emptyGroupsTitle, { color: theme.text }]}>
+                No groups available
+              </Text>
+              <Text style={[styles.emptyGroupsSubtitle, { color: theme.textSecondary }]}>
+                Contact your administrator to be added to a group
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -297,14 +322,6 @@ export default function GroupListScreen() {
               }
             />
           )}
-          
-          <Pressable 
-            onPress={() => setShowGroupTree(false)}
-            style={[styles.closeTreeButton, { backgroundColor: theme.surface }]}
-          >
-            <Feather name="x" size={18} color={theme.text} />
-            <Text style={[styles.closeTreeText, { color: theme.text }]}>Close</Text>
-          </Pressable>
         </View>
       ) : (
         <ChannelList
@@ -359,8 +376,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingContainer: {
-    padding: Spacing.xl,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: 14,
+  },
+  emptyGroupsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyGroupsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: Spacing.md,
+    textAlign: 'center',
+  },
+  emptyGroupsSubtitle: {
+    fontSize: 14,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,

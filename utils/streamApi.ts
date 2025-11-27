@@ -1,9 +1,30 @@
 // Backend hosted on Replit, frontend on Expo.dev
 // Safe API URL initialization - never parse undefined
-let API_URL = 'http://localhost:3000'; // Default fallback
-if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
-  API_URL = process.env.EXPO_PUBLIC_API_URL.trim();
+import { Platform } from 'react-native';
+
+function getApiUrl(): string {
+  // For web development, use the dev domain backend (port 3003 is mapped to local 3000)
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const hostname = window.location?.hostname || '';
+    // If running on Replit dev domain, use the backend port
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
+      // Backend is on port 3003 (mapped from local 3000)
+      const backendUrl = `https://${hostname.replace(':8081', '')}:3003`;
+      console.log('🌐 [streamApi] Using dev backend URL:', backendUrl);
+      return backendUrl;
+    }
+  }
+  
+  // For production or native apps, use the configured URL
+  if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
+    return process.env.EXPO_PUBLIC_API_URL.trim();
+  }
+  
+  // Default fallback
+  return 'http://localhost:3000';
 }
+
+const API_URL = getApiUrl();
 console.log('🌐 [streamApi] API URL configured:', API_URL);
 console.log('🔍 [streamApi] EXPO_PUBLIC_API_URL raw:', process.env.EXPO_PUBLIC_API_URL);
 
