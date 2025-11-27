@@ -5,7 +5,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
-import { AppHeader } from '@/components/AppHeader';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useStreamAuth } from '@/utils/streamAuth';
@@ -16,12 +15,13 @@ type NavigationProp = NativeStackNavigationProp<SettingsStackParamList>;
 interface SettingsItemProps {
   icon: keyof typeof Feather.glyphMap;
   label: string;
+  description?: string;
   onPress: () => void;
   isDestructive?: boolean;
   showChevron?: boolean;
 }
 
-function SettingsItem({ icon, label, onPress, isDestructive = false, showChevron = true }: SettingsItemProps) {
+function SettingsItem({ icon, label, description, onPress, isDestructive = false, showChevron = true }: SettingsItemProps) {
   const { theme } = useTheme();
   
   return (
@@ -36,16 +36,23 @@ function SettingsItem({ icon, label, onPress, isDestructive = false, showChevron
         <Feather 
           name={icon} 
           size={20} 
-          color={isDestructive ? theme.emergency : theme.text} 
+          color={isDestructive ? theme.emergency : theme.textSecondary} 
         />
-        <ThemedText 
-          style={[
-            styles.settingItemLabel, 
-            isDestructive && { color: theme.emergency }
-          ]}
-        >
-          {label}
-        </ThemedText>
+        <View style={styles.settingTextContainer}>
+          <ThemedText 
+            style={[
+              styles.settingItemLabel, 
+              isDestructive && { color: theme.emergency }
+            ]}
+          >
+            {label}
+          </ThemedText>
+          {description ? (
+            <ThemedText style={[styles.settingDescription, { color: theme.textSecondary }]}>
+              {description}
+            </ThemedText>
+          ) : null}
+        </View>
       </View>
       {showChevron ? (
         <Feather name="chevron-right" size={20} color={theme.textSecondary} />
@@ -56,7 +63,7 @@ function SettingsItem({ icon, label, onPress, isDestructive = false, showChevron
 
 export default function SettingsScreen() {
   const { theme } = useTheme();
-  const { logout } = useStreamAuth();
+  const { user, logout } = useStreamAuth();
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
 
@@ -83,27 +90,58 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.screenContainer, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
-      <AppHeader />
+      {/* Custom Header with Back Button */}
+      <View style={[styles.header, { backgroundColor: theme.backgroundSecondary, borderBottomColor: theme.border }]}>
+        <Pressable 
+          onPress={() => navigation.goBack()}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+        >
+          <Feather name="arrow-left" size={24} color={theme.text} />
+        </Pressable>
+        <ThemedText style={styles.headerTitle}>Settings</ThemedText>
+        <View style={styles.headerRight} />
+      </View>
+
       <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>
         <View style={styles.container}>
+          {/* Profile Section at Top */}
+          <Pressable 
+            onPress={() => navigation.navigate('Profile')}
+            style={({ pressed }) => [
+              styles.profileSection,
+              { backgroundColor: theme.surface },
+              pressed && { opacity: 0.8 }
+            ]}
+          >
+            <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+              <ThemedText style={styles.avatarText}>
+                {user?.name?.[0]?.toUpperCase() || user?.id?.[0]?.toUpperCase() || 'U'}
+              </ThemedText>
+            </View>
+            <View style={styles.profileInfo}>
+              <ThemedText style={styles.profileName}>{user?.name || 'User'}</ThemedText>
+              <ThemedText style={[styles.profileStatus, { color: theme.textSecondary }]}>
+                Available
+              </ThemedText>
+            </View>
+            <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+          </Pressable>
+
+          {/* Account Section */}
           <View style={styles.section}>
             <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>Account</ThemedText>
             
             <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
               <SettingsItem
-                icon="user"
-                label="Profile"
-                onPress={() => navigation.navigate('Profile')}
-              />
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
-              <SettingsItem
                 icon="bell"
                 label="Notifications"
+                description="Message notifications"
                 onPress={() => navigation.navigate('Notifications')}
               />
             </View>
           </View>
 
+          {/* Support Section */}
           <View style={styles.section}>
             <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>Support</ThemedText>
             
@@ -111,11 +149,13 @@ export default function SettingsScreen() {
               <SettingsItem
                 icon="info"
                 label="About"
+                description="App info and legal"
                 onPress={() => navigation.navigate('About')}
               />
             </View>
           </View>
 
+          {/* Logout Section */}
           <View style={styles.section}>
             <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
               <SettingsItem
@@ -137,9 +177,57 @@ const styles = StyleSheet.create({
   screenContainer: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: Spacing.sm,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  headerRight: {
+    width: 40,
+  },
   container: {
     padding: Spacing.lg,
-    gap: Spacing['2xl'],
+    gap: Spacing.xl,
+  },
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.lg,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  profileInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  profileStatus: {
+    fontSize: 14,
   },
   section: {
     gap: Spacing.md,
@@ -159,16 +247,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.lg,
-    minHeight: 56,
+    minHeight: 64,
   },
   settingItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.lg,
+    flex: 1,
+  },
+  settingTextContainer: {
+    flex: 1,
+    gap: 2,
   },
   settingItemLabel: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  settingDescription: {
+    fontSize: 13,
   },
   divider: {
     height: 1,
