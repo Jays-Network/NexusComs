@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { View, Pressable, Switch, StyleSheet, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
+import { AppHeader } from '@/components/AppHeader';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useStreamAuth } from '@/utils/streamAuth';
@@ -11,6 +13,7 @@ import { useStreamAuth } from '@/utils/streamAuth';
 export default function SettingsScreen() {
   const { theme } = useTheme();
   const { user, logout } = useStreamAuth();
+  const insets = useSafeAreaInsets();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
@@ -36,7 +39,9 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>
+    <View style={[styles.screenContainer, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+      <AppHeader />
+      <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>
       <View style={styles.container}>
         {/* Profile Section */}
         <View style={styles.section}>
@@ -130,11 +135,15 @@ export default function SettingsScreen() {
           <ThemedText style={styles.logoutButtonText}>Log Out</ThemedText>
         </Pressable>
       </View>
-    </ScreenScrollView>
+      </ScreenScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+  },
   container: {
     padding: Spacing.lg,
     gap: Spacing['2xl']

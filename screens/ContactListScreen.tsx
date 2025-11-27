@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useStreamAuth } from '@/utils/streamAuth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppHeader } from '@/components/AppHeader';
 
 interface Contact {
   id: string;
@@ -91,10 +92,12 @@ export default function ContactListScreen() {
         styles.container,
         {
           backgroundColor: theme.backgroundRoot,
+          paddingTop: insets.top,
           paddingBottom: insets.bottom + 80,
         },
       ]}
     >
+      <AppHeader />
       {contacts.length === 0 ? (
         <EmptyStateView />
       ) : (

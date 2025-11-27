@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
+import { AppHeader } from '@/components/AppHeader';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useStreamAuth } from '@/utils/streamAuth';
@@ -108,6 +110,8 @@ export default function EmergencyListScreen() {
     await loadEmergencyMessages();
   }
 
+  const insets = useSafeAreaInsets();
+
   if (isLoading) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.backgroundRoot }]}>
@@ -117,32 +121,38 @@ export default function EmergencyListScreen() {
   }
 
   return (
-    <ScreenScrollView 
-      style={{ backgroundColor: theme.backgroundRoot }}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      {messages.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Feather name="alert-octagon" size={64} color={theme.emergency} />
-          <ThemedText style={styles.emptyText}>No Emergency Alerts</ThemedText>
-          <ThemedText style={styles.emptySubtext}>
-            Emergency alerts from your channels will appear here
-          </ThemedText>
-        </View>
-      ) : (
-        <View style={styles.messagesContainer}>
-          {messages.map((message) => (
-            <EmergencyCard key={message.id} message={message} />
-          ))}
-        </View>
-      )}
-    </ScreenScrollView>
+    <View style={[styles.screenContainer, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+      <AppHeader />
+      <ScreenScrollView 
+        style={{ backgroundColor: theme.backgroundRoot }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+      >
+        {messages.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Feather name="alert-octagon" size={64} color={theme.emergency} />
+            <ThemedText style={styles.emptyText}>No Emergency Alerts</ThemedText>
+            <ThemedText style={styles.emptySubtext}>
+              Emergency alerts from your channels will appear here
+            </ThemedText>
+          </View>
+        ) : (
+          <View style={styles.messagesContainer}>
+            {messages.map((message) => (
+              <EmergencyCard key={message.id} message={message} />
+            ))}
+          </View>
+        )}
+      </ScreenScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+  },
   centered: {
     flex: 1,
     justifyContent: 'center',

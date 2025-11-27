@@ -1,12 +1,14 @@
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChannelList } from 'stream-chat-expo';
 import { Channel } from 'stream-chat';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useStreamAuth } from '@/utils/streamAuth';
 import { ChatsStackParamList } from '@/navigation/ChatsStackNavigator';
+import { AppHeader } from '@/components/AppHeader';
 
 type NavigationProp = NativeStackNavigationProp<ChatsStackParamList>;
 
@@ -63,6 +65,7 @@ export default function GroupListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
   const { user } = useStreamAuth();
+  const insets = useSafeAreaInsets();
 
   const handleChannelSelect = (channel: Channel) => {
     const channelId = channel.id ?? channel.cid ?? '';
@@ -79,7 +82,8 @@ export default function GroupListScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+    <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+      <AppHeader />
       <ChannelList
         filters={{
           members: { $in: [user.id] },
