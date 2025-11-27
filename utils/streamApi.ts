@@ -86,6 +86,7 @@ export interface Group {
   name: string;
   description?: string;
   parent_group_id?: number | null;
+  stream_channel_id?: string | null;
   member_count: number;
   created_at: string;
   created_by: string;
