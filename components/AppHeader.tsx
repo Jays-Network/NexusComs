@@ -1,17 +1,15 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Image, Pressable, Modal, FlatList, Text } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
-import { Colors, Spacing } from "@/constants/theme";
+import { Spacing } from "@/constants/theme";
 import { useStreamAuth } from "@/utils/streamAuth";
 
-interface AppHeaderProps {
-  onMenuPress?: (option: string) => void;
-}
-
-export function AppHeader({ onMenuPress }: AppHeaderProps) {
+export function AppHeader() {
   const { theme } = useTheme();
   const { user } = useStreamAuth();
+  const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
 
   const menuOptions = [
@@ -20,7 +18,9 @@ export function AppHeader({ onMenuPress }: AppHeaderProps) {
 
   const handleMenuOption = (option: string) => {
     setMenuVisible(false);
-    onMenuPress?.(option);
+    if (option === "settings") {
+      navigation.navigate("SettingsTab");
+    }
   };
 
   return (
