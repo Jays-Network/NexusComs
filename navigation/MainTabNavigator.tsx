@@ -7,6 +7,7 @@ import ChatsStackNavigator from "@/navigation/ChatsStackNavigator";
 import EmergencyStackNavigator from "@/navigation/EmergencyStackNavigator";
 import SettingsStackNavigator from "@/navigation/SettingsStackNavigator";
 import ContactsStackNavigator from "@/navigation/ContactsStackNavigator";
+import CallLogStackNavigator from "@/navigation/CallLogStackNavigator";
 import { useTheme } from "@/hooks/useTheme";
 import { Colors } from "@/constants/theme";
 
@@ -14,6 +15,7 @@ export type MainTabParamList = {
   ChatsTab: undefined;
   AlertsTab: undefined;
   ContactsTab: undefined;
+  CallLogTab: undefined;
   SettingsTab: undefined;
 };
 
@@ -80,13 +82,20 @@ export default function MainTabNavigator() {
         }}
       />
       <Tab.Screen
+        name="CallLogTab"
+        component={CallLogStackNavigator}
+        options={{
+          title: "Calls",
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="phone" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="SettingsTab"
         component={SettingsStackNavigator}
         options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="settings" size={size} color={color} />
-          ),
+          tabBarButton: () => null,
         }}
       />
     </Tab.Navigator>

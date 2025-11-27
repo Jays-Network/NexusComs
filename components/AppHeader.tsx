@@ -13,6 +13,7 @@ export function AppHeader() {
   const [menuVisible, setMenuVisible] = useState(false);
 
   const menuOptions = [
+    { id: "new-group", label: "New Group", icon: "plus-circle" },
     { id: "settings", label: "Settings", icon: "settings" },
   ];
 
@@ -20,6 +21,8 @@ export function AppHeader() {
     setMenuVisible(false);
     if (option === "settings") {
       navigation.navigate("SettingsTab");
+    } else if (option === "new-group") {
+      navigation.navigate("ChatsTab", { screen: "CreateGroup" });
     }
   };
 

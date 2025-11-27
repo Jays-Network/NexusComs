@@ -3,10 +3,12 @@ import { useTheme } from "@/hooks/useTheme";
 import { getCommonScreenOptions } from "./screenOptions";
 import GroupListScreen from "@/screens/GroupListScreen";
 import ChatRoomScreen from "@/screens/ChatRoomScreen";
+import CreateGroupScreen from "@/screens/CreateGroupScreen";
 
 export type ChatsStackParamList = {
   GroupList: undefined;
   ChatRoom: { channelId: string; channelName: string };
+  CreateGroup: undefined;
 };
 
 const Stack = createNativeStackNavigator<ChatsStackParamList>();
@@ -28,6 +30,14 @@ export default function ChatsStackNavigator() {
           title: route.params.channelName,
           headerTransparent: false
         })}
+      />
+      <Stack.Screen
+        name="CreateGroup"
+        component={CreateGroupScreen}
+        options={{ 
+          title: 'New Group',
+          headerTransparent: false
+        }}
       />
     </Stack.Navigator>
   );
