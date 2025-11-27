@@ -91,6 +91,8 @@ export default function GroupListScreen() {
     
     try {
       const fetchedGroups = await fetchGroups(authToken);
+      console.log('[GroupListScreen] Fetched groups:', fetchedGroups.length);
+      console.log('[GroupListScreen] First group sample:', fetchedGroups[0]);
       setGroups(fetchedGroups);
     } catch (error) {
       console.warn('Failed to fetch groups:', error);
@@ -162,15 +164,21 @@ export default function GroupListScreen() {
   };
 
   const handleGroupPress = (group: HierarchicalGroup) => {
+    console.log('[GroupListScreen] Group pressed:', group.name, 'stream_channel_id:', group.stream_channel_id);
+    
     // Navigate to chat if group has a Stream channel
     if (group.stream_channel_id) {
+      console.log('[GroupListScreen] Navigating to GroupChatRoom with channelId:', group.stream_channel_id);
       navigation.navigate('GroupChatRoom', {
         channelId: group.stream_channel_id,
         channelName: group.name,
       });
     } else if (group.hasChildren) {
+      console.log('[GroupListScreen] No stream_channel_id, toggling expand for group with children');
       // If no channel but has children, just expand/collapse
       toggleExpand(group.id);
+    } else {
+      console.log('[GroupListScreen] No stream_channel_id and no children - cannot navigate');
     }
   };
 
@@ -193,7 +201,8 @@ export default function GroupListScreen() {
     const hasChannel = !!item.stream_channel_id;
     
     return (
-      <View
+      <Pressable
+        onPress={() => handleGroupPress(item)}
         style={[
           styles.groupItem,
           { 
@@ -205,7 +214,14 @@ export default function GroupListScreen() {
       >
         <View style={styles.groupItemContent}>
           {item.hasChildren ? (
-            <Pressable onPress={() => toggleExpand(item.id)} style={styles.expandButton}>
+            <Pressable 
+              onPress={(e) => {
+                e.stopPropagation();
+                toggleExpand(item.id);
+              }} 
+              style={styles.expandButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Feather 
                 name={item.isExpanded ? "chevron-down" : "chevron-right"} 
                 size={20} 
@@ -216,29 +232,24 @@ export default function GroupListScreen() {
             <View style={styles.expandPlaceholder} />
           )}
           
-          <Pressable 
-            onPress={() => handleGroupPress(item)}
-            style={styles.groupPressableContent}
-          >
-            <View style={[styles.groupIcon, { backgroundColor: theme.primary + '30' }]}>
-              <Feather 
-                name={item.hasChildren ? "folder" : "users"} 
-                size={18} 
-                color={theme.primary} 
-              />
-            </View>
-            
-            <View style={styles.groupInfo}>
-              <Text style={[styles.groupName, { color: theme.text }]} numberOfLines={1}>
-                {item.name}
+          <View style={[styles.groupIcon, { backgroundColor: theme.primary + '30' }]}>
+            <Feather 
+              name={item.hasChildren ? "folder" : "users"} 
+              size={18} 
+              color={theme.primary} 
+            />
+          </View>
+          
+          <View style={styles.groupInfo}>
+            <Text style={[styles.groupName, { color: theme.text }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {item.description ? (
+              <Text style={[styles.groupDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                {item.description}
               </Text>
-              {item.description ? (
-                <Text style={[styles.groupDescription, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {item.description}
-                </Text>
-              ) : null}
-            </View>
-          </Pressable>
+            ) : null}
+          </View>
           
           {item.member_count !== undefined && item.member_count > 0 ? (
             <View style={[styles.memberBadge, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
@@ -250,15 +261,12 @@ export default function GroupListScreen() {
           ) : null}
           
           {hasChannel ? (
-            <Pressable 
-              onPress={() => handleGroupPress(item)}
-              style={styles.chatButton}
-            >
+            <View style={styles.chatIndicator}>
               <Feather name="message-circle" size={18} color={theme.primary} />
-            </Pressable>
+            </View>
           ) : null}
         </View>
-      </View>
+      </Pressable>
     );
   };
 
@@ -481,6 +489,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chatButton: {
+    padding: 8,
+    marginLeft: Spacing.sm,
+  },
+  chatIndicator: {
     padding: 8,
     marginLeft: Spacing.sm,
   },
