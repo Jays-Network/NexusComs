@@ -1,194 +1,142 @@
-import { useState } from "react";
-import { StyleSheet, View, TextInput } from "react-native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { View, StyleSheet } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { ThemedText } from '@/components/ThemedText';
+import { ScreenScrollView } from '@/components/ScreenScrollView';
+import { useTheme } from '@/hooks/useTheme';
+import { Spacing, BorderRadius } from '@/constants/theme';
+import { useStreamAuth } from '@/utils/streamAuth';
 
-import { ScreenKeyboardAwareScrollView } from "@/components/ScreenKeyboardAwareScrollView";
-import { ThemedText } from "@/components/ThemedText";
-import { Button } from "@/components/Button";
-import { useTheme } from "@/hooks/useTheme";
-import { Spacing, BorderRadius, Typography } from "@/constants/theme";
-import Spacer from "@/components/Spacer";
-import type { ProfileStackParamList } from "@/navigation/ProfileStackNavigator";
-
-type ProfileScreenProps = {
-  navigation: NativeStackNavigationProp<ProfileStackParamList, "Profile">;
-};
-
-export default function ProfileScreen({ navigation }: ProfileScreenProps) {
-  const { theme, isDark } = useTheme();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleSubmit = () => {
-    console.log("Form submitted:", { name, email, password });
-  };
-
-  const inputStyle = [
-    styles.input,
-    {
-      backgroundColor: theme.backgroundDefault,
-      color: theme.text,
-    },
-  ];
+export default function ProfileScreen() {
+  const { theme } = useTheme();
+  const { user } = useStreamAuth();
 
   return (
-    <ScreenKeyboardAwareScrollView>
-      <View style={styles.section}>
-        <ThemedText type="h1">Heading 1</ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          32px • Bold
-        </ThemedText>
+    <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>
+      <View style={styles.container}>
+        <View style={styles.avatarSection}>
+          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+            <ThemedText style={styles.avatarText}>
+              {user?.name?.[0]?.toUpperCase() || user?.id?.[0]?.toUpperCase() || 'U'}
+            </ThemedText>
+          </View>
+          <ThemedText style={styles.displayName}>{user?.name || 'User'}</ThemedText>
+          <ThemedText style={[styles.username, { color: theme.textSecondary }]}>@{user?.id}</ThemedText>
+        </View>
+
+        <View style={styles.section}>
+          <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>Account Information</ThemedText>
+          
+          <View style={[styles.infoCard, { backgroundColor: theme.surface }]}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabel}>
+                <Feather name="user" size={18} color={theme.textSecondary} />
+                <ThemedText style={[styles.labelText, { color: theme.textSecondary }]}>Display Name</ThemedText>
+              </View>
+              <ThemedText style={styles.infoValue}>{user?.name || 'Not set'}</ThemedText>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabel}>
+                <Feather name="at-sign" size={18} color={theme.textSecondary} />
+                <ThemedText style={[styles.labelText, { color: theme.textSecondary }]}>Username</ThemedText>
+              </View>
+              <ThemedText style={styles.infoValue}>{user?.id || 'Not set'}</ThemedText>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabel}>
+                <Feather name="shield" size={18} color={theme.textSecondary} />
+                <ThemedText style={[styles.labelText, { color: theme.textSecondary }]}>Account Status</ThemedText>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: theme.primary }]}>
+                <ThemedText style={styles.statusText}>Active</ThemedText>
+              </View>
+            </View>
+          </View>
+        </View>
       </View>
-
-      <View style={styles.section}>
-        <ThemedText type="h2">Heading 2</ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          28px • Bold
-        </ThemedText>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="h3">Heading 3</ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          24px • Semi-Bold
-        </ThemedText>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="h4">Heading 4</ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          20px • Semi-Bold
-        </ThemedText>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="body">
-          Body text - This is the default text style for paragraphs and general
-          content.
-        </ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          16px • Regular
-        </ThemedText>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="small">
-          Small text - Used for captions, labels, and secondary information.
-        </ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          14px • Regular
-        </ThemedText>
-      </View>
-
-      <View style={styles.section}>
-        <ThemedText type="link">Link text - Interactive elements</ThemedText>
-        <ThemedText type="small" style={styles.meta}>
-          16px • Regular • Colored
-        </ThemedText>
-      </View>
-
-      <Spacer height={Spacing["4xl"]} />
-
-      <View style={styles.fieldContainer}>
-        <ThemedText type="small" style={styles.label}>
-          Name
-        </ThemedText>
-        <TextInput
-          style={inputStyle}
-          value={name}
-          onChangeText={setName}
-          placeholder="Enter your name"
-          placeholderTextColor={isDark ? "#9BA1A6" : "#687076"}
-          autoCapitalize="words"
-          returnKeyType="next"
-        />
-      </View>
-
-      <Spacer height={Spacing.lg} />
-
-      <View style={styles.fieldContainer}>
-        <ThemedText type="small" style={styles.label}>
-          Email
-        </ThemedText>
-        <TextInput
-          style={inputStyle}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="your.email@example.com"
-          placeholderTextColor={isDark ? "#9BA1A6" : "#687076"}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          returnKeyType="next"
-        />
-      </View>
-
-      <Spacer height={Spacing.lg} />
-
-      <View style={styles.fieldContainer}>
-        <ThemedText type="small" style={styles.label}>
-          Password
-        </ThemedText>
-        <TextInput
-          style={inputStyle}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Enter a password"
-          placeholderTextColor={isDark ? "#9BA1A6" : "#687076"}
-          secureTextEntry
-          autoCapitalize="none"
-          returnKeyType="next"
-        />
-      </View>
-
-      <Spacer height={Spacing.lg} />
-
-      <Button onPress={handleSubmit}>Submit Form</Button>
-
-      <Spacer height={Spacing["2xl"]} />
-
-      <ThemedText type="h3" style={styles.sectionTitle}>
-        Testing
-      </ThemedText>
-      <Spacer height={Spacing.md} />
-      <Button
-        onPress={() => navigation.navigate("Crash")}
-        style={styles.crashButton}
-      >
-        Crash App
-      </Button>
-    </ScreenKeyboardAwareScrollView>
+    </ScreenScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    padding: Spacing.lg,
+    gap: Spacing['2xl'],
+  },
+  avatarSection: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  avatarText: {
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  displayName: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  username: {
+    fontSize: 16,
+  },
   section: {
-    marginBottom: Spacing["3xl"],
-  },
-  meta: {
-    opacity: 0.5,
-    marginTop: Spacing.sm,
-  },
-  fieldContainer: {
-    width: "100%",
-  },
-  label: {
-    marginBottom: Spacing.sm,
-    fontWeight: "600",
-    opacity: 0.8,
-  },
-  input: {
-    height: Spacing.inputHeight,
-    borderWidth: 0,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.lg,
-    fontSize: Typography.body.fontSize,
+    gap: Spacing.md,
   },
   sectionTitle: {
-    marginTop: Spacing.xl,
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  crashButton: {
-    backgroundColor: "#FF3B30",
+  infoCard: {
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    minHeight: 56,
+  },
+  infoLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  labelText: {
+    fontSize: 15,
+  },
+  infoValue: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: Spacing.lg,
+  },
+  statusBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.xs,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

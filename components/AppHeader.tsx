@@ -11,22 +11,16 @@ interface AppHeaderProps {
 
 export function AppHeader({ onMenuPress }: AppHeaderProps) {
   const { theme } = useTheme();
-  const { user, logout } = useStreamAuth();
+  const { user } = useStreamAuth();
   const [menuVisible, setMenuVisible] = useState(false);
 
   const menuOptions = [
-    { id: "profile", label: "Profile", icon: "user" },
     { id: "settings", label: "Settings", icon: "settings" },
-    { id: "logout", label: "Logout", icon: "log-out" },
   ];
 
   const handleMenuOption = (option: string) => {
     setMenuVisible(false);
-    if (option === "logout") {
-      logout();
-    } else {
-      onMenuPress?.(option);
-    }
+    onMenuPress?.(option);
   };
 
   return (
