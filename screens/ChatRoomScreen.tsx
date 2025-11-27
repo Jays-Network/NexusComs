@@ -27,13 +27,25 @@ export default function ChatRoomScreen() {
 
     const initChannel = async () => {
       try {
-        // Get or create the channel
-        const channelInstance = chatClient.channel('messaging', channelId);
+        // Determine channel type based on channelId prefix
+        // Group channels (group-{id}) use 'team' type
+        // Direct messages use 'messaging' type
+        const isGroupChannel = channelId.startsWith('group-');
+        const channelType = isGroupChannel ? 'team' : 'messaging';
+        
+        console.log(`[ChatRoom] Loading ${channelType} channel: ${channelId}`);
+        
+        // Get or create the channel with appropriate type
+        const channelInstance = chatClient.channel(channelType, channelId, {
+          // Create with defaults if doesn't exist (for group channels)
+          ...(isGroupChannel ? { name: route.params.channelName || 'Group Chat' } : {}),
+        });
+        
         await channelInstance.watch();
         setChannel(channelInstance);
       } catch (error: any) {
         console.error('Failed to load channel:', error);
-        Alert.alert('Error', 'Failed to load chat');
+        Alert.alert('Error', 'Failed to load chat. Please try again.');
       } finally {
         setIsLoading(false);
       }

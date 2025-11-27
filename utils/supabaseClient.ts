@@ -7,33 +7,33 @@ const getSupabaseCredentials = () => {
   const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
   const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
   
-  // Extract URL using regex - most robust way to handle web bundler quirks
-  // Matches: https://anything.supabase.co (captures just the valid URL portion)
-  const urlMatch = rawUrl.match(/https:\/\/[a-zA-Z0-9-]+\.supabase\.co/);
-  let supabaseUrl = urlMatch ? urlMatch[0] : '';
+  // Clean URL more aggressively - handle all bundler quirks
+  // Remove all quotes, escapes, and whitespace first
+  let cleanedUrl = rawUrl
+    .replace(/\\"/g, '')
+    .replace(/\\'/g, '')
+    .replace(/["'`]/g, '')
+    .replace(/\s/g, '')
+    .trim();
   
-  // Fallback: try cleaning if regex didn't match
-  if (!supabaseUrl) {
-    supabaseUrl = rawUrl
-      .replace(/\\"/g, '')
-      .replace(/['"]/g, '')
-      .replace(/\s+/g, '')
-      .replace(/\/+$/, '')
-      .trim();
-  }
+  // Extract URL using regex - most robust way to handle bundler quirks
+  const urlMatch = cleanedUrl.match(/https:\/\/[a-zA-Z0-9-]+\.supabase\.co/);
+  let supabaseUrl = urlMatch ? urlMatch[0] : cleanedUrl;
+  
+  // Ensure no trailing characters
+  supabaseUrl = supabaseUrl.replace(/[^a-zA-Z0-9./:_-]/g, '');
+  
+  // Clean key more aggressively
+  let cleanedKey = rawKey
+    .replace(/\\"/g, '')
+    .replace(/\\'/g, '')
+    .replace(/["'`]/g, '')
+    .replace(/\s/g, '')
+    .trim();
   
   // Extract JWT key using regex - matches base64 JWT format
-  const keyMatch = rawKey.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
-  let supabaseAnonKey = keyMatch ? keyMatch[0] : '';
-  
-  // Fallback: try cleaning if regex didn't match
-  if (!supabaseAnonKey) {
-    supabaseAnonKey = rawKey
-      .replace(/\\"/g, '')
-      .replace(/['"]/g, '')
-      .replace(/\s+/g, '')
-      .trim();
-  }
+  const keyMatch = cleanedKey.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
+  let supabaseAnonKey = keyMatch ? keyMatch[0] : cleanedKey;
   
   console.log('🔍 [supabaseClient] Checking credentials:');
   console.log('  Raw URL:', JSON.stringify(rawUrl));

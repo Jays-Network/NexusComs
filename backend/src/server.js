@@ -1384,10 +1384,11 @@ app.get("/api/groups", sessionMiddleware, async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch groups" });
     }
 
-    // Transform to include member_count
+    // Transform to include member_count and stream_channel_id
     const groupsWithCounts = (groups || []).map(g => ({
       ...g,
       member_count: g.group_members?.[0]?.count || 0,
+      stream_channel_id: `group-${g.id}`, // Stream channels follow pattern: group-{id}
       group_members: undefined
     }));
 

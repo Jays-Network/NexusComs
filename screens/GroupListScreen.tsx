@@ -162,13 +162,15 @@ export default function GroupListScreen() {
   };
 
   const handleGroupPress = (group: HierarchicalGroup) => {
-    if (group.hasChildren) {
+    // Navigate to chat if group has a Stream channel
+    if (group.stream_channel_id) {
+      navigation.navigate('GroupChatRoom', {
+        channelId: group.stream_channel_id,
+        channelName: group.name,
+      });
+    } else if (group.hasChildren) {
+      // If no channel but has children, just expand/collapse
       toggleExpand(group.id);
-    } else if (group.stream_channel_id) {
-      setSelectedGroup(group);
-      setShowGroupTree(false);
-    } else {
-      setSelectedGroup(group);
     }
   };
 
@@ -188,10 +190,10 @@ export default function GroupListScreen() {
 
   const renderGroupItem = ({ item }: { item: HierarchicalGroup }) => {
     const isSelected = selectedGroup?.id === item.id;
+    const hasChannel = !!item.stream_channel_id;
     
     return (
-      <Pressable
-        onPress={() => handleGroupPress(item)}
+      <View
         style={[
           styles.groupItem,
           { 
@@ -214,24 +216,29 @@ export default function GroupListScreen() {
             <View style={styles.expandPlaceholder} />
           )}
           
-          <View style={[styles.groupIcon, { backgroundColor: theme.primary + '30' }]}>
-            <Feather 
-              name={item.hasChildren ? "folder" : "users"} 
-              size={18} 
-              color={theme.primary} 
-            />
-          </View>
-          
-          <View style={styles.groupInfo}>
-            <Text style={[styles.groupName, { color: theme.text }]} numberOfLines={1}>
-              {item.name}
-            </Text>
-            {item.description ? (
-              <Text style={[styles.groupDescription, { color: theme.textSecondary }]} numberOfLines={1}>
-                {item.description}
+          <Pressable 
+            onPress={() => handleGroupPress(item)}
+            style={styles.groupPressableContent}
+          >
+            <View style={[styles.groupIcon, { backgroundColor: theme.primary + '30' }]}>
+              <Feather 
+                name={item.hasChildren ? "folder" : "users"} 
+                size={18} 
+                color={theme.primary} 
+              />
+            </View>
+            
+            <View style={styles.groupInfo}>
+              <Text style={[styles.groupName, { color: theme.text }]} numberOfLines={1}>
+                {item.name}
               </Text>
-            ) : null}
-          </View>
+              {item.description ? (
+                <Text style={[styles.groupDescription, { color: theme.textSecondary }]} numberOfLines={1}>
+                  {item.description}
+                </Text>
+              ) : null}
+            </View>
+          </Pressable>
           
           {item.member_count !== undefined && item.member_count > 0 ? (
             <View style={[styles.memberBadge, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
@@ -242,11 +249,16 @@ export default function GroupListScreen() {
             </View>
           ) : null}
           
-          {!item.hasChildren ? (
-            <Feather name="message-circle" size={16} color={theme.textSecondary} />
+          {hasChannel ? (
+            <Pressable 
+              onPress={() => handleGroupPress(item)}
+              style={styles.chatButton}
+            >
+              <Feather name="message-circle" size={18} color={theme.primary} />
+            </Pressable>
           ) : null}
         </View>
-      </Pressable>
+      </View>
     );
   };
 
@@ -460,8 +472,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Spacing.sm,
   },
+  groupPressableContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   groupInfo: {
     flex: 1,
+  },
+  chatButton: {
+    padding: 8,
+    marginLeft: Spacing.sm,
   },
   groupName: {
     fontSize: 15,
