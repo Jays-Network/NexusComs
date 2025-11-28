@@ -1,62 +1,50 @@
-// Backend hosted on Replit, frontend on Expo.dev
-// Safe API URL initialization - never parse undefined
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 function getApiUrl(): string {
-  // Get the Expo manifest/config to detect development mode
   const manifest = Constants.expoConfig || Constants.manifest2 || Constants.manifest;
   const debuggerHost = Constants.expoGoConfig?.debuggerHost || (manifest as any)?.debuggerHost;
   
-  // For web development, use the dev domain backend (port 3003 is mapped to local 3000)
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const hostname = window.location?.hostname || '';
-    // If running on Replit dev domain, use the backend port
     if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      // Backend is on port 3003 (mapped from local 3000)
       const backendUrl = `https://${hostname.replace(':8081', '')}:3003`;
-      console.log('🌐 [streamApi] Using dev backend URL:', backendUrl);
+      console.log('[CometChatApi] Using dev backend URL:', backendUrl);
       return backendUrl;
     }
   }
   
-  // For mobile (Android/iOS) in Expo Go development mode
-  // The debuggerHost will be something like "hostname:port"
   if (debuggerHost && (Platform.OS === 'android' || Platform.OS === 'ios')) {
-    // Extract hostname from debuggerHost (format: hostname:port)
     const hostMatch = debuggerHost.match(/^([^:]+)/);
     if (hostMatch) {
       const host = hostMatch[1];
-      // Check if it's a Replit dev domain
       if (host.includes('replit.dev') || host.includes('repl.co') || host.includes('worf.replit.dev')) {
-        // Backend is on port 3003
         const backendUrl = `https://${host}:3003`;
-        console.log('🌐 [streamApi] Using mobile dev backend URL:', backendUrl);
+        console.log('[CometChatApi] Using mobile dev backend URL:', backendUrl);
         return backendUrl;
       }
     }
   }
   
-  // For production or native apps, use the configured URL
   if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
     const apiUrl = process.env.EXPO_PUBLIC_API_URL.trim();
-    console.log('🌐 [streamApi] Using configured API URL:', apiUrl);
+    console.log('[CometChatApi] Using configured API URL:', apiUrl);
     return apiUrl;
   }
   
-  // Default fallback
-  console.log('🌐 [streamApi] Using default localhost fallback');
+  console.log('[CometChatApi] Using default localhost fallback');
   return 'http://localhost:3000';
 }
 
 const API_URL = getApiUrl();
-console.log('🌐 [streamApi] API URL configured:', API_URL);
-console.log('🔍 [streamApi] EXPO_PUBLIC_API_URL raw:', process.env.EXPO_PUBLIC_API_URL);
+console.log('[CometChatApi] API URL configured:', API_URL);
 
-export interface StreamTokenResponse {
-  token: string;
+export interface CometChatTokenResponse {
+  authToken: string;
   userId: string;
-  apiKey: string;
+  appId: string;
+  region: string;
+  authKey: string;
 }
 
 export interface LoginResponse {
@@ -65,6 +53,7 @@ export interface LoginResponse {
     id: string;
     email: string;
     username: string;
+    billing_plan?: string;
   };
 }
 
@@ -91,18 +80,18 @@ export async function loginWithUsernamePassword(
 
     return await response.json();
   } catch (error) {
-    console.warn('⚠️ Login request failed:', error);
+    console.warn('[CometChatApi] Login request failed:', error);
     throw error;
   }
 }
 
-export async function getStreamToken(
+export async function getCometChatToken(
   userId: string,
   userName: string,
   userImage?: string
-): Promise<StreamTokenResponse> {
+): Promise<CometChatTokenResponse> {
   try {
-    const response = await fetch(`${API_URL}/api/auth/stream-token`, {
+    const response = await fetch(`${API_URL}/api/auth/cometchat-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -116,23 +105,36 @@ export async function getStreamToken(
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to get Stream token');
+      throw new Error(error.error || 'Failed to get CometChat token');
     }
 
     return await response.json();
   } catch (error) {
-    console.warn('⚠️ Stream token request failed (backend may be down):', error);
+    console.warn('[CometChatApi] CometChat token request failed:', error);
     throw error;
   }
 }
 
-// Group types
+// Legacy function for backwards compatibility (calls CometChat endpoint)
+export async function getStreamToken(
+  userId: string,
+  userName: string,
+  userImage?: string
+): Promise<{ token: string; userId: string; apiKey: string }> {
+  const response = await getCometChatToken(userId, userName, userImage);
+  return {
+    token: response.authToken,
+    userId: response.userId,
+    apiKey: response.appId,
+  };
+}
+
 export interface Group {
   id: number;
   name: string;
   description?: string;
   parent_group_id?: number | null;
-  stream_channel_id?: string | null;
+  cometchat_group_id?: string | null;
   member_count: number;
   created_at: string;
   created_by: string;
@@ -145,7 +147,6 @@ export interface CreateGroupRequest {
   memberIds?: string[];
 }
 
-// Fetch all groups from backend
 export async function fetchGroups(authToken: string): Promise<Group[]> {
   try {
     const response = await fetch(`${API_URL}/api/groups`, {
@@ -161,12 +162,11 @@ export async function fetchGroups(authToken: string): Promise<Group[]> {
 
     return await response.json();
   } catch (error) {
-    console.warn('⚠️ Fetch groups failed:', error);
+    console.warn('[CometChatApi] Fetch groups failed:', error);
     throw error;
   }
 }
 
-// Create a new group via backend
 export async function createGroup(
   authToken: string,
   data: CreateGroupRequest
@@ -188,7 +188,7 @@ export async function createGroup(
 
     return await response.json();
   } catch (error) {
-    console.warn('⚠️ Create group failed:', error);
+    console.warn('[CometChatApi] Create group failed:', error);
     throw error;
   }
 }

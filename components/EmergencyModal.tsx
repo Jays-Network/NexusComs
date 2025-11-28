@@ -14,25 +14,32 @@ import { Audio } from 'expo-av';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useStreamAuth } from '@/utils/streamAuth';
-import type { Event, MessageResponse } from 'stream-chat';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
+import { addMessageListener, removeMessageListener } from '@/utils/cometChatClient';
 
 const { width } = Dimensions.get('window');
 
-// Import emergency sound at module level for Metro bundling
 const emergencySound = require('../assets/sounds/emergency.wav');
+
+interface EmergencyMessage {
+  id: string;
+  text: string;
+  senderId: string;
+  senderName: string;
+  createdAt: string;
+}
 
 export default function EmergencyModal() {
   const [visible, setVisible] = useState(false);
-  const [alert, setAlert] = useState<MessageResponse | null>(null);
+  const [alert, setAlert] = useState<EmergencyMessage | null>(null);
   const [pulseAnim] = useState(new Animated.Value(1));
   const soundRef = useRef<Audio.Sound | null>(null);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const dismissTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { theme } = useTheme();
-  const { chatClient, user } = useStreamAuth();
+  const { user, cometChatUser, isInitialized } = useCometChatAuth();
+  const listenerIdRef = useRef<string>(`emergency_modal_${Date.now()}`);
 
-  // Configure audio mode to play even in silent mode on iOS
   useEffect(() => {
     const configureAudio = async () => {
       if (Platform.OS !== 'web') {
@@ -49,7 +56,6 @@ export default function EmergencyModal() {
     configureAudio();
   }, []);
 
-  // Cleanup sound, animation, and timeout on unmount
   useEffect(() => {
     return () => {
       if (soundRef.current) {
@@ -65,24 +71,29 @@ export default function EmergencyModal() {
   }, []);
 
   useEffect(() => {
-    if (!chatClient) return;
+    if (!isInitialized || !cometChatUser) return;
 
-    // Listen for emergency messages across all channels
-    const handleNewMessage = (event: Event) => {
-      const message = event.message;
+    const handleNewMessage = (message: any) => {
+      const metadata = message.getMetadata?.() || message.metadata || {};
+      const senderId = message.getSender?.()?.getUid?.() || message.sender?.uid;
       
-      // Check if this is an emergency message (using custom field) and not from current user
-      if (message && (message as any)?.emergency === true && message.user?.id !== user?.id) {
-        handleEmergencyAlert(message);
+      if (metadata.emergency === true && senderId !== user?.id) {
+        handleEmergencyAlert({
+          id: message.getId?.() || message.id || String(Date.now()),
+          text: message.getText?.() || message.text || 'Emergency!',
+          senderId: senderId,
+          senderName: message.getSender?.()?.getName?.() || message.sender?.name || 'Unknown',
+          createdAt: new Date((message.getSentAt?.() || message.sentAt || Date.now()) * 1000).toISOString(),
+        });
       }
     };
 
-    chatClient.on('message.new', handleNewMessage);
+    addMessageListener(listenerIdRef.current, handleNewMessage);
 
     return () => {
-      chatClient.off('message.new', handleNewMessage);
+      removeMessageListener(listenerIdRef.current);
     };
-  }, [chatClient, user]);
+  }, [isInitialized, cometChatUser, user]);
 
   useEffect(() => {
     if (visible) {
@@ -90,8 +101,7 @@ export default function EmergencyModal() {
     }
   }, [visible]);
 
-  function handleEmergencyAlert(message: MessageResponse) {
-    // Clear any pending dismissal timeout to prevent it from clearing this new alert
+  function handleEmergencyAlert(message: EmergencyMessage) {
     if (dismissTimeoutRef.current) {
       clearTimeout(dismissTimeoutRef.current);
       dismissTimeoutRef.current = null;
@@ -100,19 +110,15 @@ export default function EmergencyModal() {
     setAlert(message);
     setVisible(true);
     
-    // Always trigger haptics and sound, even if modal is already visible
-    // This ensures every emergency message produces feedback
     triggerHaptics();
     playEmergencySound();
   }
 
   function startPulseAnimation() {
-    // Stop existing animation if any
     if (animationRef.current) {
       animationRef.current.stop();
     }
 
-    // Create and start new animation
     animationRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -134,7 +140,6 @@ export default function EmergencyModal() {
     if (Platform.OS === 'web') return;
     
     try {
-      // Trigger heavy impact haptic feedback 3 times
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 200);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
@@ -147,15 +152,12 @@ export default function EmergencyModal() {
     if (Platform.OS === 'web') return;
     
     try {
-      // Stop and unload any existing sound
       if (soundRef.current) {
         await soundRef.current.stopAsync();
         await soundRef.current.unloadAsync();
         soundRef.current = null;
       }
 
-      // Play emergency sound file using expo-av
-      // Note: emergency.wav file should be placed in assets/sounds/
       const { sound } = await Audio.Sound.createAsync(
         emergencySound,
         { shouldPlay: true, volume: 1.0 }
@@ -163,7 +165,6 @@ export default function EmergencyModal() {
       
       soundRef.current = sound;
       
-      // Clean up sound after playing
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync().then(() => {
@@ -174,19 +175,16 @@ export default function EmergencyModal() {
         }
       });
     } catch (error) {
-      // If emergency.wav is missing, log warning but don't crash
       console.warn('Emergency sound file not found. Please add emergency.wav to assets/sounds/', error);
     }
   }
 
   async function handleAcknowledge() {
-    // Stop animation
     if (animationRef.current) {
       animationRef.current.stop();
       animationRef.current = null;
     }
 
-    // Stop any playing sound
     if (soundRef.current) {
       try {
         await soundRef.current.stopAsync();
@@ -197,15 +195,12 @@ export default function EmergencyModal() {
       }
     }
     
-    // Hide modal first
     setVisible(false);
     
-    // Clear any existing dismissal timeout
     if (dismissTimeoutRef.current) {
       clearTimeout(dismissTimeoutRef.current);
     }
     
-    // Clear alert after modal dismissal animation completes (300ms for fade)
     dismissTimeoutRef.current = setTimeout(() => {
       setAlert(null);
       dismissTimeoutRef.current = null;
@@ -219,7 +214,7 @@ export default function EmergencyModal() {
       visible={visible}
       animationType="fade"
       transparent={false}
-      onRequestClose={() => {}} // Prevent dismissing without acknowledgment
+      onRequestClose={() => {}}
     >
       <View style={[styles.container, { backgroundColor: theme.emergency }]}>
         <View style={styles.content}>
@@ -237,17 +232,15 @@ export default function EmergencyModal() {
           <ThemedText style={styles.title}>EMERGENCY ALERT</ThemedText>
 
           <View style={styles.messageContainer}>
-            <ThemedText style={styles.message}>{alert.text || 'Emergency!'}</ThemedText>
+            <ThemedText style={styles.message}>{alert.text}</ThemedText>
           </View>
 
-          {alert.user && (
-            <ThemedText style={styles.sender}>
-              From: {alert.user.name || alert.user.id}
-            </ThemedText>
-          )}
+          <ThemedText style={styles.sender}>
+            From: {alert.senderName}
+          </ThemedText>
 
           <ThemedText style={styles.timestamp}>
-            {alert.created_at ? new Date(alert.created_at).toLocaleString() : ''}
+            {alert.createdAt ? new Date(alert.createdAt).toLocaleString() : ''}
           </ThemedText>
 
           <Pressable

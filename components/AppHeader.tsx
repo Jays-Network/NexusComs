@@ -4,11 +4,11 @@ import { useNavigation } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing } from "@/constants/theme";
-import { useStreamAuth } from "@/utils/streamAuth";
+import { useCometChatAuth } from "@/utils/cometChatAuth";
 
 export function AppHeader() {
   const { theme } = useTheme();
-  const { user } = useStreamAuth();
+  const { user } = useCometChatAuth();
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
 

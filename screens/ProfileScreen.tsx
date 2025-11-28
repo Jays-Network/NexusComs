@@ -4,11 +4,11 @@ import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
-import { useStreamAuth } from '@/utils/streamAuth';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
-  const { user } = useStreamAuth();
+  const { user } = useCometChatAuth();
 
   return (
     <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>

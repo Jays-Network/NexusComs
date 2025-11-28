@@ -1,16 +1,25 @@
-import { View, StyleSheet, Text, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, Text, Pressable, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChannelList } from 'stream-chat-expo';
-import { Channel } from 'stream-chat';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useStreamAuth } from '@/utils/streamAuth';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { DirectChatsStackParamList } from '@/navigation/DirectChatsStackNavigator';
 import { AppHeader } from '@/components/AppHeader';
+import { fetchConversations } from '@/utils/cometChatClient';
+import { Spacing, BorderRadius } from '@/constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<DirectChatsStackParamList>;
+
+interface Conversation {
+  id: string;
+  name: string;
+  lastMessage?: string;
+  lastMessageTime?: Date;
+  unreadCount: number;
+}
 
 const EmptyChannelList = () => {
   const { theme } = useTheme();
@@ -28,17 +37,8 @@ const EmptyChannelList = () => {
   );
 };
 
-const LoadingErrorIndicator = () => {
+const LoadingErrorIndicator = ({ onRetry }: { onRetry: () => void }) => {
   const { theme } = useTheme();
-  const { logout } = useStreamAuth();
-  
-  const handleRetry = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.warn('Logout error:', error);
-    }
-  };
   
   return (
     <View style={styles.emptyContainer}>
@@ -51,10 +51,10 @@ const LoadingErrorIndicator = () => {
       </Text>
       <Pressable 
         style={[styles.retryButton, { backgroundColor: theme.primary }]}
-        onPress={handleRetry}
+        onPress={onRetry}
       >
         <Text style={[styles.retryButtonText, { color: theme.buttonText }]}>
-          Log Out and Try Again
+          Try Again
         </Text>
       </Pressable>
     </View>
@@ -64,36 +64,141 @@ const LoadingErrorIndicator = () => {
 export default function DirectChatsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
-  const { user } = useStreamAuth();
+  const { user, cometChatUser, isInitialized } = useCometChatAuth();
   const insets = useSafeAreaInsets();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChannelSelect = (channel: Channel) => {
-    const channelId = channel.id ?? channel.cid ?? '';
-    const channelName = (channel.data as { name?: string })?.name || 'Chat';
-    
+  const loadConversations = useCallback(async () => {
+    if (!isInitialized || !cometChatUser) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const fetchedConversations = await fetchConversations(30);
+      const mappedConversations: Conversation[] = fetchedConversations
+        .filter((conv: any) => conv.getConversationType?.() === 'user')
+        .map((conv: any) => {
+          const conversationWith = conv.getConversationWith?.();
+          const lastMessage = conv.getLastMessage?.();
+          return {
+            id: conversationWith?.getUid?.() || conv.conversationId,
+            name: conversationWith?.getName?.() || 'Unknown',
+            lastMessage: lastMessage?.getText?.() || '',
+            lastMessageTime: lastMessage ? new Date((lastMessage.getSentAt?.() || 0) * 1000) : undefined,
+            unreadCount: conv.getUnreadMessageCount?.() || 0,
+          };
+        });
+      setConversations(mappedConversations);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to fetch conversations:', err);
+      setError(err.message || 'Failed to load chats');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [isInitialized, cometChatUser]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [loadConversations])
+  );
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadConversations();
+  };
+
+  const handleConversationPress = (conversation: Conversation) => {
     navigation.navigate('DirectChatRoom', {
-      channelId,
-      channelName,
+      channelId: conversation.id,
+      channelName: conversation.name,
     });
   };
+
+  const renderConversation = ({ item }: { item: Conversation }) => (
+    <Pressable
+      style={[styles.conversationItem, { backgroundColor: theme.surface }]}
+      onPress={() => handleConversationPress(item)}
+    >
+      <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+        <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+      </View>
+      <View style={styles.conversationContent}>
+        <View style={styles.conversationHeader}>
+          <Text style={[styles.conversationName, { color: theme.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          {item.lastMessageTime ? (
+            <Text style={[styles.conversationTime, { color: theme.textSecondary }]}>
+              {item.lastMessageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          ) : null}
+        </View>
+        {item.lastMessage ? (
+          <Text style={[styles.lastMessage, { color: theme.textSecondary }]} numberOfLines={1}>
+            {item.lastMessage}
+          </Text>
+        ) : null}
+      </View>
+      {item.unreadCount > 0 ? (
+        <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
+          <Text style={styles.unreadCount}>{item.unreadCount}</Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
 
   if (!user) {
     return null;
   }
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+        <AppHeader />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading chats...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+        <AppHeader />
+        <LoadingErrorIndicator onRetry={loadConversations} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
       <AppHeader />
-      <ChannelList
-        filters={{
-          type: 'messaging',
-          members: { $in: [user.id] },
-        }}
-        sort={{ last_message_at: -1 }}
-        onSelect={handleChannelSelect}
-        EmptyStateIndicator={EmptyChannelList}
-        LoadingErrorIndicator={LoadingErrorIndicator}
-      />
+      {conversations.length === 0 ? (
+        <EmptyChannelList />
+      ) : (
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => item.id}
+          renderItem={renderConversation}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={theme.primary}
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -101,6 +206,15 @@ export default function DirectChatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
@@ -128,6 +242,63 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  listContent: {
+    padding: Spacing.md,
+  },
+  conversationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  conversationContent: {
+    flex: 1,
+    gap: 4,
+  },
+  conversationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  conversationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  conversationTime: {
+    fontSize: 12,
+  },
+  lastMessage: {
+    fontSize: 14,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    marginLeft: Spacing.sm,
+  },
+  unreadCount: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '600',
   },
 });

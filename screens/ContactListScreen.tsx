@@ -1,7 +1,7 @@
 import { View, StyleSheet, Text, FlatList, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useStreamAuth } from '@/utils/streamAuth';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/AppHeader';
 
@@ -76,10 +76,10 @@ const ContactItem = ({ contact, theme }: { contact: Contact; theme: any }) => {
 
 export default function ContactListScreen() {
   const { theme } = useTheme();
-  const { user } = useStreamAuth();
+  const { user } = useCometChatAuth();
   const insets = useSafeAreaInsets();
 
-  // Mock contacts data - replace with Stream API call
+  // Mock contacts data - replace with CometChat API call
   const contacts: Contact[] = [];
 
   if (!user) {

@@ -6,9 +6,11 @@ const jwt = require("jsonwebtoken");
 const { createClient } = require("@supabase/supabase-js");
 const bcrypt = require("bcrypt");
 const https = require("https");
-const { StreamChat } = require("stream-chat");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+
+// CometChat utilities (replacing Stream)
+const cometchat = require("./utils/cometchat");
 
 // Security imports
 const securityRoutes = require("./routes/security");
@@ -136,20 +138,12 @@ const runStartupSecurityAudit = async () => {
 // Run security audit after server starts
 setTimeout(runStartupSecurityAudit, 3000);
 
-// Initialize Stream Chat server client for token generation
-let streamServerClient = null;
-if (process.env.STREAM_API_KEY && process.env.STREAM_API_SECRET) {
-  try {
-    streamServerClient = StreamChat.getInstance(
-      process.env.STREAM_API_KEY,
-      process.env.STREAM_API_SECRET
-    );
-    console.log("✓ Stream Chat server client initialized");
-  } catch (error) {
-    console.error("✗ Failed to initialize Stream Chat:", error.message);
-  }
+// Initialize CometChat (replacing Stream Chat)
+if (cometchat.isConfigured()) {
+  console.log("✓ CometChat configured - App ID:", cometchat.COMETCHAT_APP_ID);
+  console.log("✓ CometChat Region:", cometchat.COMETCHAT_REGION);
 } else {
-  console.error("✗ STREAM_API_KEY or STREAM_API_SECRET not set - Stream tokens will not work");
+  console.error("✗ CometChat not fully configured - check COMETCHAT_APP_ID, COMETCHAT_API_KEY, COMETCHAT_AUTH_KEY");
 }
 
 const app = express();
@@ -974,10 +968,10 @@ app.delete("/api/users/:id", sessionMiddleware, async (req, res) => {
   }
 });
 
-// ============= STREAM TOKEN ENDPOINT =============
+// ============= COMETCHAT AUTH TOKEN ENDPOINT =============
 
-// Stream token generation endpoint
-app.post("/api/auth/stream-token", async (req, res) => {
+// CometChat token generation endpoint (replaces Stream)
+app.post("/api/auth/cometchat-token", async (req, res) => {
   try {
     const { userId, userName, userImage } = req.body;
 
@@ -987,42 +981,83 @@ app.post("/api/auth/stream-token", async (req, res) => {
         .json({ error: "userId and userName are required" });
     }
 
-    // Sanitize user ID to be Stream-compatible (lowercase, only alphanumeric, underscore, dash)
-    const sanitizedUserId = userId.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
-    console.log(`[Stream] Generating token for user: ${sanitizedUserId}`);
+    // Sanitize user ID to be CometChat-compatible
+    const sanitizedUserId = cometchat.sanitizeUid(userId);
+    console.log(`[CometChat] Generating token for user: ${sanitizedUserId}`);
 
-    // Check if Stream client is available
-    if (!streamServerClient) {
-      console.error("[Stream] Server client not initialized");
+    // Check if CometChat is configured
+    if (!cometchat.isConfigured()) {
+      console.error("[CometChat] Not configured");
       return res.status(500).json({ 
-        error: "Stream Chat not configured - STREAM_API_KEY or STREAM_API_SECRET missing" 
+        error: "CometChat not configured - check COMETCHAT_APP_ID, COMETCHAT_API_KEY, COMETCHAT_AUTH_KEY" 
       });
     }
 
-    // Generate real Stream token using the server SDK
-    const token = streamServerClient.createToken(sanitizedUserId);
-    console.log(`[Stream] Token generated successfully for: ${sanitizedUserId}`);
-
-    // Optionally upsert the user to Stream (creates or updates)
+    // Create or update user in CometChat
     try {
-      await streamServerClient.upsertUser({
-        id: sanitizedUserId,
-        name: userName,
-        image: userImage || undefined,
-      });
-      console.log(`[Stream] User upserted: ${sanitizedUserId}`);
-    } catch (upsertError) {
-      console.warn(`[Stream] User upsert warning: ${upsertError.message}`);
-      // Continue even if upsert fails - token is still valid
+      await cometchat.createUser(sanitizedUserId, userName, userImage);
+      console.log(`[CometChat] User created/updated: ${sanitizedUserId}`);
+    } catch (userError) {
+      console.warn(`[CometChat] User creation warning: ${userError.message}`);
+    }
+
+    // Generate auth token for the user
+    const authToken = await cometchat.createAuthToken(sanitizedUserId);
+    console.log(`[CometChat] Auth token generated for: ${sanitizedUserId}`);
+
+    // Update user's cometchat_uid in Supabase
+    try {
+      await supabase
+        .from("users")
+        .update({ cometchat_uid: sanitizedUserId })
+        .ilike("email", userId);
+    } catch (dbError) {
+      console.warn(`[CometChat] Could not update user cometchat_uid: ${dbError.message}`);
     }
 
     res.json({
-      token: token,
+      authToken: authToken,
       userId: sanitizedUserId,
-      apiKey: process.env.STREAM_API_KEY,
+      appId: cometchat.COMETCHAT_APP_ID,
+      region: cometchat.COMETCHAT_REGION,
+      authKey: cometchat.COMETCHAT_AUTH_KEY,
     });
   } catch (error) {
-    console.error("Stream token error:", error);
+    console.error("CometChat token error:", error);
+    res.status(500).json({ error: "Failed to generate token: " + error.message });
+  }
+});
+
+// Legacy Stream token endpoint (redirects to CometChat)
+app.post("/api/auth/stream-token", async (req, res) => {
+  console.log("[Legacy] Stream token endpoint called, redirecting to CometChat");
+  
+  const { userId, userName, userImage } = req.body;
+
+  if (!userId || !userName) {
+    return res.status(400).json({ error: "userId and userName are required" });
+  }
+
+  try {
+    const sanitizedUserId = cometchat.sanitizeUid(userId);
+    
+    if (!cometchat.isConfigured()) {
+      return res.status(500).json({ error: "Chat service not configured" });
+    }
+
+    await cometchat.createUser(sanitizedUserId, userName, userImage);
+    const authToken = await cometchat.createAuthToken(sanitizedUserId);
+
+    res.json({
+      token: authToken,
+      userId: sanitizedUserId,
+      apiKey: cometchat.COMETCHAT_APP_ID,
+      appId: cometchat.COMETCHAT_APP_ID,
+      region: cometchat.COMETCHAT_REGION,
+      authKey: cometchat.COMETCHAT_AUTH_KEY,
+    });
+  } catch (error) {
+    console.error("Legacy token error:", error);
     res.status(500).json({ error: "Failed to generate token: " + error.message });
   }
 });
@@ -1092,20 +1127,20 @@ app.delete("/api/logs", sessionMiddleware, async (req, res) => {
 // Check all external services status
 app.get("/api/services/status", async (req, res) => {
   const services = {
-    stream: { status: "unknown", error: null, severity: null },
+    cometchat: { status: "unknown", error: null, severity: null },
     supabase: { status: "unknown", error: null, severity: null },
     brevo: { status: "unknown", error: null, severity: null },
     expo: { status: "unknown", error: null, severity: null },
   };
 
-  // Check Stream
-  if (process.env.EXPO_PUBLIC_STREAM_API_KEY) {
-    services.stream.status = "connected";
+  // Check CometChat
+  if (cometchat.isConfigured()) {
+    services.cometchat.status = "connected";
   } else {
-    services.stream.status = "disconnected";
-    services.stream.error = "Stream API Key not configured";
-    services.stream.severity = "critical";
-    addLog("ERROR", "Stream", "Stream API Key not configured");
+    services.cometchat.status = "disconnected";
+    services.cometchat.error = "CometChat not configured";
+    services.cometchat.severity = "critical";
+    addLog("ERROR", "CometChat", "CometChat credentials not configured");
   }
 
   // Check Supabase
@@ -1237,7 +1272,7 @@ app.get("/api/users/available", sessionMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, username, email, billing_plan, stream_id")
+      .select("id, username, email, billing_plan, cometchat_uid")
       .order("username");
 
     if (error) {
@@ -1281,35 +1316,44 @@ app.post("/api/groups", sessionMiddleware, async (req, res) => {
       return res.status(500).json({ error: "Failed to create group" });
     }
 
-    // Create corresponding Stream channel
-    let streamChannelId = null;
-    if (streamServerClient && group) {
+    // Create corresponding CometChat group
+    let cometchatGroupId = null;
+    if (cometchat.isConfigured() && group) {
       try {
-        streamChannelId = `group-${group.id}`;
-        await streamServerClient.createChannel('team', streamChannelId, {
-          name: name,
-          image: null,
-          description: description,
-          custom: {
-            type: 'group',
-            groupId: group.id,
-          }
-        });
-        console.log(`Stream channel created for group: ${group.id}`);
-        addLog("INFO", "Stream", `Channel created for group: ${name}`);
-      } catch (streamError) {
-        console.warn(`Stream channel creation warning: ${streamError.message}`);
-        addLog("WARN", "Stream", `Could not create channel for group ${name}`, streamError.message);
+        cometchatGroupId = `group_${group.id}`;
+        
+        // Get creator's CometChat UID
+        const creatorUid = cometchat.sanitizeUid(req.user.email);
+        
+        await cometchat.createGroup(
+          cometchatGroupId,
+          name,
+          'public',
+          description,
+          creatorUid
+        );
+        
+        // Update group with CometChat ID
+        await supabase
+          .from("groups")
+          .update({ cometchat_group_id: cometchatGroupId })
+          .eq("id", group.id);
+          
+        console.log(`CometChat group created for group: ${group.id}`);
+        addLog("INFO", "CometChat", `Group created: ${name}`);
+      } catch (chatError) {
+        console.warn(`CometChat group creation warning: ${chatError.message}`);
+        addLog("WARN", "CometChat", `Could not create group ${name}`, chatError.message);
       }
     }
 
-    // Add members to group and Stream channel
+    // Add members to group and CometChat group
     if (memberIds && memberIds.length > 0) {
       try {
-        // Get user details for Stream IDs
+        // Get user details for CometChat UIDs
         const { data: users } = await supabase
           .from("users")
-          .select("id, stream_id")
+          .select("id, email, cometchat_uid")
           .in("id", memberIds);
 
         if (users && users.length > 0) {
@@ -1329,24 +1373,21 @@ app.post("/api/groups", sessionMiddleware, async (req, res) => {
             console.warn("Error adding members to Supabase:", memberError);
           }
 
-          // Add members to Stream channel
-          if (streamServerClient && streamChannelId) {
+          // Add members to CometChat group
+          if (cometchat.isConfigured() && cometchatGroupId) {
             try {
-              const streamUserIds = users
-                .map(u => u.stream_id)
-                .filter(id => id != null);
+              const memberUids = users
+                .map(u => u.cometchat_uid || cometchat.sanitizeUid(u.email))
+                .filter(uid => uid != null);
               
-              if (streamUserIds.length > 0) {
-                await streamServerClient.addChannelMembers(
-                  `team:${streamChannelId}`,
-                  streamUserIds
-                );
-                console.log(`Added ${streamUserIds.length} members to Stream channel`);
-                addLog("INFO", "Stream", `Added ${streamUserIds.length} members to group ${name}`);
+              if (memberUids.length > 0) {
+                await cometchat.addGroupMembers(cometchatGroupId, memberUids);
+                console.log(`Added ${memberUids.length} members to CometChat group`);
+                addLog("INFO", "CometChat", `Added ${memberUids.length} members to group ${name}`);
               }
-            } catch (streamMemberError) {
-              console.warn(`Error adding members to Stream: ${streamMemberError.message}`);
-              addLog("WARN", "Stream", `Could not add members to Stream channel`, streamMemberError.message);
+            } catch (memberError) {
+              console.warn(`Error adding members to CometChat: ${memberError.message}`);
+              addLog("WARN", "CometChat", `Could not add members to group`, memberError.message);
             }
           }
         }
@@ -1358,7 +1399,10 @@ app.post("/api/groups", sessionMiddleware, async (req, res) => {
 
     res.status(201).json({ 
       message: "Group created successfully with members", 
-      group 
+      group: {
+        ...group,
+        cometchat_group_id: cometchatGroupId
+      }
     });
   } catch (error) {
     console.error("Create group error:", error);
@@ -1384,11 +1428,11 @@ app.get("/api/groups", sessionMiddleware, async (req, res) => {
       return res.status(500).json({ error: "Failed to fetch groups" });
     }
 
-    // Transform to include member_count and stream_channel_id
+    // Transform to include member_count and cometchat_group_id
     const groupsWithCounts = (groups || []).map(g => ({
       ...g,
       member_count: g.group_members?.[0]?.count || 0,
-      stream_channel_id: `group-${g.id}`, // Stream channels follow pattern: group-{id}
+      cometchat_group_id: g.cometchat_group_id || `group_${g.id}`,
       group_members: undefined
     }));
 

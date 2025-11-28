@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
-import { useStreamAuth } from '@/utils/streamAuth';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
 import type { SettingsStackParamList } from '@/navigation/SettingsStackNavigator';
 
 type NavigationProp = NativeStackNavigationProp<SettingsStackParamList>;
@@ -63,7 +63,7 @@ function SettingsItem({ icon, label, description, onPress, isDestructive = false
 
 export default function SettingsScreen() {
   const { theme } = useTheme();
-  const { user, logout } = useStreamAuth();
+  const { user, logout } = useCometChatAuth();
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
 

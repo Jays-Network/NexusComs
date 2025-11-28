@@ -6,13 +6,13 @@ import { ThemedText } from '@/components/ThemedText';
 import { ScreenKeyboardAwareScrollView } from '@/components/ScreenKeyboardAwareScrollView';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useStreamAuth } from '@/utils/streamAuth';
-import { fetchGroups, createGroup, Group } from '@/utils/streamApi';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
+import { fetchGroups, createGroup, Group } from '@/utils/cometChatApi';
 
 export default function CreateGroupScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation();
-  const { user, authToken } = useStreamAuth();
+  const { user, authToken } = useCometChatAuth();
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
   const [parentGroupId, setParentGroupId] = useState<number | null>(null);

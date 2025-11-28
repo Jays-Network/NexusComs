@@ -73,7 +73,7 @@ export default function AboutScreen() {
                 <Feather name="message-circle" size={18} color={theme.textSecondary} />
                 <ThemedText style={[styles.labelText, { color: theme.textSecondary }]}>Chat</ThemedText>
               </View>
-              <ThemedText style={styles.infoValue}>Stream</ThemedText>
+              <ThemedText style={styles.infoValue}>CometChat</ThemedText>
             </View>
 
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
@@ -83,7 +83,7 @@ export default function AboutScreen() {
                 <Feather name="video" size={18} color={theme.textSecondary} />
                 <ThemedText style={[styles.labelText, { color: theme.textSecondary }]}>Video</ThemedText>
               </View>
-              <ThemedText style={styles.infoValue}>Stream Video SDK</ThemedText>
+              <ThemedText style={styles.infoValue}>CometChat Calling SDK</ThemedText>
             </View>
 
             <View style={[styles.divider, { backgroundColor: theme.border }]} />

@@ -6,7 +6,6 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Chat, OverlayProvider } from "stream-chat-expo";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
@@ -14,14 +13,13 @@ import { StatusBar } from "expo-status-bar";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { StreamAuthProvider, useStreamAuth } from "@/utils/streamAuth";
+import { CometChatAuthProvider, useCometChatAuth } from "@/utils/cometChatAuth";
 import { SupabaseSyncProvider, useSupabaseSync } from "@/utils/supabaseSync";
 import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
 
 SplashScreen.preventAutoHideAsync();
 
-// Configure notifications
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -35,29 +33,30 @@ Notifications.setNotificationHandler({
 const Stack = createNativeStackNavigator();
 
 function AppContent() {
-  const { user, chatClient, isLoading } = useStreamAuth();
+  const { user, cometChatUser, isLoading, isInitialized } = useCometChatAuth();
   const { startSync, stopSync } = useSupabaseSync();
   const { theme } = useTheme();
 
   useEffect(() => {
-    console.log('📱 [App.tsx] AppContent state change:');
+    console.log('[App.tsx] AppContent state change:');
     console.log('  - isLoading:', isLoading);
     console.log('  - user:', user ? `${user.name} (${user.id})` : null);
-    console.log('  - chatClient:', !!chatClient);
+    console.log('  - cometChatUser:', !!cometChatUser);
+    console.log('  - isInitialized:', isInitialized);
     console.log('  - theme:', !!theme);
 
     if (!isLoading) {
-      console.log('🎬 Hiding splash screen...');
+      console.log('Hiding splash screen...');
       SplashScreen.hideAsync();
     }
-  }, [isLoading, user, chatClient, theme]);
+  }, [isLoading, user, cometChatUser, isInitialized, theme]);
 
   useEffect(() => {
     if (user && user.id) {
-      console.log('🔄 [App.tsx] Starting Supabase sync for user:', user.id);
+      console.log('[App.tsx] Starting Supabase sync for user:', user.id);
       startSync(user.id);
     } else {
-      console.log('🔄 [App.tsx] Stopping Supabase sync (no user)');
+      console.log('[App.tsx] Stopping Supabase sync (no user)');
       stopSync();
     }
     return () => {
@@ -66,13 +65,12 @@ function AppContent() {
   }, [user]);
 
   if (isLoading || !theme) {
-    console.log('⏳ Loading... isLoading:', isLoading, 'theme:', !!theme);
+    console.log('Loading... isLoading:', isLoading, 'theme:', !!theme);
     return null;
   }
 
-  // Show login screen if no user
   if (!user) {
-    console.log('📝 No user - showing login screen');
+    console.log('No user - showing login screen');
     return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -83,46 +81,20 @@ function AppContent() {
     );
   }
 
-  // If no chat client, show error (this should not happen if user is logged in)
-  if (!chatClient) {
-    console.log('⚠️ User logged in but no chat client - showing login screen');
-    return (
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Login" component={LoginScreen} />
-        </Stack.Navigator>
-        <StatusBar style="auto" />
-      </NavigationContainer>
-    );
-  }
-
-  // Show main app with Stream Chat provider
-  console.log('✅ Rendering main app for user:', user.name);
+  console.log('Rendering main app for user:', user.name);
   return (
-    <OverlayProvider
-      value={{
-        style: {
-          colors: {
-            background: theme.backgroundRoot,
-          },
-        },
-      }}
-    >
-      <Chat client={chatClient}>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Main" component={MainTabNavigator} />
-          </Stack.Navigator>
-          <StatusBar style="auto" />
-        </NavigationContainer>
-        <EmergencyModal />
-      </Chat>
-    </OverlayProvider>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={MainTabNavigator} />
+      </Stack.Navigator>
+      <StatusBar style="auto" />
+      <EmergencyModal />
+    </NavigationContainer>
   );
 }
 
 export default function App() {
-  console.log('🚀 App.tsx: Application starting...');
+  console.log('[App.tsx] Application starting...');
   
   return (
     <ErrorBoundary>
@@ -130,9 +102,9 @@ export default function App() {
         <GestureHandlerRootView style={styles.root}>
           <KeyboardProvider>
             <SupabaseSyncProvider>
-              <StreamAuthProvider>
+              <CometChatAuthProvider>
                 <AppContent />
-              </StreamAuthProvider>
+              </CometChatAuthProvider>
             </SupabaseSyncProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>

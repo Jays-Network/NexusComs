@@ -3,14 +3,12 @@ import { View, StyleSheet, Text, Pressable, FlatList, RefreshControl, ActivityIn
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChannelList } from 'stream-chat-expo';
-import { Channel } from 'stream-chat';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useStreamAuth } from '@/utils/streamAuth';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { GroupsStackParamList } from '@/navigation/GroupsStackNavigator';
 import { AppHeader } from '@/components/AppHeader';
-import { fetchGroups, Group } from '@/utils/streamApi';
+import { fetchGroups, Group } from '@/utils/cometChatApi';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<GroupsStackParamList>;
@@ -37,43 +35,10 @@ const EmptyChannelList = () => {
   );
 };
 
-const LoadingErrorIndicator = () => {
-  const { theme } = useTheme();
-  const { logout } = useStreamAuth();
-  
-  const handleRetry = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.warn('Logout error:', error);
-    }
-  };
-  
-  return (
-    <View style={styles.emptyContainer}>
-      <Feather name="alert-circle" size={64} color={theme.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: theme.text }]}>
-        No channels available
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-        You are not a member of any channels yet. Contact your administrator to be added to a group.
-      </Text>
-      <Pressable 
-        style={[styles.retryButton, { backgroundColor: theme.primary }]}
-        onPress={handleRetry}
-      >
-        <Text style={[styles.retryButtonText, { color: theme.buttonText }]}>
-          Log Out and Try Again
-        </Text>
-      </Pressable>
-    </View>
-  );
-};
-
 export default function GroupListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
-  const { user, authToken } = useStreamAuth();
+  const { user, authToken, logout } = useCometChatAuth();
   const insets = useSafeAreaInsets();
   
   const [groups, setGroups] = useState<Group[]>([]);
@@ -81,7 +46,6 @@ export default function GroupListScreen() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showGroupTree, setShowGroupTree] = useState(true);
 
   const loadGroups = async () => {
     if (!authToken) {
@@ -92,7 +56,6 @@ export default function GroupListScreen() {
     try {
       const fetchedGroups = await fetchGroups(authToken);
       console.log('[GroupListScreen] Fetched groups:', fetchedGroups.length);
-      console.log('[GroupListScreen] First group sample:', fetchedGroups[0]);
       setGroups(fetchedGroups);
     } catch (error) {
       console.warn('Failed to fetch groups:', error);
@@ -108,7 +71,6 @@ export default function GroupListScreen() {
     }, [authToken])
   );
 
-  // Auto-expand top-level groups on first load
   useFocusEffect(
     useCallback(() => {
       if (groups.length > 0 && expandedGroups.size === 0) {
@@ -164,32 +126,20 @@ export default function GroupListScreen() {
   };
 
   const handleGroupPress = (group: HierarchicalGroup) => {
-    console.log('[GroupListScreen] Group pressed:', group.name, 'stream_channel_id:', group.stream_channel_id);
+    console.log('[GroupListScreen] Group pressed:', group.name, 'cometchat_group_id:', group.cometchat_group_id);
     
-    // Navigate to chat if group has a Stream channel
-    if (group.stream_channel_id) {
-      console.log('[GroupListScreen] Navigating to GroupChatRoom with channelId:', group.stream_channel_id);
+    if (group.cometchat_group_id) {
+      console.log('[GroupListScreen] Navigating to GroupChatRoom with channelId:', group.cometchat_group_id);
       navigation.navigate('GroupChatRoom', {
-        channelId: group.stream_channel_id,
+        channelId: group.cometchat_group_id,
         channelName: group.name,
       });
     } else if (group.hasChildren) {
-      console.log('[GroupListScreen] No stream_channel_id, toggling expand for group with children');
-      // If no channel but has children, just expand/collapse
+      console.log('[GroupListScreen] No cometchat_group_id, toggling expand for group with children');
       toggleExpand(group.id);
     } else {
-      console.log('[GroupListScreen] No stream_channel_id and no children - cannot navigate');
+      console.log('[GroupListScreen] No cometchat_group_id and no children - cannot navigate');
     }
-  };
-
-  const handleChannelSelect = (channel: Channel) => {
-    const channelId = channel.id ?? channel.cid ?? '';
-    const channelName = (channel.data as { name?: string })?.name || 'Chat';
-    
-    navigation.navigate('GroupChatRoom', {
-      channelId,
-      channelName,
-    });
   };
 
   const clearGroupFilter = () => {
@@ -198,7 +148,7 @@ export default function GroupListScreen() {
 
   const renderGroupItem = ({ item }: { item: HierarchicalGroup }) => {
     const isSelected = selectedGroup?.id === item.id;
-    const hasChannel = !!item.stream_channel_id;
+    const hasChannel = !!item.cometchat_group_id;
     
     return (
       <Pressable
@@ -275,27 +225,18 @@ export default function GroupListScreen() {
   }
 
   const hierarchicalGroups = buildHierarchicalList();
-  const hasGroups = groups.length > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
       <AppHeader />
       
       <View style={[styles.filterBar, { borderBottomColor: theme.border }]}>
-        <Pressable
-          onPress={() => setShowGroupTree(!showGroupTree)}
-          style={[styles.filterButton, { backgroundColor: theme.surface }]}
-        >
+        <View style={[styles.filterButton, { backgroundColor: theme.surface }]}>
           <Feather name="layers" size={16} color={theme.primary} />
           <Text style={[styles.filterText, { color: theme.text }]} numberOfLines={1}>
             {selectedGroup ? selectedGroup.name : 'All Groups'}
           </Text>
-          <Feather 
-            name={showGroupTree ? "chevron-up" : "chevron-down"} 
-            size={16} 
-            color={theme.textSecondary} 
-          />
-        </Pressable>
+        </View>
         
         {selectedGroup ? (
           <Pressable 
@@ -307,54 +248,49 @@ export default function GroupListScreen() {
         ) : null}
       </View>
       
-      {showGroupTree ? (
-        <View style={[styles.groupTreeContainer, { backgroundColor: theme.backgroundRoot }]}>
-          {isLoadingGroups ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={theme.primary} />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-                Loading groups...
+      <View style={[styles.groupTreeContainer, { backgroundColor: theme.backgroundRoot }]}>
+        {isLoadingGroups ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+              Loading groups...
+            </Text>
+          </View>
+        ) : hierarchicalGroups.length === 0 ? (
+          <View style={styles.emptyGroupsContainer}>
+            <Feather name="users" size={48} color={theme.textSecondary} />
+            <Text style={[styles.emptyGroupsTitle, { color: theme.text }]}>
+              No groups available
+            </Text>
+            <Text style={[styles.emptyGroupsSubtitle, { color: theme.textSecondary }]}>
+              Contact your administrator to be added to a group
+            </Text>
+            <Pressable 
+              style={[styles.retryButton, { backgroundColor: theme.primary }]}
+              onPress={logout}
+            >
+              <Text style={[styles.retryButtonText, { color: theme.buttonText }]}>
+                Log Out and Try Again
               </Text>
-            </View>
-          ) : hierarchicalGroups.length === 0 ? (
-            <View style={styles.emptyGroupsContainer}>
-              <Feather name="users" size={48} color={theme.textSecondary} />
-              <Text style={[styles.emptyGroupsTitle, { color: theme.text }]}>
-                No groups available
-              </Text>
-              <Text style={[styles.emptyGroupsSubtitle, { color: theme.textSecondary }]}>
-                Contact your administrator to be added to a group
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={hierarchicalGroups}
-              keyExtractor={item => item.id.toString()}
-              renderItem={renderGroupItem}
-              contentContainerStyle={styles.groupListContent}
-              style={styles.groupTree}
-              refreshControl={
-                <RefreshControl
-                  refreshing={isRefreshing}
-                  onRefresh={handleRefresh}
-                  tintColor={theme.primary}
-                />
-              }
-            />
-          )}
-        </View>
-      ) : (
-        <ChannelList
-          filters={{
-            members: { $in: [user.id] },
-            ...(selectedGroup?.stream_channel_id ? { id: selectedGroup.stream_channel_id } : {}),
-          }}
-          sort={{ last_message_at: -1 }}
-          onSelect={handleChannelSelect}
-          EmptyStateIndicator={EmptyChannelList}
-          LoadingErrorIndicator={LoadingErrorIndicator}
-        />
-      )}
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            data={hierarchicalGroups}
+            keyExtractor={item => item.id.toString()}
+            renderItem={renderGroupItem}
+            contentContainerStyle={styles.groupListContent}
+            style={styles.groupTree}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={theme.primary}
+              />
+            }
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -480,17 +416,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Spacing.sm,
   },
-  groupPressableContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   groupInfo: {
     flex: 1,
-  },
-  chatButton: {
-    padding: 8,
-    marginLeft: Spacing.sm,
   },
   chatIndicator: {
     padding: 8,
@@ -515,20 +442,6 @@ const styles = StyleSheet.create({
   },
   memberCount: {
     fontSize: 12,
-    fontWeight: '500',
-  },
-  closeTreeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-    borderRadius: BorderRadius.md,
-  },
-  closeTreeText: {
-    fontSize: 15,
     fontWeight: '500',
   },
 });
