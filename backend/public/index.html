@@ -692,24 +692,24 @@
 
                         <h3 style="color: #FFFFFF; margin: 30px 0 20px 0; font-size: 18px;">External Services</h3>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-                            <!-- STREAM.IO -->
-                            <div onclick="openServiceModal('stream')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
-                                <div id="streamErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
+                            <!-- COMETCHAT -->
+                            <div onclick="openServiceModal('cometchat')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
+                                <div id="cometchatErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #FF0066 0%, #FF6600 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">S</div>
+                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #6929C4 0%, #1192E8 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">C</div>
                                     <div>
-                                        <h4 style="color: #FFFFFF; margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">Stream Chat</h4>
-                                        <p style="color: #b0b0b0; margin: 0; font-size: 12px;">getstream.io</p>
+                                        <h4 style="color: #FFFFFF; margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">CometChat</h4>
+                                        <p style="color: #b0b0b0; margin: 0; font-size: 12px;">cometchat.com</p>
                                     </div>
                                 </div>
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Status:</p>
-                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="streamStatus">Connected</p>
-                                    <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="streamError"></p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="cometchatStatus">Connected</p>
+                                    <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="cometchatError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
-                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">API Key: <span style="color: #D4AF37;" id="streamKey">gxfjy67sps69</span></p>
-                                    <p style="color: #b0b0b0; margin: 0;">Messaging SDK: <span style="color: #D4AF37;">v11.x</span></p>
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">App ID: <span style="color: #D4AF37;" id="cometchatAppId">Loading...</span></p>
+                                    <p style="color: #b0b0b0; margin: 0;">Region: <span style="color: #D4AF37;" id="cometchatRegion">Loading...</span></p>
                                 </div>
                             </div>
 
@@ -791,7 +791,7 @@
                                 <option value="WARN">Warnings Only</option>
                                 <option value="INFO">Info Only</option>
                                 <option value="backend">Backend Logs</option>
-                                <option value="stream">Stream Service</option>
+                                <option value="cometchat">CometChat Service</option>
                                 <option value="supabase">Supabase Service</option>
                                 <option value="brevo">Brevo Service</option>
                             </select>
@@ -1622,7 +1622,7 @@
                 const services = await response.json();
 
                 // Update each service with fetched status
-                updateServiceCard('stream', services.stream);
+                updateServiceCard('cometchat', services.cometchat);
                 updateServiceCard('supabase', services.supabase);
                 updateServiceCard('brevo', services.brevo);
                 updateServiceCard('expo', services.expo);
@@ -1839,51 +1839,51 @@
 
         // SERVICE MODAL FUNCTIONS
         const serviceDetails = {
-            stream: {
-                title: 'Stream Chat - Detailed Connection',
+            cometchat: {
+                title: 'CometChat - Detailed Connection',
                 html: `
                     <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
                         <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Operational</span></p>
-                        <p><span style="color: #b0b0b0;">API Key:</span> <span style="color: #D4AF37;">gxfjy67sps69</span></p>
-                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;">Global</span></p>
+                        <p><span style="color: #b0b0b0;">App ID:</span> <span style="color: #D4AF37;" id="modalCometchatAppId">Loading...</span></p>
+                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;" id="modalCometchatRegion">Loading...</span></p>
                     </div>
                     <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">APIs & Endpoints</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
                         <p style="color: #D4AF37; font-weight: 600;">Chat API:</p>
-                        <p style="color: #b0b0b0;">• POST /channels - Create/Update channels</p>
-                        <p style="color: #b0b0b0;">• GET /channels - List channels</p>
+                        <p style="color: #b0b0b0;">• POST /groups - Create/Update groups</p>
+                        <p style="color: #b0b0b0;">• GET /groups - List groups</p>
                         <p style="color: #b0b0b0;">• POST /messages - Send messages</p>
                         <p style="color: #b0b0b0;">• WebSocket: Real-time message sync</p>
                     </div>
                     <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Functions in Use</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">• createChannel() - Initialize group channels</p>
-                        <p style="color: #b0b0b0;">• sendMessage() - Post messages with emergency flag</p>
-                        <p style="color: #b0b0b0;">• listenToMessages() - Real-time updates</p>
-                        <p style="color: #b0b0b0;">• getUserInfo() - User profile sync</p>
+                        <p style="color: #b0b0b0;">• createGroup() - Initialize group channels</p>
+                        <p style="color: #b0b0b0;">• sendTextMessage() - Post messages with emergency flag</p>
+                        <p style="color: #b0b0b0;">• addMessageListener() - Real-time updates</p>
+                        <p style="color: #b0b0b0;">• getUser() - User profile sync</p>
                     </div>
                     <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
                         <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
-                        <p style="color: #FFD700;">⚠️ Connection Timeout (30s)</p>
-                        <p style="color: #b0b0b0;">→ Auto-retry with exponential backoff</p>
-                        <p style="color: #b0b0b0;">→ Check frontend network connection</p>
-                        <p style="color: #b0b0b0;">→ Verify Stream API Key in environment</p>
+                        <p style="color: #FFD700;">Connection Timeout (30s)</p>
+                        <p style="color: #b0b0b0;">- Auto-retry with exponential backoff</p>
+                        <p style="color: #b0b0b0;">- Check frontend network connection</p>
+                        <p style="color: #b0b0b0;">- Verify CometChat App ID in environment</p>
                         
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Invalid API Key</p>
-                        <p style="color: #b0b0b0;">→ Fallback to defensive initialization</p>
-                        <p style="color: #b0b0b0;">→ Verify key in EXPO_PUBLIC_STREAM_API_KEY</p>
+                        <p style="color: #FFD700; margin-top: 12px;">Invalid App ID / Auth Key</p>
+                        <p style="color: #b0b0b0;">- Verify COMETCHAT_APP_ID is correct</p>
+                        <p style="color: #b0b0b0;">- Verify COMETCHAT_AUTH_KEY for frontend</p>
                         
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Message Send Failure</p>
-                        <p style="color: #b0b0b0;">→ Queue locally & retry when online</p>
-                        <p style="color: #b0b0b0;">→ Check browser DevTools > Network tab</p>
+                        <p style="color: #FFD700; margin-top: 12px;">Message Send Failure</p>
+                        <p style="color: #b0b0b0;">- Queue locally & retry when online</p>
+                        <p style="color: #b0b0b0;">- Check browser DevTools > Network tab</p>
                     </div>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
                         <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
-                        <p style="color: #b0b0b0;">• Frontend: console.log() in utils/streamClient.ts</p>
+                        <p style="color: #b0b0b0;">• Frontend: console.log() in utils/cometChatClient.ts</p>
                         <p style="color: #b0b0b0;">• Monitor: Browser DevTools > Console tab</p>
-                        <p style="color: #b0b0b0;">• Test: Use Channel List screen to verify connection</p>
+                        <p style="color: #b0b0b0;">• Test: Use Group List screen to verify connection</p>
                         <p style="color: #b0b0b0;">• View: Check chat for real-time message updates</p>
                     </div>
                 `
@@ -1918,7 +1918,7 @@
                     <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Required Tables</h3>
                     <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
                         <p style="color: #D4AF37; font-weight: 600;">Core Tables:</p>
-                        <p style="color: #b0b0b0;">• users (id, email, name, role, account_id, stream_id, permissions)</p>
+                        <p style="color: #b0b0b0;">• users (id, email, name, role, account_id, cometchat_uid, permissions)</p>
                         <p style="color: #b0b0b0;">• groups (id, name, description, created_by)</p>
                         <p style="color: #b0b0b0;">• group_members (group_id, user_id, role)</p>
                         <p style="color: #b0b0b0;">• emergency_groups (id, name, description, priority)</p>
