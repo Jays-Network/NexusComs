@@ -327,6 +327,60 @@ export const getUnreadMessageCount = async (): Promise<Record<string, number>> =
   }
 };
 
+export const fetchUsers = async (limit: number = 30): Promise<any[]> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    const usersRequest = new CometChat.UsersRequestBuilder()
+      .setLimit(limit)
+      .build();
+
+    const users = await usersRequest.fetchNext();
+    console.log('[CometChat] Fetched users:', users.length);
+    return users;
+  } catch (error) {
+    console.error('[CometChat] Fetch users failed:', error);
+    throw error;
+  }
+};
+
+export const addUserListener = (
+  listenerId: string,
+  callbacks: {
+    onUserOnline?: (user: any) => void;
+    onUserOffline?: (user: any) => void;
+  }
+): void => {
+  if (!CometChat) {
+    console.warn('[CometChat] Cannot add user listener - SDK not loaded');
+    return;
+  }
+
+  CometChat.addUserListener(
+    listenerId,
+    new CometChat.UserListener({
+      onUserOnline: (user: any) => {
+        console.log('[CometChat] User online:', user.getUid());
+        callbacks.onUserOnline?.(user);
+      },
+      onUserOffline: (user: any) => {
+        console.log('[CometChat] User offline:', user.getUid());
+        callbacks.onUserOffline?.(user);
+      },
+    })
+  );
+};
+
+export const removeUserListener = (listenerId: string): void => {
+  if (!CometChat) {
+    return;
+  }
+
+  CometChat.removeUserListener(listenerId);
+};
+
 export {
   CometChat,
   COMETCHAT_APP_ID,
