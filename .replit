@@ -25,12 +25,12 @@ localPort = 34289
 externalPort = 5173
 
 [[ports]]
-localPort = 35147
-externalPort = 6800
-
-[[ports]]
 localPort = 35853
 externalPort = 8000
+
+[[ports]]
+localPort = 37557
+externalPort = 8008
 
 [[ports]]
 localPort = 37727
@@ -39,6 +39,10 @@ externalPort = 6000
 [[ports]]
 localPort = 37793
 externalPort = 3001
+
+[[ports]]
+localPort = 40387
+externalPort = 6800
 
 [[ports]]
 localPort = 40609
@@ -146,6 +150,6 @@ EXPO_PUBLIC_STREAM_API_KEY = "gxfjy67sps69"
 EXPO_PUBLIC_API_URL = "https://NexusComs.replit.app"
 EXPO_PUBLIC_SUPABASE_URL = "https://pyqjpymkckmhtnacqqtd.supabase.co"
 EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5cWpweW1rY2ttaHRuYWNxcXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0ODY5MzksImV4cCI6MjA3OTA2MjkzOX0.4ZlouMFZbGBogXnbRv8q8TRZ5P1rttaVk4N-gf2T14M"
-EXPO_PUBLIC_COMETCHAT_APP_ID = "${COMETCHAT_APP_ID}"
-EXPO_PUBLIC_COMETCHAT_REGION = "${COMETCHAT_REGION}"
-EXPO_PUBLIC_COMETCHAT_AUTH_KEY = "${COMETCHAT_AUTH_KEY}"
+EXPO_PUBLIC_COMETCHAT_APP_ID = "16723866734b9d81b"
+EXPO_PUBLIC_COMETCHAT_REGION = "eu"
+EXPO_PUBLIC_COMETCHAT_AUTH_KEY = "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
