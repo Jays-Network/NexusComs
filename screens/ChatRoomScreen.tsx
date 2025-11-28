@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { ChatsStackParamList } from '@/navigation/ChatsStackNavigator';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { 
   joinGroup, 
   sendTextMessage, 
@@ -40,6 +41,7 @@ export default function ChatRoomScreen() {
   const { user, cometChatUser, isInitialized } = useCometChatAuth();
   const flatListRef = useRef<FlatList>(null);
   const listenerIdRef = useRef<string>(`chat_${channelId}_${Date.now()}`);
+  const { paddingBottom } = useScreenInsets();
 
   const transformMessage = useCallback((msg: any): Message => {
     return {
@@ -279,7 +281,14 @@ export default function ChatRoomScreen() {
           </View>
         }
       />
-      <View style={[styles.inputContainer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
+      <View style={[
+        styles.inputContainer, 
+        { 
+          backgroundColor: theme.surface, 
+          borderTopColor: theme.border,
+          paddingBottom: paddingBottom,
+        }
+      ]}>
         <TextInput
           style={[styles.textInput, { backgroundColor: theme.backgroundRoot, color: theme.text }]}
           placeholder="Type a message..."
