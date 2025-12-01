@@ -1,6 +1,6 @@
 import "react-native-gesture-handler";
-import { useEffect } from "react";
-import { StyleSheet } from "react-native";
+import { useEffect, useCallback } from "react";
+import { StyleSheet, View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -9,6 +9,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
+import { Feather } from "@expo/vector-icons";
 
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
@@ -98,12 +100,27 @@ function AppContent() {
 export default function App() {
   console.log('[App.tsx] Application starting...');
   
+  const [fontsLoaded, fontError] = useFonts({
+    ...Feather.font,
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      console.log('[App.tsx] Fonts loaded:', fontsLoaded, 'Error:', fontError);
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    console.log('[App.tsx] Waiting for fonts to load...');
+    return null;
+  }
+  
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <SettingsProvider>
           <SafeAreaProvider>
-            <GestureHandlerRootView style={styles.root}>
+            <GestureHandlerRootView style={styles.root} onLayout={onLayoutRootView}>
               <KeyboardProvider>
                 <SupabaseSyncProvider>
                   <CometChatAuthProvider>

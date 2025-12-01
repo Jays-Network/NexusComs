@@ -204,9 +204,11 @@ export default function ChatRoomScreen() {
         // Fetch existing messages
         try {
           const existingMessages = await fetchMessages(channelId, receiverType, 50);
-          const transformed = existingMessages.map(transformMessage).reverse();
+          const transformed = existingMessages.map(transformMessage);
+          // Sort messages by sentAt time in ascending order (oldest first, newest last)
+          transformed.sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
           setMessages(transformed);
-          console.log(`[ChatRoom] Loaded ${transformed.length} messages`);
+          console.log(`[ChatRoom] Loaded ${transformed.length} messages (sorted chronologically)`);
         } catch (fetchError) {
           console.warn('[ChatRoom] Could not fetch messages:', fetchError);
         }
