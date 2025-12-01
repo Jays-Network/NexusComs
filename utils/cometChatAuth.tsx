@@ -149,16 +149,30 @@ export const CometChatAuthProvider = ({ children }: { children: ReactNode }) => 
   };
 
   const logout = async () => {
+    console.log('[CometChatAuth] Logout initiated...');
     try {
+      console.log('[CometChatAuth] Logging out of CometChat...');
       await logoutCometChatUser();
+      console.log('[CometChatAuth] CometChat logout successful');
+      
+      console.log('[CometChatAuth] Clearing stored data...');
       await AsyncStorage.removeItem(STORAGE_KEY);
       await AsyncStorage.removeItem('@session_token');
+      console.log('[CometChatAuth] Storage cleared');
+      
       setUser(null);
       setCometChatUser(null);
       setAuthToken(null);
+      console.log('[CometChatAuth] Logout complete - state cleared');
     } catch (error) {
       console.error('[CometChatAuth] Logout error:', error);
-      throw error;
+      // Still clear local state even if CometChat logout fails
+      setUser(null);
+      setCometChatUser(null);
+      setAuthToken(null);
+      await AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+      await AsyncStorage.removeItem('@session_token').catch(() => {});
+      console.log('[CometChatAuth] Forced logout complete despite error');
     }
   };
 

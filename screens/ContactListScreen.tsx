@@ -25,7 +25,7 @@ const EmptyStateView = () => {
         No contacts yet
       </Text>
       <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-        Your contacts will appear here
+        When other team members log in, they will appear here
       </Text>
     </View>
   );
@@ -98,23 +98,30 @@ export default function ContactListScreen() {
 
   const loadContacts = useCallback(async () => {
     if (!isInitialized || !cometChatUser) {
-      console.log('[ContactList] Waiting for CometChat initialization');
+      console.log('[ContactList] Waiting for CometChat initialization', { isInitialized, hasCometChatUser: !!cometChatUser });
       return;
     }
 
     try {
       setError(null);
-      console.log('[ContactList] Fetching users from CometChat...');
-      const users = await fetchUsers(50);
-      
       const currentUserId = cometChatUser.getUid?.() || cometChatUser.uid;
+      console.log('[ContactList] Fetching users from CometChat (current user:', currentUserId, ')...');
+      
+      const users = await fetchUsers(50);
+      console.log('[ContactList] Raw users from CometChat:', users.length);
+      
       const filteredUsers = users.filter((u: any) => {
         const uid = u.getUid?.() || u.uid;
         return uid !== currentUserId;
       });
       
       const transformedContacts = filteredUsers.map(transformUser);
-      console.log('[ContactList] Loaded contacts:', transformedContacts.length);
+      console.log('[ContactList] Loaded contacts (excluding self):', transformedContacts.length);
+      
+      if (transformedContacts.length === 0) {
+        console.log('[ContactList] No other users found. Other team members need to log in to appear here.');
+      }
+      
       setContacts(transformedContacts);
     } catch (err: any) {
       console.error('[ContactList] Error loading contacts:', err);

@@ -77,10 +77,13 @@ export default function SettingsScreen() {
           text: 'Log Out',
           style: 'destructive',
           onPress: async () => {
+            console.log('[Settings] Logout button pressed');
             try {
               await logout();
+              console.log('[Settings] Logout successful');
             } catch (error) {
-              console.error('Logout error:', error);
+              console.error('[Settings] Logout error:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
             }
           }
         }
