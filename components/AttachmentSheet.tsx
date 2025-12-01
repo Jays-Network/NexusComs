@@ -132,6 +132,27 @@ export function AttachmentSheet({ visible, onClose, onAttachment }: AttachmentSh
 
   const handleLocation = async () => {
     if (isProcessingRef.current) return;
+    
+    // Show options for static vs live location
+    if (Platform.OS === 'web') {
+      // On web, just send static location
+      sendStaticLocation();
+    } else {
+      Alert.alert(
+        'Share Location',
+        'Choose how to share your location',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Current Location', onPress: sendStaticLocation },
+          { text: 'Live Location (15 min)', onPress: () => sendLiveLocation(15) },
+          { text: 'Live Location (1 hour)', onPress: () => sendLiveLocation(60) },
+        ]
+      );
+    }
+  };
+
+  const sendStaticLocation = async () => {
+    if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     setIsProcessing(true);
     setProcessingType('location');
@@ -157,6 +178,7 @@ export function AttachmentSheet({ visible, onClose, onAttachment }: AttachmentSh
       onAttachment('location', {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
+        isLive: false,
       });
       onClose();
     } catch (error) {
@@ -166,6 +188,50 @@ export function AttachmentSheet({ visible, onClose, onAttachment }: AttachmentSh
       } else {
         Alert.alert('Error', 'Could not get your location. Please try again.');
       }
+    } finally {
+      isProcessingRef.current = false;
+      setIsProcessing(false);
+      setProcessingType(null);
+    }
+  };
+
+  const sendLiveLocation = async (durationMinutes: number) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setIsProcessing(true);
+    setProcessingType('location');
+
+    try {
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        if (!canAskAgain && Platform.OS !== 'web') {
+          showPermissionDenied('location');
+        } else {
+          Alert.alert('Permission Required', 'Permission to access location is required.');
+        }
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + durationMinutes);
+
+      onAttachment('liveLocation', {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        isLive: true,
+        durationMinutes,
+        expiresAt: expiresAt.toISOString(),
+        startedAt: new Date().toISOString(),
+      });
+      onClose();
+    } catch (error) {
+      console.error('Live location error:', error);
+      Alert.alert('Error', 'Could not get your location. Please try again.');
     } finally {
       isProcessingRef.current = false;
       setIsProcessing(false);

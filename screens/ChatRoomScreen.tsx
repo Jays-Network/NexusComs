@@ -29,13 +29,17 @@ type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'> & {
 };
 
 interface Attachment {
-  type: 'image' | 'video' | 'audio' | 'file' | 'location' | 'contact' | 'poll' | 'event';
+  type: 'image' | 'video' | 'audio' | 'file' | 'location' | 'liveLocation' | 'contact' | 'poll' | 'event';
   url?: string;
   name?: string;
   size?: number;
   mimeType?: string;
   latitude?: number;
   longitude?: number;
+  isLive?: boolean;
+  durationMinutes?: number;
+  expiresAt?: string;
+  startedAt?: string;
   phoneNumbers?: string[];
   emails?: string[];
   question?: string;
@@ -75,8 +79,16 @@ export default function ChatRoomScreen() {
 
   const transformMessage = useCallback((msg: any): Message => {
     const msgType = msg.getType?.() || msg.type || 'text';
+    const subType = msg.getSubType?.() || msg.subType;
     let attachment: Attachment | undefined;
     let text = msg.getText?.() || msg.text || '';
+    
+    console.log('[ChatRoom] Transforming message:', {
+      msgType,
+      subType,
+      hasGetCustomData: !!msg.getCustomData,
+      customData: msg.getCustomData?.() || msg.data || msg.customData,
+    });
 
     if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'file') {
       const url = msg.getURL?.() || msg.data?.url || msg.attachment?.fileUrl;
@@ -89,9 +101,12 @@ export default function ChatRoomScreen() {
         mimeType: msg.getAttachment?.()?.getMimeType?.() || metadata.mimeType,
       };
       text = text || `[${msgType.charAt(0).toUpperCase() + msgType.slice(1)}]`;
-    } else if (msgType === 'custom') {
-      const customData = msg.getCustomData?.() || msg.data || {};
-      const customType = customData.type || msg.getSubType?.();
+    } else if (msgType === 'custom' || subType === 'location' || subType === 'liveLocation' || subType === 'contact' || subType === 'poll' || subType === 'event') {
+      // Handle custom messages - check both customData.type and subType for type identification
+      const customData = msg.getCustomData?.() || msg.data || msg.customData || {};
+      const customType = subType || customData.type || msg.getSubType?.();
+      
+      console.log('[ChatRoom] Processing custom message:', { customType, customData });
       
       if (customType === 'location') {
         attachment = {
@@ -99,8 +114,22 @@ export default function ChatRoomScreen() {
           latitude: customData.latitude,
           longitude: customData.longitude,
           name: customData.address,
+          isLive: false,
         };
         text = `Location: ${customData.address || `${customData.latitude?.toFixed(4)}, ${customData.longitude?.toFixed(4)}`}`;
+        console.log('[ChatRoom] Created location attachment:', attachment);
+      } else if (customType === 'liveLocation') {
+        attachment = {
+          type: 'liveLocation',
+          latitude: customData.latitude,
+          longitude: customData.longitude,
+          isLive: true,
+          durationMinutes: customData.durationMinutes,
+          expiresAt: customData.expiresAt,
+          startedAt: customData.startedAt,
+        };
+        text = `Live Location (${customData.durationMinutes} min)`;
+        console.log('[ChatRoom] Created live location attachment:', attachment);
       } else if (customType === 'contact') {
         attachment = {
           type: 'contact',
@@ -353,8 +382,23 @@ export default function ChatRoomScreen() {
             latitude: data.latitude, 
             longitude: data.longitude,
             address: `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`,
+            isLive: false,
           };
           sentMessage = await sendCustomMessage(channelId, 'location', customData, receiverType);
+          break;
+        }
+        case 'liveLocation': {
+          const customData = { 
+            type: 'liveLocation', 
+            latitude: data.latitude, 
+            longitude: data.longitude,
+            isLive: true,
+            durationMinutes: data.durationMinutes,
+            expiresAt: data.expiresAt,
+            startedAt: data.startedAt,
+          };
+          sentMessage = await sendCustomMessage(channelId, 'liveLocation', customData, receiverType);
+          console.log('[ChatRoom] Live location message sent, will update for', data.durationMinutes, 'minutes');
           break;
         }
         case 'contact': {
@@ -468,6 +512,37 @@ export default function ChatRoomScreen() {
                 <Text style={[styles.locationCoords, { color: isOwnMessage ? 'rgba(0,0,0,0.6)' : theme.textSecondary }]} numberOfLines={1}>
                   {attachment.latitude?.toFixed(4)}, {attachment.longitude?.toFixed(4)}
                 </Text>
+              </View>
+            </View>
+          </View>
+        );
+      case 'liveLocation':
+        const isExpired = attachment.expiresAt ? new Date(attachment.expiresAt) < new Date() : false;
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.locationContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <View style={styles.liveLocationIcon}>
+                <Feather name="navigation" size={20} color="#FFFFFF" />
+              </View>
+              <View style={styles.locationInfo}>
+                <View style={styles.liveLocationHeader}>
+                  <Text style={[styles.locationLabel, { color: textColor }]}>
+                    {isExpired ? 'Live Location Ended' : 'Live Location'}
+                  </Text>
+                  {!isExpired && (
+                    <View style={styles.liveBadge}>
+                      <Text style={styles.liveBadgeText}>LIVE</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.locationCoords, { color: isOwnMessage ? 'rgba(0,0,0,0.6)' : theme.textSecondary }]} numberOfLines={1}>
+                  {attachment.latitude?.toFixed(4)}, {attachment.longitude?.toFixed(4)}
+                </Text>
+                {attachment.durationMinutes && (
+                  <Text style={[styles.liveLocationDuration, { color: isOwnMessage ? 'rgba(0,0,0,0.5)' : theme.textSecondary }]}>
+                    {isExpired ? 'Expired' : `${attachment.durationMinutes} min sharing`}
+                  </Text>
+                )}
               </View>
             </View>
           </View>
@@ -859,6 +934,34 @@ const styles = StyleSheet.create({
   },
   locationCoords: {
     fontSize: 11,
+    marginTop: 2,
+  },
+  liveLocationIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#16A34A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  liveLocationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  liveBadge: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  liveBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  liveLocationDuration: {
+    fontSize: 10,
     marginTop: 2,
   },
   contactContainer: {
