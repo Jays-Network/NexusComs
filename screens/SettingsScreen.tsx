@@ -1,4 +1,4 @@
-import { View, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Pressable, StyleSheet, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -67,28 +67,45 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
 
+  async function performLogout() {
+    console.log('[Settings] Performing logout...');
+    try {
+      await logout();
+      console.log('[Settings] Logout successful');
+    } catch (error) {
+      console.error('[Settings] Logout error:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to log out. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to log out. Please try again.');
+      }
+    }
+  }
+
   function handleLogout() {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: async () => {
-            console.log('[Settings] Logout button pressed');
-            try {
-              await logout();
-              console.log('[Settings] Logout successful');
-            } catch (error) {
-              console.error('[Settings] Logout error:', error);
-              Alert.alert('Error', 'Failed to log out. Please try again.');
-            }
+    console.log('[Settings] Logout button pressed, platform:', Platform.OS);
+    
+    if (Platform.OS === 'web') {
+      // Use native browser confirm on web
+      const confirmed = window.confirm('Are you sure you want to log out?');
+      if (confirmed) {
+        performLogout();
+      }
+    } else {
+      // Use React Native Alert on mobile
+      Alert.alert(
+        'Log Out',
+        'Are you sure you want to log out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Log Out',
+            style: 'destructive',
+            onPress: performLogout
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   }
 
   return (
