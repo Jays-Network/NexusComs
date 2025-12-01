@@ -101,10 +101,10 @@ export default function ChatRoomScreen() {
         mimeType: msg.getAttachment?.()?.getMimeType?.() || metadata.mimeType,
       };
       text = text || `[${msgType.charAt(0).toUpperCase() + msgType.slice(1)}]`;
-    } else if (msgType === 'custom' || subType === 'location' || subType === 'liveLocation' || subType === 'contact' || subType === 'poll' || subType === 'event') {
-      // Handle custom messages - check both customData.type and subType for type identification
+    } else if (msgType === 'custom' || msgType === 'location' || msgType === 'liveLocation' || msgType === 'contact' || msgType === 'poll' || msgType === 'event' || subType === 'location' || subType === 'liveLocation' || subType === 'contact' || subType === 'poll' || subType === 'event') {
+      // Handle custom messages - CometChat may return the custom type as msgType directly
       const customData = msg.getCustomData?.() || msg.data || msg.customData || {};
-      const customType = subType || customData.type || msg.getSubType?.();
+      const customType = msgType !== 'custom' && msgType !== 'text' ? msgType : (subType || customData.type || msg.getSubType?.());
       
       console.log('[ChatRoom] Processing custom message:', { customType, customData });
       
