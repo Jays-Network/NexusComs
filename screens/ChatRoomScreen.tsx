@@ -119,12 +119,17 @@ export default function ChatRoomScreen() {
       }
     }
 
+    const rawTimestamp = msg.getSentAt?.() || msg.sentAt;
+    const sentAt = rawTimestamp != null 
+      ? new Date(rawTimestamp >= 1e12 ? rawTimestamp : rawTimestamp * 1000)
+      : new Date();
+
     return {
       id: msg.getId?.() || msg.id || String(Date.now()),
       text: text,
       senderId: msg.getSender?.()?.getUid?.() || msg.sender?.uid || '',
       senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
-      sentAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000),
+      sentAt: sentAt,
       isEmergency: msg.getMetadata?.()?.emergency || msg.metadata?.emergency || false,
       messageType: msgType,
       attachment: attachment,
