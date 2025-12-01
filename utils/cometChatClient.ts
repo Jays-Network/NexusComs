@@ -654,6 +654,80 @@ export const removeUserListener = (listenerId: string): void => {
   CometChat.removeUserListener(listenerId);
 };
 
+export const createDirectConversation = async (userId: string): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    console.log('[CometChat] Creating/getting direct conversation with user:', userId);
+    const user = await CometChat.getUser(userId);
+    return user;
+  } catch (error) {
+    console.error('[CometChat] Create direct conversation failed:', error);
+    throw error;
+  }
+};
+
+export const sendMediaMessage = async (
+  receiverId: string,
+  file: any,
+  messageType: string,
+  receiverType: string = 'group',
+  metadata?: Record<string, any>
+): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    const mediaMessage = new CometChat.MediaMessage(
+      receiverId,
+      file,
+      messageType,
+      receiverType === 'group' ? CometChat.RECEIVER_TYPE.GROUP : CometChat.RECEIVER_TYPE.USER
+    );
+
+    if (metadata) {
+      mediaMessage.setMetadata(metadata);
+    }
+
+    const message = await CometChat.sendMessage(mediaMessage);
+    console.log('[CometChat] Media message sent:', message.getId());
+    return message;
+  } catch (error: any) {
+    console.error('[CometChat] Send media message failed:', error);
+    throw error;
+  }
+};
+
+export const sendCustomMessage = async (
+  receiverId: string,
+  customType: string,
+  customData: Record<string, any>,
+  receiverType: string = 'group'
+): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    const customMessage = new CometChat.CustomMessage(
+      receiverId,
+      receiverType === 'group' ? CometChat.RECEIVER_TYPE.GROUP : CometChat.RECEIVER_TYPE.USER,
+      customType,
+      customData
+    );
+
+    const message = await CometChat.sendMessage(customMessage);
+    console.log('[CometChat] Custom message sent:', message.getId());
+    return message;
+  } catch (error: any) {
+    console.error('[CometChat] Send custom message failed:', error);
+    throw error;
+  }
+};
+
 export {
   CometChat,
   COMETCHAT_APP_ID,

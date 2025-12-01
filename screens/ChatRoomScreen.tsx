@@ -7,9 +7,12 @@ import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { ChatsStackParamList } from '@/navigation/ChatsStackNavigator';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { AttachmentSheet } from '@/components/AttachmentSheet';
 import { 
   joinGroup, 
   sendTextMessage, 
+  sendCustomMessage,
+  sendMediaMessage,
   fetchMessages, 
   addMessageListener, 
   removeMessageListener,
@@ -19,6 +22,22 @@ import {
 
 type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'>;
 
+interface Attachment {
+  type: 'image' | 'video' | 'audio' | 'file' | 'location' | 'contact' | 'poll' | 'event';
+  url?: string;
+  name?: string;
+  size?: number;
+  mimeType?: string;
+  latitude?: number;
+  longitude?: number;
+  phoneNumbers?: string[];
+  emails?: string[];
+  question?: string;
+  options?: string[];
+  title?: string;
+  date?: string;
+}
+
 interface Message {
   id: string;
   text: string;
@@ -26,6 +45,8 @@ interface Message {
   senderName: string;
   sentAt: Date;
   isEmergency?: boolean;
+  messageType?: string;
+  attachment?: Attachment;
 }
 
 export default function ChatRoomScreen() {
@@ -37,6 +58,7 @@ export default function ChatRoomScreen() {
   const [error, setError] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showAttachmentSheet, setShowAttachmentSheet] = useState(false);
   const { theme } = useTheme();
   const { user, cometChatUser, isInitialized } = useCometChatAuth();
   const flatListRef = useRef<FlatList>(null);
@@ -44,13 +66,68 @@ export default function ChatRoomScreen() {
   const { paddingBottom } = useScreenInsets();
 
   const transformMessage = useCallback((msg: any): Message => {
+    const msgType = msg.getType?.() || msg.type || 'text';
+    let attachment: Attachment | undefined;
+    let text = msg.getText?.() || msg.text || '';
+
+    if (msgType === 'image' || msgType === 'video' || msgType === 'audio' || msgType === 'file') {
+      const url = msg.getURL?.() || msg.data?.url || msg.attachment?.fileUrl;
+      const metadata = msg.getMetadata?.() || msg.metadata || {};
+      attachment = {
+        type: msgType as Attachment['type'],
+        url: url,
+        name: msg.getAttachment?.()?.getName?.() || metadata.name || msgType,
+        size: msg.getAttachment?.()?.getSize?.() || metadata.size,
+        mimeType: msg.getAttachment?.()?.getMimeType?.() || metadata.mimeType,
+      };
+      text = text || `[${msgType.charAt(0).toUpperCase() + msgType.slice(1)}]`;
+    } else if (msgType === 'custom') {
+      const customData = msg.getCustomData?.() || msg.data || {};
+      const customType = customData.type || msg.getSubType?.();
+      
+      if (customType === 'location') {
+        attachment = {
+          type: 'location',
+          latitude: customData.latitude,
+          longitude: customData.longitude,
+          name: customData.address,
+        };
+        text = `Location: ${customData.address || `${customData.latitude?.toFixed(4)}, ${customData.longitude?.toFixed(4)}`}`;
+      } else if (customType === 'contact') {
+        attachment = {
+          type: 'contact',
+          name: customData.name,
+          phoneNumbers: customData.phoneNumbers,
+          emails: customData.emails,
+        };
+        text = `Contact: ${customData.name || 'Shared Contact'}`;
+      } else if (customType === 'poll') {
+        attachment = {
+          type: 'poll',
+          question: customData.question,
+          options: customData.options,
+        };
+        text = `Poll: ${customData.question || 'New Poll'}`;
+      } else if (customType === 'event') {
+        attachment = {
+          type: 'event',
+          title: customData.title,
+          date: customData.date,
+          name: customData.location,
+        };
+        text = `Event: ${customData.title || 'New Event'}`;
+      }
+    }
+
     return {
       id: msg.getId?.() || msg.id || String(Date.now()),
-      text: msg.getText?.() || msg.text || '',
+      text: text,
       senderId: msg.getSender?.()?.getUid?.() || msg.sender?.uid || '',
       senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
       sentAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000),
       isEmergency: msg.getMetadata?.()?.emergency || msg.metadata?.emergency || false,
+      messageType: msgType,
+      attachment: attachment,
     };
   }, []);
 
@@ -184,9 +261,237 @@ export default function ChatRoomScreen() {
     }
   };
 
+  const handleAttachment = useCallback(async (type: string, data: any) => {
+    console.log('[ChatRoom] Attachment received:', type, data);
+    const groupId = channelId;
+
+    try {
+      let sentMessage: any;
+
+      switch (type) {
+        case 'gallery':
+        case 'camera': {
+          const isVideo = data.type === 'video' || data.mimeType?.startsWith('video/');
+          const messageType = isVideo ? 'video' : 'image';
+          
+          const fileData = {
+            uri: data.uri,
+            name: data.uri?.split('/').pop() || (isVideo ? 'video.mp4' : 'photo.jpg'),
+            type: data.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
+          };
+          
+          console.log('[ChatRoom] Sending media message:', messageType, fileData);
+          sentMessage = await sendMediaMessage(groupId, fileData, messageType, 'group', {
+            width: data.width,
+            height: data.height,
+          });
+          break;
+        }
+        case 'document': {
+          const fileData = {
+            uri: data.uri,
+            name: data.name || 'document',
+            type: data.mimeType || 'application/octet-stream',
+          };
+          
+          console.log('[ChatRoom] Sending document:', fileData);
+          sentMessage = await sendMediaMessage(groupId, fileData, 'file', 'group', {
+            name: data.name,
+            size: data.size,
+          });
+          break;
+        }
+        case 'audio': {
+          const fileData = {
+            uri: data.uri,
+            name: data.name || 'audio.mp3',
+            type: data.mimeType || 'audio/mpeg',
+          };
+          
+          console.log('[ChatRoom] Sending audio:', fileData);
+          sentMessage = await sendMediaMessage(groupId, fileData, 'audio', 'group', {
+            name: data.name,
+            size: data.size,
+          });
+          break;
+        }
+        case 'location': {
+          const customData = { 
+            type: 'location', 
+            latitude: data.latitude, 
+            longitude: data.longitude,
+            address: `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`,
+          };
+          sentMessage = await sendCustomMessage(groupId, 'location', customData, 'group');
+          break;
+        }
+        case 'contact': {
+          const customData = { 
+            type: 'contact', 
+            name: data.name || data.firstName || 'Contact',
+            phoneNumbers: data.phoneNumbers?.map((p: any) => p.number) || [],
+            emails: data.emails?.map((e: any) => e.email) || [],
+          };
+          sentMessage = await sendCustomMessage(groupId, 'contact', customData, 'group');
+          break;
+        }
+        case 'poll': {
+          const customData = { 
+            type: 'poll', 
+            question: 'New Poll',
+            options: ['Option 1', 'Option 2'],
+            votes: {},
+          };
+          sentMessage = await sendCustomMessage(groupId, 'poll', customData, 'group');
+          break;
+        }
+        case 'event': {
+          const customData = { 
+            type: 'event', 
+            title: 'New Event',
+            date: new Date().toISOString(),
+            location: '',
+          };
+          sentMessage = await sendCustomMessage(groupId, 'event', customData, 'group');
+          break;
+        }
+        default:
+          console.log('[ChatRoom] Unknown attachment type:', type);
+          return;
+      }
+
+      if (sentMessage) {
+        const transformed = transformMessage(sentMessage);
+        setMessages(prev => [...prev, transformed]);
+
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+
+        console.log('[ChatRoom] Attachment message sent:', type);
+      }
+    } catch (error: any) {
+      console.error('[ChatRoom] Failed to send attachment:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to send attachment. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to send attachment. Please try again.');
+      }
+    }
+  }, [channelId, transformMessage]);
+
+  const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean) => {
+    const iconColor = isOwnMessage ? '#000' : theme.primary;
+    const textColor = isOwnMessage ? '#000' : theme.text;
+
+    switch (attachment.type) {
+      case 'image':
+      case 'video':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.mediaPlaceholder, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <Feather name={attachment.type === 'image' ? 'image' : 'video'} size={32} color={iconColor} />
+              <Text style={[styles.attachmentLabel, { color: textColor }]}>
+                {attachment.name || attachment.type}
+              </Text>
+            </View>
+          </View>
+        );
+      case 'audio':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.audioContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <Feather name="headphones" size={24} color={iconColor} />
+              <Text style={[styles.attachmentLabel, { color: textColor }]} numberOfLines={1}>
+                {attachment.name || 'Audio'}
+              </Text>
+            </View>
+          </View>
+        );
+      case 'file':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.fileContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <Feather name="file-text" size={24} color={iconColor} />
+              <View style={styles.fileInfo}>
+                <Text style={[styles.fileName, { color: textColor }]} numberOfLines={1}>
+                  {attachment.name || 'Document'}
+                </Text>
+                {attachment.size && (
+                  <Text style={[styles.fileSize, { color: isOwnMessage ? 'rgba(0,0,0,0.6)' : theme.textSecondary }]}>
+                    {(attachment.size / 1024).toFixed(1)} KB
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        );
+      case 'location':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.locationContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <Feather name="map-pin" size={24} color="#16A34A" />
+              <View style={styles.locationInfo}>
+                <Text style={[styles.locationLabel, { color: textColor }]}>Shared Location</Text>
+                <Text style={[styles.locationCoords, { color: isOwnMessage ? 'rgba(0,0,0,0.6)' : theme.textSecondary }]} numberOfLines={1}>
+                  {attachment.latitude?.toFixed(4)}, {attachment.longitude?.toFixed(4)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        );
+      case 'contact':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.contactContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <View style={[styles.contactAvatar, { backgroundColor: theme.primary }]}>
+                <Feather name="user" size={20} color="#FFF" />
+              </View>
+              <View style={styles.contactInfo}>
+                <Text style={[styles.contactName, { color: textColor }]}>{attachment.name || 'Contact'}</Text>
+                {attachment.phoneNumbers && attachment.phoneNumbers.length > 0 && (
+                  <Text style={[styles.contactPhone, { color: isOwnMessage ? 'rgba(0,0,0,0.6)' : theme.textSecondary }]} numberOfLines={1}>
+                    {attachment.phoneNumbers[0]}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        );
+      case 'poll':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.pollContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <Feather name="bar-chart-2" size={24} color="#9333EA" />
+              <Text style={[styles.pollQuestion, { color: textColor }]}>{attachment.question || 'Poll'}</Text>
+            </View>
+          </View>
+        );
+      case 'event':
+        return (
+          <View style={styles.attachmentContainer}>
+            <View style={[styles.eventContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
+              <Feather name="calendar" size={24} color="#E11D48" />
+              <View style={styles.eventInfo}>
+                <Text style={[styles.eventTitle, { color: textColor }]}>{attachment.title || 'Event'}</Text>
+                {attachment.date && (
+                  <Text style={[styles.eventDate, { color: isOwnMessage ? 'rgba(0,0,0,0.6)' : theme.textSecondary }]}>
+                    {new Date(attachment.date).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        );
+      default:
+        return null;
+    }
+  }, [theme]);
+
   const renderMessage = useCallback(({ item }: { item: Message }) => {
     const isOwnMessage = item.senderId === user?.id;
     const isEmergency = item.isEmergency;
+    const hasAttachment = item.attachment != null;
     
     return (
       <View style={[
@@ -202,13 +507,16 @@ export default function ChatRoomScreen() {
             {item.senderName}
           </Text>
         )}
-        <Text style={[
-          styles.messageText,
-          { color: isOwnMessage ? '#000' : theme.text },
-          isEmergency && styles.emergencyText,
-        ]}>
-          {item.text}
-        </Text>
+        {hasAttachment && item.attachment && renderAttachmentContent(item.attachment, isOwnMessage)}
+        {(!hasAttachment || item.messageType === 'text') && (
+          <Text style={[
+            styles.messageText,
+            { color: isOwnMessage ? '#000' : theme.text },
+            isEmergency && styles.emergencyText,
+          ]}>
+            {item.text}
+          </Text>
+        )}
         <Text style={[
           styles.timestamp,
           { color: isOwnMessage ? 'rgba(0,0,0,0.5)' : theme.textSecondary }
@@ -217,7 +525,7 @@ export default function ChatRoomScreen() {
         </Text>
       </View>
     );
-  }, [user?.id, theme]);
+  }, [user?.id, theme, renderAttachmentContent]);
 
   if (isLoading) {
     return (
@@ -290,6 +598,15 @@ export default function ChatRoomScreen() {
           paddingBottom: paddingBottom,
         }
       ]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.attachmentButton,
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => setShowAttachmentSheet(true)}
+        >
+          <Feather name="paperclip" size={22} color={theme.textSecondary} />
+        </Pressable>
         <TextInput
           style={[styles.textInput, { backgroundColor: theme.backgroundRoot, color: theme.text }]}
           placeholder="Type a message..."
@@ -315,6 +632,11 @@ export default function ChatRoomScreen() {
           )}
         </Pressable>
       </View>
+      <AttachmentSheet
+        visible={showAttachmentSheet}
+        onClose={() => setShowAttachmentSheet(false)}
+        onAttachment={handleAttachment}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -426,6 +748,13 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderTopWidth: 1,
   },
+  attachmentButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.xs,
+  },
   textInput: {
     flex: 1,
     minHeight: 40,
@@ -442,5 +771,117 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  attachmentContainer: {
+    marginBottom: Spacing.sm,
+  },
+  mediaPlaceholder: {
+    width: 180,
+    height: 120,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentLabel: {
+    fontSize: 12,
+    marginTop: Spacing.xs,
+  },
+  audioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  fileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  fileInfo: {
+    flex: 1,
+  },
+  fileName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  fileSize: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  locationInfo: {
+    flex: 1,
+  },
+  locationLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  locationCoords: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  contactContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  contactAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  contactPhone: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  pollContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  pollQuestion: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  eventContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  eventInfo: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  eventDate: {
+    fontSize: 11,
+    marginTop: 2,
   },
 });

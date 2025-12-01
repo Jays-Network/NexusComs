@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Text, FlatList, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, Text, FlatList, Pressable, ActivityIndicator, RefreshControl, Alert, Linking, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { AppHeader } from '@/components/AppHeader';
-import { fetchUsers, addUserListener, removeUserListener } from '@/utils/cometChatClient';
-import { Spacing } from '@/constants/theme';
+import { fetchUsers, addUserListener, removeUserListener, createDirectConversation } from '@/utils/cometChatClient';
+import { Spacing, BorderRadius } from '@/constants/theme';
 
 interface Contact {
   id: string;
@@ -31,7 +32,14 @@ const EmptyStateView = () => {
   );
 };
 
-const ContactItem = ({ contact, theme }: { contact: Contact; theme: any }) => {
+interface ContactItemProps {
+  contact: Contact;
+  theme: any;
+  onChatPress: (contact: Contact) => void;
+  onCallPress: (contact: Contact) => void;
+}
+
+const ContactItem = ({ contact, theme, onChatPress, onCallPress }: ContactItemProps) => {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'online':
@@ -44,37 +52,69 @@ const ContactItem = ({ contact, theme }: { contact: Contact; theme: any }) => {
   };
 
   return (
-    <Pressable
-      style={[styles.contactItem, { backgroundColor: theme.card }]}
-      onPress={() => {}}
-    >
+    <View style={[styles.contactItem, { backgroundColor: theme.surface }]}>
       <View style={styles.contactContent}>
-        <View
-          style={[
-            styles.avatar,
-            { backgroundColor: theme.primary },
-          ]}
-        >
-          <Text style={[styles.avatarText, { color: theme.buttonText }]}>
-            {contact.name.charAt(0).toUpperCase()}
-          </Text>
+        <View style={styles.avatarContainer}>
+          <View
+            style={[
+              styles.avatar,
+              { backgroundColor: theme.primary },
+            ]}
+          >
+            <Text style={[styles.avatarText, { color: theme.buttonText }]}>
+              {contact.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.statusDot,
+              { 
+                backgroundColor: getStatusColor(contact.status),
+                borderColor: theme.surface,
+              },
+            ]}
+          />
         </View>
         <View style={styles.contactInfo}>
-          <Text style={[styles.contactName, { color: theme.text }]}>
-            {contact.name}
-          </Text>
+          <View style={styles.nameRow}>
+            <View
+              style={[
+                styles.statusLight,
+                { backgroundColor: getStatusColor(contact.status) },
+              ]}
+            />
+            <Text style={[styles.contactName, { color: theme.text }]} numberOfLines={1}>
+              {contact.name}
+            </Text>
+          </View>
           <Text style={[styles.contactStatus, { color: theme.textSecondary }]}>
             {contact.status === 'online' ? 'Online' : 'Offline'}
           </Text>
         </View>
       </View>
-      <View
-        style={[
-          styles.statusIndicator,
-          { backgroundColor: getStatusColor(contact.status) },
-        ]}
-      />
-    </Pressable>
+      <View style={styles.actionButtons}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.actionButton,
+            { backgroundColor: theme.backgroundSecondary },
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => onChatPress(contact)}
+        >
+          <Feather name="message-circle" size={20} color={theme.primary} />
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.actionButton,
+            { backgroundColor: theme.backgroundSecondary },
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => onCallPress(contact)}
+        >
+          <Feather name="phone" size={20} color="#34C759" />
+        </Pressable>
+      </View>
+    </View>
   );
 };
 
@@ -82,6 +122,7 @@ export default function ContactListScreen() {
   const { theme } = useTheme();
   const { user, cometChatUser, isInitialized } = useCometChatAuth();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -172,6 +213,54 @@ export default function ContactListScreen() {
     loadContacts();
   }, [loadContacts]);
 
+  const handleChatPress = useCallback(async (contact: Contact) => {
+    try {
+      console.log('[ContactList] Starting chat with:', contact.name);
+      await createDirectConversation(contact.id);
+      navigation.navigate('DirectChats', {
+        screen: 'DirectChatRoom',
+        params: {
+          channelId: contact.id,
+          channelName: contact.name,
+        },
+      });
+    } catch (err: any) {
+      console.error('[ContactList] Error starting chat:', err);
+      if (Platform.OS === 'web') {
+        window.alert('Could not start chat. Please try again.');
+      } else {
+        Alert.alert('Error', 'Could not start chat. Please try again.');
+      }
+    }
+  }, [navigation]);
+
+  const handleCallPress = useCallback((contact: Contact) => {
+    console.log('[ContactList] Initiating call with:', contact.name);
+    if (Platform.OS === 'web') {
+      window.alert(`Video calling requires the Expo Go app. Please use the mobile app to call ${contact.name}.`);
+    } else {
+      Alert.alert(
+        'Start Call',
+        `Would you like to call ${contact.name}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Voice Call', 
+            onPress: () => {
+              Alert.alert('Coming Soon', 'Voice calling will be available in the next update.');
+            }
+          },
+          { 
+            text: 'Video Call', 
+            onPress: () => {
+              Alert.alert('Coming Soon', 'Video calling will be available in the next update.');
+            }
+          },
+        ]
+      );
+    }
+  }, []);
+
   if (!user) {
     return null;
   }
@@ -249,7 +338,12 @@ export default function ContactListScreen() {
         <FlatList
           data={contacts}
           renderItem={({ item }) => (
-            <ContactItem contact={item} theme={theme} />
+            <ContactItem 
+              contact={item} 
+              theme={theme} 
+              onChatPress={handleChatPress}
+              onCallPress={handleCallPress}
+            />
           )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -334,42 +428,74 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
   },
   contactContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: Spacing.md,
+  },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   avatarText: {
     fontSize: 18,
     fontWeight: '600',
   },
+  statusDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+  },
   contactInfo: {
     flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusLight: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   contactName: {
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
   },
   contactStatus: {
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 2,
+    marginLeft: 16,
   },
-  statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginLeft: Spacing.md,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
