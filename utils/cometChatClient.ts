@@ -323,7 +323,49 @@ export const getGroup = async (guid: string): Promise<any> => {
   }
 };
 
-export const joinGroup = async (guid: string, groupType: string = 'public'): Promise<any> => {
+export const createGroup = async (
+  guid: string,
+  name: string,
+  groupType: string = 'public',
+  metadata?: Record<string, any>
+): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    console.log('[CometChat] Creating group:', guid, name);
+    const group = new CometChat.Group(
+      guid,
+      name,
+      groupType === 'public' ? CometChat.GROUP_TYPE.PUBLIC : 
+        groupType === 'private' ? CometChat.GROUP_TYPE.PRIVATE : 
+        CometChat.GROUP_TYPE.PASSWORD,
+      ''
+    );
+    
+    if (metadata) {
+      group.setMetadata(metadata);
+    }
+    
+    const createdGroup = await CometChat.createGroup(group);
+    console.log('[CometChat] Group created successfully:', guid);
+    return createdGroup;
+  } catch (error: any) {
+    if (error.code === 'ERR_GUID_ALREADY_EXISTS') {
+      console.log('[CometChat] Group already exists:', guid);
+      return await getGroup(guid);
+    }
+    console.error('[CometChat] Create group failed:', error);
+    throw error;
+  }
+};
+
+export const joinGroup = async (
+  guid: string, 
+  groupType: string = 'public',
+  groupName?: string
+): Promise<any> => {
   if (!CometChat) {
     throw new Error('CometChat SDK not loaded');
   }
@@ -337,6 +379,24 @@ export const joinGroup = async (guid: string, groupType: string = 'public'): Pro
       console.log('[CometChat] Already a member of group:', guid);
       return await getGroup(guid);
     }
+    
+    if (error.code === 'ERR_GUID_NOT_FOUND') {
+      console.log('[CometChat] Group not found, creating:', guid);
+      const name = groupName || `Group ${guid}`;
+      try {
+        await createGroup(guid, name, groupType);
+        const joinedGroup = await CometChat.joinGroup(guid, groupType, '');
+        console.log('[CometChat] Created and joined group:', guid);
+        return joinedGroup;
+      } catch (createError: any) {
+        if (createError.code === 'ERR_GUID_ALREADY_EXISTS' || 
+            createError.code === 'ERR_ALREADY_JOINED') {
+          return await getGroup(guid);
+        }
+        throw createError;
+      }
+    }
+    
     console.error('[CometChat] Join group failed:', error);
     throw error;
   }

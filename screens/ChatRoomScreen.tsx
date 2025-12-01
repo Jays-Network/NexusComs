@@ -68,13 +68,13 @@ export default function ChatRoomScreen() {
       try {
         console.log(`[ChatRoom] Loading group: ${channelId}`);
         
-        // Convert channel ID format: group-{id} -> group_{id}
-        const groupId = channelId.replace('group-', 'group_');
+        // Use the channelId directly - don't transform it since it comes from the database
+        const groupId = channelId;
         console.log(`[ChatRoom] CometChat group ID: ${groupId}`);
         
-        // Join the group (or get it if already a member)
+        // Join the group (or create and join if it doesn't exist)
         try {
-          await joinGroup(groupId, 'public');
+          await joinGroup(groupId, 'public', channelName);
           console.log('[ChatRoom] Joined/verified group membership');
         } catch (joinError: any) {
           console.warn('[ChatRoom] Join group warning:', joinError);
@@ -165,7 +165,8 @@ export default function ChatRoomScreen() {
 
     setIsSending(true);
     try {
-      const groupId = channelId.replace('group-', 'group_');
+      // Use channelId directly - it comes from the database as the CometChat group ID
+      const groupId = channelId;
       const sentMessage = await sendTextMessage(groupId, messageText.trim(), 'group');
       
       const transformed = transformMessage(sentMessage);
