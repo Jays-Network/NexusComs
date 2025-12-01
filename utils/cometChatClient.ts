@@ -488,12 +488,20 @@ export const fetchMessages = async (
   }
 
   try {
-    const messagesRequest = new CometChat.MessagesRequestBuilder()
-      .setLimit(limit)
-      .setGUID(receiverId)
-      .build();
-
+    let messagesRequestBuilder = new CometChat.MessagesRequestBuilder()
+      .setLimit(limit);
+    
+    if (receiverType === 'user') {
+      console.log('[CometChat] Fetching messages for user:', receiverId);
+      messagesRequestBuilder = messagesRequestBuilder.setUID(receiverId);
+    } else {
+      console.log('[CometChat] Fetching messages for group:', receiverId);
+      messagesRequestBuilder = messagesRequestBuilder.setGUID(receiverId);
+    }
+    
+    const messagesRequest = messagesRequestBuilder.build();
     const messages = await messagesRequest.fetchPrevious();
+    console.log('[CometChat] Fetched', messages.length, 'messages');
     return messages;
   } catch (error) {
     console.error('[CometChat] Fetch messages failed:', error);
