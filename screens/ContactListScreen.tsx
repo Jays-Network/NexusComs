@@ -222,6 +222,7 @@ export default function ContactListScreen() {
         params: {
           channelId: contact.id,
           channelName: contact.name,
+          isDirectChat: true,
         },
       });
     } catch (err: any) {

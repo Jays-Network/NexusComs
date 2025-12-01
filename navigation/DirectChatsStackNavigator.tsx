@@ -6,7 +6,7 @@ import ChatRoomScreen from "@/screens/ChatRoomScreen";
 
 export type DirectChatsStackParamList = {
   DirectChatsList: undefined;
-  DirectChatRoom: { channelId: string; channelName: string };
+  DirectChatRoom: { channelId: string; channelName: string; isDirectChat?: boolean };
 };
 
 const Stack = createNativeStackNavigator<DirectChatsStackParamList>();

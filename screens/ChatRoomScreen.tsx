@@ -20,7 +20,13 @@ import {
   CometChat
 } from '@/utils/cometChatClient';
 
-type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'>;
+type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'> & {
+  params: {
+    channelId: string;
+    channelName: string;
+    isDirectChat?: boolean;
+  };
+};
 
 interface Attachment {
   type: 'image' | 'video' | 'audio' | 'file' | 'location' | 'contact' | 'poll' | 'event';
@@ -52,7 +58,7 @@ interface Message {
 export default function ChatRoomScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation();
-  const { channelId, channelName } = route.params;
+  const { channelId, channelName, isDirectChat } = route.params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +70,8 @@ export default function ChatRoomScreen() {
   const flatListRef = useRef<FlatList>(null);
   const listenerIdRef = useRef<string>(`chat_${channelId}_${Date.now()}`);
   const { paddingBottom } = useScreenInsets();
+  
+  const receiverType = isDirectChat ? 'user' : 'group';
 
   const transformMessage = useCallback((msg: any): Message => {
     const msgType = msg.getType?.() || msg.type || 'text';
@@ -148,23 +156,25 @@ export default function ChatRoomScreen() {
 
     const initChat = async () => {
       try {
-        console.log(`[ChatRoom] Loading group: ${channelId}`);
+        const currentUserId = cometChatUser.getUid?.() || cometChatUser.uid;
         
-        // Use the channelId directly - don't transform it since it comes from the database
-        const groupId = channelId;
-        console.log(`[ChatRoom] CometChat group ID: ${groupId}`);
-        
-        // Join the group (or create and join if it doesn't exist)
-        try {
-          await joinGroup(groupId, 'public', channelName);
-          console.log('[ChatRoom] Joined/verified group membership');
-        } catch (joinError: any) {
-          console.warn('[ChatRoom] Join group warning:', joinError);
+        if (isDirectChat) {
+          console.log(`[ChatRoom] Loading direct chat with user: ${channelId}`);
+        } else {
+          console.log(`[ChatRoom] Loading group: ${channelId}`);
+          
+          // Join the group (only for group chats)
+          try {
+            await joinGroup(channelId, 'public', channelName);
+            console.log('[ChatRoom] Joined/verified group membership');
+          } catch (joinError: any) {
+            console.warn('[ChatRoom] Join group warning:', joinError);
+          }
         }
         
         // Fetch existing messages
         try {
-          const existingMessages = await fetchMessages(groupId, 'group', 50);
+          const existingMessages = await fetchMessages(channelId, receiverType, 50);
           const transformed = existingMessages.map(transformMessage).reverse();
           setMessages(transformed);
           console.log(`[ChatRoom] Loaded ${transformed.length} messages`);
@@ -176,11 +186,30 @@ export default function ChatRoomScreen() {
         addMessageListener(
           listenerIdRef.current,
           (newMessage: any) => {
+            const msgReceiverType = newMessage.getReceiverType?.() || newMessage.receiverType;
             const receiverId = newMessage.getReceiverId?.() || newMessage.receiverId;
-            if (receiverId === groupId) {
-              const transformed = transformMessage(newMessage);
-              setMessages(prev => [...prev, transformed]);
-              markAsRead(newMessage);
+            const senderId = newMessage.getSender?.()?.getUid?.() || newMessage.sender?.uid;
+            
+            if (isDirectChat) {
+              // For direct chats, check if this message is part of this conversation
+              const isRelevant = 
+                (senderId === channelId && receiverId === currentUserId) ||
+                (senderId === currentUserId && receiverId === channelId);
+              
+              if (isRelevant && msgReceiverType === 'user') {
+                console.log('[ChatRoom] New direct message received');
+                const transformed = transformMessage(newMessage);
+                setMessages(prev => [...prev, transformed]);
+                markAsRead(newMessage);
+              }
+            } else {
+              // For group chats
+              if (receiverId === channelId && msgReceiverType === 'group') {
+                console.log('[ChatRoom] New group message received');
+                const transformed = transformMessage(newMessage);
+                setMessages(prev => [...prev, transformed]);
+                markAsRead(newMessage);
+              }
             }
           }
         );
@@ -199,7 +228,7 @@ export default function ChatRoomScreen() {
     return () => {
       removeMessageListener(listenerIdRef.current);
     };
-  }, [isInitialized, cometChatUser, channelId, transformMessage]);
+  }, [isInitialized, cometChatUser, channelId, channelName, isDirectChat, receiverType, transformMessage]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -247,9 +276,8 @@ export default function ChatRoomScreen() {
 
     setIsSending(true);
     try {
-      // Use channelId directly - it comes from the database as the CometChat group ID
-      const groupId = channelId;
-      const sentMessage = await sendTextMessage(groupId, messageText.trim(), 'group');
+      console.log(`[ChatRoom] Sending message to ${isDirectChat ? 'user' : 'group'}: ${channelId}`);
+      const sentMessage = await sendTextMessage(channelId, messageText.trim(), receiverType);
       
       const transformed = transformMessage(sentMessage);
       setMessages(prev => [...prev, transformed]);
@@ -268,7 +296,6 @@ export default function ChatRoomScreen() {
 
   const handleAttachment = useCallback(async (type: string, data: any) => {
     console.log('[ChatRoom] Attachment received:', type, data);
-    const groupId = channelId;
 
     try {
       let sentMessage: any;
@@ -286,7 +313,7 @@ export default function ChatRoomScreen() {
           };
           
           console.log('[ChatRoom] Sending media message:', messageType, fileData);
-          sentMessage = await sendMediaMessage(groupId, fileData, messageType, 'group', {
+          sentMessage = await sendMediaMessage(channelId, fileData, messageType, receiverType, {
             width: data.width,
             height: data.height,
           });
@@ -300,7 +327,7 @@ export default function ChatRoomScreen() {
           };
           
           console.log('[ChatRoom] Sending document:', fileData);
-          sentMessage = await sendMediaMessage(groupId, fileData, 'file', 'group', {
+          sentMessage = await sendMediaMessage(channelId, fileData, 'file', receiverType, {
             name: data.name,
             size: data.size,
           });
@@ -314,7 +341,7 @@ export default function ChatRoomScreen() {
           };
           
           console.log('[ChatRoom] Sending audio:', fileData);
-          sentMessage = await sendMediaMessage(groupId, fileData, 'audio', 'group', {
+          sentMessage = await sendMediaMessage(channelId, fileData, 'audio', receiverType, {
             name: data.name,
             size: data.size,
           });
@@ -327,7 +354,7 @@ export default function ChatRoomScreen() {
             longitude: data.longitude,
             address: `${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`,
           };
-          sentMessage = await sendCustomMessage(groupId, 'location', customData, 'group');
+          sentMessage = await sendCustomMessage(channelId, 'location', customData, receiverType);
           break;
         }
         case 'contact': {
@@ -337,7 +364,7 @@ export default function ChatRoomScreen() {
             phoneNumbers: data.phoneNumbers?.map((p: any) => p.number) || [],
             emails: data.emails?.map((e: any) => e.email) || [],
           };
-          sentMessage = await sendCustomMessage(groupId, 'contact', customData, 'group');
+          sentMessage = await sendCustomMessage(channelId, 'contact', customData, receiverType);
           break;
         }
         case 'poll': {
@@ -347,7 +374,7 @@ export default function ChatRoomScreen() {
             options: ['Option 1', 'Option 2'],
             votes: {},
           };
-          sentMessage = await sendCustomMessage(groupId, 'poll', customData, 'group');
+          sentMessage = await sendCustomMessage(channelId, 'poll', customData, receiverType);
           break;
         }
         case 'event': {
@@ -357,7 +384,7 @@ export default function ChatRoomScreen() {
             date: new Date().toISOString(),
             location: '',
           };
-          sentMessage = await sendCustomMessage(groupId, 'event', customData, 'group');
+          sentMessage = await sendCustomMessage(channelId, 'event', customData, receiverType);
           break;
         }
         default:
@@ -383,7 +410,7 @@ export default function ChatRoomScreen() {
         Alert.alert('Error', 'Failed to send attachment. Please try again.');
       }
     }
-  }, [channelId, transformMessage]);
+  }, [channelId, receiverType, transformMessage]);
 
   const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean) => {
     const iconColor = isOwnMessage ? '#000' : theme.primary;

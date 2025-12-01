@@ -118,6 +118,7 @@ export default function DirectChatsScreen() {
     navigation.navigate('DirectChatRoom', {
       channelId: conversation.id,
       channelName: conversation.name,
+      isDirectChat: true,
     });
   };
 
