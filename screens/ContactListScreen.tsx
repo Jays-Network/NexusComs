@@ -215,9 +215,9 @@ export default function ContactListScreen() {
 
   const handleChatPress = useCallback(async (contact: Contact) => {
     try {
-      console.log('[ContactList] Starting chat with:', contact.name);
+      console.log('[ContactList] Starting chat with:', contact.name, 'id:', contact.id);
       await createDirectConversation(contact.id);
-      navigation.navigate('DirectChats', {
+      navigation.navigate('ChatsTab', {
         screen: 'DirectChatRoom',
         params: {
           channelId: contact.id,
