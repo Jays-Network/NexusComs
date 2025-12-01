@@ -15,6 +15,8 @@ import LoginScreen from "@/screens/LoginScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CometChatAuthProvider, useCometChatAuth } from "@/utils/cometChatAuth";
 import { SupabaseSyncProvider, useSupabaseSync } from "@/utils/supabaseSync";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -98,17 +100,21 @@ export default function App() {
   
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <GestureHandlerRootView style={styles.root}>
-          <KeyboardProvider>
-            <SupabaseSyncProvider>
-              <CometChatAuthProvider>
-                <AppContent />
-              </CometChatAuthProvider>
-            </SupabaseSyncProvider>
-          </KeyboardProvider>
-        </GestureHandlerRootView>
-      </SafeAreaProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={styles.root}>
+              <KeyboardProvider>
+                <SupabaseSyncProvider>
+                  <CometChatAuthProvider>
+                    <AppContent />
+                  </CometChatAuthProvider>
+                </SupabaseSyncProvider>
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </SettingsProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeMode } from '@/contexts/ThemeContext';
 import { Spacing, BorderRadius } from '@/constants/theme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
 import type { SettingsStackParamList } from '@/navigation/SettingsStackNavigator';
@@ -16,12 +17,13 @@ interface SettingsItemProps {
   icon: keyof typeof Feather.glyphMap;
   label: string;
   description?: string;
+  value?: string;
   onPress: () => void;
   isDestructive?: boolean;
   showChevron?: boolean;
 }
 
-function SettingsItem({ icon, label, description, onPress, isDestructive = false, showChevron = true }: SettingsItemProps) {
+function SettingsItem({ icon, label, description, value, onPress, isDestructive = false, showChevron = true }: SettingsItemProps) {
   const { theme } = useTheme();
   
   return (
@@ -54,18 +56,40 @@ function SettingsItem({ icon, label, description, onPress, isDestructive = false
           ) : null}
         </View>
       </View>
-      {showChevron ? (
-        <Feather name="chevron-right" size={20} color={theme.textSecondary} />
-      ) : null}
+      <View style={styles.settingItemRight}>
+        {value ? (
+          <ThemedText style={[styles.settingValue, { color: theme.textSecondary }]}>
+            {value}
+          </ThemedText>
+        ) : null}
+        {showChevron ? (
+          <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
-export default function SettingsScreen() {
+function SettingsDivider() {
   const { theme } = useTheme();
+  return <View style={[styles.divider, { backgroundColor: theme.border }]} />;
+}
+
+export default function SettingsScreen() {
+  const { theme, isDark } = useTheme();
+  const { themeMode } = useThemeMode();
   const { user, logout } = useCometChatAuth();
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
+
+  const getThemeModeLabel = () => {
+    switch (themeMode) {
+      case 'light': return 'Light';
+      case 'dark': return 'Dark';
+      case 'system': return 'System';
+      default: return 'System';
+    }
+  };
 
   async function performLogout() {
     console.log('[Settings] Performing logout...');
@@ -86,13 +110,11 @@ export default function SettingsScreen() {
     console.log('[Settings] Logout button pressed, platform:', Platform.OS);
     
     if (Platform.OS === 'web') {
-      // Use native browser confirm on web
       const confirmed = window.confirm('Are you sure you want to log out?');
       if (confirmed) {
         performLogout();
       }
     } else {
-      // Use React Native Alert on mobile
       Alert.alert(
         'Log Out',
         'Are you sure you want to log out?',
@@ -110,7 +132,6 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.screenContainer, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
-      {/* Custom Header with Back Button */}
       <View style={[styles.header, { backgroundColor: theme.backgroundSecondary, borderBottomColor: theme.border }]}>
         <Pressable 
           onPress={() => navigation.goBack()}
@@ -124,7 +145,6 @@ export default function SettingsScreen() {
 
       <ScreenScrollView style={{ backgroundColor: theme.backgroundRoot }}>
         <View style={styles.container}>
-          {/* Profile Section at Top */}
           <Pressable 
             onPress={() => navigation.navigate('Profile')}
             style={({ pressed }) => [
@@ -147,24 +167,46 @@ export default function SettingsScreen() {
             <Feather name="chevron-right" size={20} color={theme.textSecondary} />
           </Pressable>
 
-          {/* Account Section */}
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>Account</ThemedText>
-            
+            <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+              Preferences
+            </ThemedText>
             <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
+              <SettingsItem
+                icon={isDark ? 'moon' : 'sun'}
+                label="Appearance"
+                description="Theme and display"
+                value={getThemeModeLabel()}
+                onPress={() => navigation.navigate('Appearance')}
+              />
+              <SettingsDivider />
               <SettingsItem
                 icon="bell"
                 label="Notifications"
-                description="Message notifications"
+                description="Alerts and sounds"
                 onPress={() => navigation.navigate('Notifications')}
+              />
+              <SettingsDivider />
+              <SettingsItem
+                icon="message-circle"
+                label="Chats"
+                description="Privacy and media"
+                onPress={() => navigation.navigate('ChatSettings')}
+              />
+              <SettingsDivider />
+              <SettingsItem
+                icon="settings"
+                label="System"
+                description="Haptics and sounds"
+                onPress={() => navigation.navigate('SystemSettings')}
               />
             </View>
           </View>
 
-          {/* Support Section */}
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>Support</ThemedText>
-            
+            <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+              Support
+            </ThemedText>
             <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
               <SettingsItem
                 icon="info"
@@ -175,7 +217,6 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* Logout Section */}
           <View style={styles.section}>
             <View style={[styles.settingCard, { backgroundColor: theme.surface }]}>
               <SettingsItem
@@ -275,6 +316,11 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
     flex: 1,
   },
+  settingItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   settingTextContainer: {
     flex: 1,
     gap: 2,
@@ -286,8 +332,11 @@ const styles = StyleSheet.create({
   settingDescription: {
     fontSize: 13,
   },
+  settingValue: {
+    fontSize: 14,
+  },
   divider: {
     height: 1,
-    marginHorizontal: Spacing.lg,
+    marginLeft: Spacing.lg + 20 + Spacing.lg,
   },
 });

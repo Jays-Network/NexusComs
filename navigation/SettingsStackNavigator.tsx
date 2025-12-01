@@ -5,12 +5,18 @@ import SettingsScreen from "@/screens/SettingsScreen";
 import ProfileScreen from "@/screens/ProfileScreen";
 import NotificationsScreen from "@/screens/NotificationsScreen";
 import AboutScreen from "@/screens/AboutScreen";
+import AppearanceScreen from "@/screens/AppearanceScreen";
+import ChatSettingsScreen from "@/screens/ChatSettingsScreen";
+import SystemSettingsScreen from "@/screens/SystemSettingsScreen";
 
 export type SettingsStackParamList = {
   Settings: undefined;
   Profile: undefined;
   Notifications: undefined;
   About: undefined;
+  Appearance: undefined;
+  ChatSettings: undefined;
+  SystemSettings: undefined;
 };
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
@@ -46,6 +52,30 @@ export default function SettingsStackNavigator() {
         component={AboutScreen}
         options={{ 
           title: 'About',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="Appearance"
+        component={AppearanceScreen}
+        options={{ 
+          title: 'Appearance',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="ChatSettings"
+        component={ChatSettingsScreen}
+        options={{ 
+          title: 'Chats',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        name="SystemSettings"
+        component={SystemSettingsScreen}
+        options={{ 
+          title: 'System',
           headerShown: true,
         }}
       />
