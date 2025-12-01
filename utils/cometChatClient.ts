@@ -1,20 +1,154 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COMETCHAT_APP_ID = process.env.EXPO_PUBLIC_COMETCHAT_APP_ID || '';
 const COMETCHAT_REGION = process.env.EXPO_PUBLIC_COMETCHAT_REGION || 'us';
 const COMETCHAT_AUTH_KEY = process.env.EXPO_PUBLIC_COMETCHAT_AUTH_KEY || '';
+
+const CONNECTION_TIMEOUT = 30000;
+const MAX_RETRY_ATTEMPTS = 3;
+const MESSAGE_QUEUE_KEY = 'cometchat_message_queue';
 
 console.log('[CometChat] Initializing CometChat client...');
 console.log('[CometChat] EXPO_PUBLIC_COMETCHAT_APP_ID exists:', !!COMETCHAT_APP_ID);
 console.log('[CometChat] EXPO_PUBLIC_COMETCHAT_REGION:', COMETCHAT_REGION);
 
 const isValidConfig = (appId: string, authKey: string): boolean => {
-  if (!appId || typeof appId !== 'string' || appId.length === 0) return false;
-  if (!authKey || typeof authKey !== 'string' || authKey.length === 0) return false;
-  if (appId.includes('$') || appId.includes('undefined')) return false;
-  if (authKey.includes('$') || authKey.includes('undefined')) return false;
+  if (!appId || typeof appId !== 'string' || appId.length === 0) {
+    console.error('[CometChat] Invalid App ID - empty or missing');
+    return false;
+  }
+  if (!authKey || typeof authKey !== 'string' || authKey.length === 0) {
+    console.error('[CometChat] Invalid Auth Key - empty or missing');
+    return false;
+  }
+  if (appId.includes('$') || appId.includes('undefined')) {
+    console.error('[CometChat] Invalid App ID - contains placeholder values');
+    return false;
+  }
+  if (authKey.includes('$') || authKey.includes('undefined')) {
+    console.error('[CometChat] Invalid Auth Key - contains placeholder values');
+    return false;
+  }
+  if (appId.length < 10) {
+    console.error('[CometChat] Invalid App ID - too short');
+    return false;
+  }
+  if (authKey.length < 20) {
+    console.error('[CometChat] Invalid Auth Key - too short');
+    return false;
+  }
   return true;
+};
+
+const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+const calculateBackoff = (attempt: number): number => {
+  return Math.min(1000 * Math.pow(2, attempt), 30000);
+};
+
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Connection timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+    
+    promise
+      .then(result => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch(error => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+};
+
+interface QueuedMessage {
+  id: string;
+  receiverId: string;
+  text: string;
+  receiverType: string;
+  metadata?: Record<string, any>;
+  timestamp: number;
+  retryCount: number;
+}
+
+let messageQueue: QueuedMessage[] = [];
+let isOnline = true;
+
+const loadMessageQueue = async (): Promise<void> => {
+  try {
+    const stored = await AsyncStorage.getItem(MESSAGE_QUEUE_KEY);
+    if (stored) {
+      messageQueue = JSON.parse(stored);
+      console.log('[CometChat] Loaded message queue:', messageQueue.length, 'pending messages');
+    }
+  } catch (error) {
+    console.error('[CometChat] Failed to load message queue:', error);
+  }
+};
+
+const saveMessageQueue = async (): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(MESSAGE_QUEUE_KEY, JSON.stringify(messageQueue));
+  } catch (error) {
+    console.error('[CometChat] Failed to save message queue:', error);
+  }
+};
+
+const processMessageQueue = async (): Promise<void> => {
+  if (messageQueue.length === 0 || !isOnline || !isInitialized) {
+    return;
+  }
+  
+  console.log('[CometChat] Processing message queue:', messageQueue.length, 'messages');
+  
+  const messagesToProcess = [...messageQueue];
+  messageQueue = [];
+  await saveMessageQueue();
+  
+  for (const queuedMsg of messagesToProcess) {
+    try {
+      await sendTextMessageInternal(
+        queuedMsg.receiverId,
+        queuedMsg.text,
+        queuedMsg.receiverType,
+        queuedMsg.metadata
+      );
+      console.log('[CometChat] Queued message sent successfully:', queuedMsg.id);
+    } catch (error) {
+      console.error('[CometChat] Failed to send queued message:', queuedMsg.id);
+      if (queuedMsg.retryCount < MAX_RETRY_ATTEMPTS) {
+        messageQueue.push({
+          ...queuedMsg,
+          retryCount: queuedMsg.retryCount + 1,
+        });
+      } else {
+        console.error('[CometChat] Message dropped after max retries:', queuedMsg.id);
+      }
+    }
+  }
+  
+  if (messageQueue.length > 0) {
+    await saveMessageQueue();
+  }
+};
+
+export const setOnlineStatus = (online: boolean): void => {
+  const wasOffline = !isOnline;
+  isOnline = online;
+  console.log('[CometChat] Online status:', online ? 'online' : 'offline');
+  
+  if (online && wasOffline && isInitialized) {
+    processMessageQueue();
+  }
+};
+
+export const getQueuedMessagesCount = (): number => {
+  return messageQueue.length;
 };
 
 const COMETCHAT_CONFIG_VALID = isValidConfig(COMETCHAT_APP_ID, COMETCHAT_AUTH_KEY);
@@ -28,16 +162,18 @@ if (COMETCHAT_CONFIG_VALID) {
     const cometChatModule = require('@cometchat/chat-sdk-react-native');
     CometChat = cometChatModule.CometChat;
     console.log('[CometChat] SDK module loaded');
+    loadMessageQueue();
   } catch (e) {
     console.error('[CometChat] Failed to load CometChat SDK:', e);
     CometChat = null;
   }
 } else {
   console.error('[CometChat] Invalid configuration - CometChat will not be loaded');
-  console.error('  - Check EXPO_PUBLIC_COMETCHAT_APP_ID and EXPO_PUBLIC_COMETCHAT_AUTH_KEY');
+  console.error('  - Verify COMETCHAT_APP_ID is correct');
+  console.error('  - Verify COMETCHAT_AUTH_KEY for frontend');
 }
 
-export const initializeCometChat = async (): Promise<boolean> => {
+export const initializeCometChat = async (retryAttempt: number = 0): Promise<boolean> => {
   if (isInitialized) {
     console.log('[CometChat] Already initialized');
     return true;
@@ -45,11 +181,14 @@ export const initializeCometChat = async (): Promise<boolean> => {
 
   if (!CometChat || !COMETCHAT_CONFIG_VALID) {
     console.error('[CometChat] Cannot initialize - SDK not loaded or invalid config');
+    console.error('[CometChat] Verify COMETCHAT_APP_ID is correct');
+    console.error('[CometChat] Verify COMETCHAT_AUTH_KEY for frontend');
     return false;
   }
 
   try {
     console.log('[CometChat] Initializing with App ID:', COMETCHAT_APP_ID);
+    console.log('[CometChat] Attempt:', retryAttempt + 1, 'of', MAX_RETRY_ATTEMPTS);
     
     const appSettings = new CometChat.AppSettingsBuilder()
       .subscribePresenceForAllUsers()
@@ -57,12 +196,40 @@ export const initializeCometChat = async (): Promise<boolean> => {
       .autoEstablishSocketConnection(true)
       .build();
 
-    await CometChat.init(COMETCHAT_APP_ID, appSettings);
+    await withTimeout(
+      CometChat.init(COMETCHAT_APP_ID, appSettings),
+      CONNECTION_TIMEOUT
+    );
+    
     isInitialized = true;
+    isOnline = true;
     console.log('[CometChat] Initialization successful');
+    
+    processMessageQueue();
+    
     return true;
-  } catch (error) {
+  } catch (error: any) {
+    const isTimeout = error.message?.includes('timeout');
+    const isInvalidCredentials = error.code === 'ERR_INVALID_APP_ID' || 
+                                  error.code === 'ERR_INVALID_AUTH_KEY';
+    
+    if (isInvalidCredentials) {
+      console.error('[CometChat] Invalid App ID or Auth Key');
+      console.error('[CometChat] Verify COMETCHAT_APP_ID is correct');
+      console.error('[CometChat] Verify COMETCHAT_AUTH_KEY for frontend');
+      return false;
+    }
+    
+    if (isTimeout && retryAttempt < MAX_RETRY_ATTEMPTS - 1) {
+      const backoffTime = calculateBackoff(retryAttempt);
+      console.warn(`[CometChat] Connection timeout. Retrying in ${backoffTime}ms...`);
+      console.warn('[CometChat] Check frontend network connection');
+      await delay(backoffTime);
+      return initializeCometChat(retryAttempt + 1);
+    }
+    
     console.error('[CometChat] Initialization failed:', error);
+    console.error('[CometChat] Auto-retry with exponential backoff exhausted');
     return false;
   }
 };
@@ -175,6 +342,26 @@ export const joinGroup = async (guid: string, groupType: string = 'public'): Pro
   }
 };
 
+const sendTextMessageInternal = async (
+  receiverId: string,
+  text: string,
+  receiverType: string = 'group',
+  metadata?: Record<string, any>
+): Promise<any> => {
+  const textMessage = new CometChat.TextMessage(
+    receiverId,
+    text,
+    receiverType === 'group' ? CometChat.RECEIVER_TYPE.GROUP : CometChat.RECEIVER_TYPE.USER
+  );
+
+  if (metadata) {
+    textMessage.setMetadata(metadata);
+  }
+
+  const message = await CometChat.sendMessage(textMessage);
+  return message;
+};
+
 export const sendTextMessage = async (
   receiverId: string,
   text: string,
@@ -185,22 +372,48 @@ export const sendTextMessage = async (
     throw new Error('CometChat SDK not loaded');
   }
 
-  try {
-    const textMessage = new CometChat.TextMessage(
+  if (!isOnline) {
+    const queuedMessage: QueuedMessage = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       receiverId,
       text,
-      receiverType === 'group' ? CometChat.RECEIVER_TYPE.GROUP : CometChat.RECEIVER_TYPE.USER
-    );
+      receiverType,
+      metadata,
+      timestamp: Date.now(),
+      retryCount: 0,
+    };
+    messageQueue.push(queuedMessage);
+    await saveMessageQueue();
+    console.log('[CometChat] Message queued for offline delivery:', queuedMessage.id);
+    console.log('[CometChat] Queue locally & retry when online');
+    return { queued: true, id: queuedMessage.id };
+  }
 
-    if (metadata) {
-      textMessage.setMetadata(metadata);
-    }
-
-    const message = await CometChat.sendMessage(textMessage);
+  try {
+    const message = await sendTextMessageInternal(receiverId, text, receiverType, metadata);
     console.log('[CometChat] Message sent:', message.getId());
     return message;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[CometChat] Send message failed:', error);
+    console.error('[CometChat] Check browser DevTools > Network tab');
+    
+    if (error.code === 'ERR_NETWORK' || error.message?.includes('network')) {
+      isOnline = false;
+      const queuedMessage: QueuedMessage = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        receiverId,
+        text,
+        receiverType,
+        metadata,
+        timestamp: Date.now(),
+        retryCount: 0,
+      };
+      messageQueue.push(queuedMessage);
+      await saveMessageQueue();
+      console.log('[CometChat] Message queued due to network error:', queuedMessage.id);
+      return { queued: true, id: queuedMessage.id };
+    }
+    
     throw error;
   }
 };
