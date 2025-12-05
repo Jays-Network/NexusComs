@@ -2,7 +2,7 @@
 
 ## Overview
 
-WorldRisk Nexus Coms is a production-ready mobile communication platform built with Expo React Native and CometChat. The application provides enterprise-grade real-time messaging, emergency alert capabilities, and secure authentication for teams requiring reliable communication infrastructure. The system consists of a mobile frontend (Expo) and a Node.js/Express backend with an integrated admin dashboard.
+WorldRisk Nexus Coms is a production-ready enterprise mobile communication platform built with Expo React Native. It provides real-time group messaging, emergency alert capabilities, and secure authentication for teams requiring reliable communication infrastructure. The application features hierarchical group organization, file sharing, location tracking, and a comprehensive emergency notification system with audio alerts and haptic feedback.
 
 ## User Preferences
 
@@ -10,166 +10,129 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture (Expo React Native)
+### Frontend Architecture
 
-**Technology Stack:**
-- **Framework:** Expo SDK 54 with React Native
-- **Navigation:** React Navigation 7+ with native stack and bottom tabs
-- **Chat SDK:** CometChat SDK for React Native (replacing Stream.io)
-- **State Management:** React hooks, Context API (CometChatAuthProvider, SupabaseSyncProvider)
-- **Styling:** React Native StyleSheet API with iOS 26 Liquid Glass design guidelines
-- **Storage:** AsyncStorage for local persistence, expo-secure-store for sensitive data
+**Framework Choice: Expo SDK 54**
+- **Rationale**: Provides managed workflow with over-the-air updates, simplified native module integration, and cross-platform compatibility (iOS, Android, Web)
+- **Trade-offs**: Some native features (video calling, advanced maps) require EAS builds rather than Expo Go
+- **Design Pattern**: Component-based architecture with custom themed components and screen-specific navigators
 
-**Key Design Decisions:**
-- Tab-based navigation with 6 main tabs: Direct Chats, Groups, Alerts, Contacts, Call Log, Settings
-- Error boundary implementation for graceful error handling and app recovery
-- Safe area insets properly handled across all device types
-- Platform-specific rendering (iOS/Android/Web) with web compatibility fallbacks
+**Navigation Structure: React Navigation 7**
+- **Implementation**: Bottom tab navigation with nested stack navigators for each major section (Chats, Groups, Emergency, Contacts, Call Log, Settings)
+- **Platform Optimization**: iOS uses BlurView for tab bar transparency with native feel; Android uses solid backgrounds
+- **Gesture Support**: Liquid Glass gestures when available, standard horizontal swipes otherwise
 
-**Emergency Alert System:**
-- Custom emergency modal with audio playback (`emergency.wav`), haptic feedback (triple heavy impact), and full-screen pulsing animation
-- Message metadata field (`emergency: true`) distinguishes emergency messages
-- Real-time emergency message listener using CometChat SDK
-- iOS silent mode bypass for critical alerts
+**UI/UX Framework: Custom Theme System**
+- **Approach**: StyleSheet-based components with comprehensive theming (light/dark modes)
+- **Rationale**: Predictable performance over utility-first CSS (NativeWind installed but unused)
+- **Design Language**: iOS 26 Liquid Glass interface guidelines with safe area handling
+- **Components**: Reusable themed wrappers (ThemedText, ThemedView, Button, Card) for consistency
 
-### Backend Architecture (Node.js/Express)
+**State Management Strategy**
+- **Local State**: React hooks (useState, useEffect, useCallback) for component-level data
+- **Shared State**: Context API for cross-cutting concerns (Theme, Settings, Auth)
+- **Persistent Storage**: AsyncStorage for user preferences and session data
+- **Real-time Sync**: CometChat SDK with custom React context for message/user updates
 
-**Technology Stack:**
-- **Framework:** Express.js with middleware for security and monitoring
-- **Authentication:** Supabase Auth with JWT sessions (7-day expiration)
-- **Database:** Supabase PostgreSQL
-- **Security:** Helmet (CSP, X-Frame-Options, XSS protection), express-rate-limit, CORS restrictions
-- **Real-time:** CometChat server-side integration for secure token generation
+### Backend Architecture
 
-**Key Design Decisions:**
-- Hybrid API service: serves both mobile API endpoints and admin CMS dashboard
-- Server-side CometChat token generation to protect API secrets from client exposure
-- Static file serving for admin dashboard (`backend/public/index.html`)
-- Dynamic URL construction for password reset links (supports Replit deployment environments)
-- Automated npm audit on server startup with vulnerability logging
-- Security dashboard for secret scanning, dependency auditing, and API traffic monitoring
+**Server Framework: Express.js**
+- **Purpose**: Authentication token generation, user management, and API gateway
+- **Security Middleware**: Helmet (CSP, XSS protection), rate limiting, CORS restrictions
+- **Session Management**: JWT tokens with configurable expiration (7-day default)
 
-**Authentication Flow:**
-1. User credentials validated against Supabase
-2. JWT session token issued (7-day expiration)
-3. CometChat auth token generated server-side
-4. User synchronized between Supabase and CometChat (`cometchat_uid` column)
+**Authentication Flow**
+- **Design**: Server-side token generation prevents API secret exposure to clients
+- **Process**: User credentials → Backend validation → CometChat auth token → Client connection
+- **Password Security**: Bcrypt hashing with salt rounds
+- **Password Reset**: Time-limited tokens (1-hour expiration) with email/username verification
 
-**Admin Dashboard:**
-- User management interface with CRUD operations
-- Tabbed interface (General, Access, Advanced) for user properties
-- Session-based authentication with secure login page
-- Direct Supabase integration for real-time data updates
+**Admin Interface**
+- **Implementation**: Static HTML/CSS/JavaScript dashboard served from backend
+- **Features**: User CRUD operations, tabbed interface (General/Access/Advanced), session management
+- **Access Control**: JWT-based session middleware protecting admin endpoints
 
-### Database Schema (Supabase PostgreSQL)
+### Data Storage Solutions
 
-**Core Tables:**
-- **users:** Authentication and profile data with `cometchat_uid` linking to CometChat
-- **groups:** Hierarchical group structure with parent-child relationships
-- **group_members:** Junction table for group membership with user tracking
-- **emergency_groups:** Dedicated tables for emergency alert groups
-- **emergency_group_members:** Emergency group membership tracking
+**Primary Database: Supabase PostgreSQL**
+- **Schema Design**: 
+  - `users` table with CometChat UID mapping (`cometchat_uid` column)
+  - `groups` and `emergency_groups` with hierarchical parent-child relationships
+  - `group_members` and `emergency_group_members` junction tables with unique constraints
+  - Indexed foreign keys for query optimization
+- **Rationale**: Managed PostgreSQL with built-in auth, real-time subscriptions, and RESTful API
+- **Connection Pattern**: Service role key for server operations, anon key for client queries (not currently utilized)
 
-**Schema Features:**
-- UUID primary keys for users (Supabase auth integration)
-- BIGSERIAL for group IDs
-- Foreign key constraints with CASCADE delete
-- Indexed columns for performance (group_id, user_id lookups)
-- JSONB permissions column for flexible role-based access control
+**Real-time Messaging: CometChat**
+- **Group Architecture**: Groups follow `group-{supabase_id}` naming pattern for database synchronization
+- **Message Types**: Text, media (images/video/audio), custom (emergency alerts, location, contacts, polls, events)
+- **Metadata Strategy**: Emergency messages tagged with `emergency: true` for special handling
+- **Conversation Types**: Group chats and one-to-one direct messaging
 
-### CometChat Integration
+**Client Storage: AsyncStorage**
+- **Use Cases**: Theme preferences, app settings, session tokens (currently JWT, could migrate to expo-secure-store)
+- **Data Serialization**: JSON strings for complex objects
+- **Persistence**: Survives app restarts but not reinstallation
 
-**Architecture Pattern:**
-- CometChat group IDs follow pattern: `group-{supabase_id}` for consistency
-- User synchronization: Supabase user creation triggers CometChat user creation
-- Server-side token generation prevents API key exposure
-- CometChat metadata used for hierarchical group tracking
+### Authentication & Authorization
 
-**Required Environment Variables:**
-- `COMETCHAT_APP_ID`: Application identifier
-- `COMETCHAT_REGION`: Deployment region (us/eu)
-- `COMETCHAT_AUTH_KEY`: Frontend authentication key
-- `COMETCHAT_API_KEY`: Backend API key (secret)
+**Multi-layered Auth System**
+- **Level 1 - Backend Auth**: Email/password login with bcrypt-hashed credentials in Supabase
+- **Level 2 - Session Tokens**: JWT tokens for backend API authentication
+- **Level 3 - CometChat Auth**: Server-generated auth tokens for real-time messaging
+- **User Linking**: `cometchat_uid` column synchronizes Supabase users with CometChat identities
 
-### Security Architecture
+**Security Measures**
+- **Token Isolation**: API secrets never exposed to frontend (env variables with EXPO_PUBLIC_ prefix only for non-secret keys)
+- **Rate Limiting**: Express middleware on authentication and general API endpoints
+- **Input Validation**: User ID sanitization, input length limits
+- **Password Policies**: Minimum 6 characters (configurable), reset token expiration
+- **CORS Policy**: Configurable origin whitelist for cross-origin requests
 
-**Runtime Security:**
-- Helmet middleware with Content Security Policy
-- Rate limiting on authentication endpoints and general API routes
-- CORS whitelist with configurable allowed origins
-- Request body size limits to prevent payload attacks
-- Input sanitization for user IDs and credentials
+### External Dependencies
 
-**Dependency Security:**
-- Automated `npm audit` on server startup
-- Critical/high vulnerability alerts logged to `backend/logs/npm-audit.log`
-- Security dashboard endpoints for on-demand scanning
-- CI/CD integration recommendations for continuous monitoring
+**CometChat Real-time Infrastructure**
+- **SDK**: @cometchat/chat-sdk-react-native for messaging, user presence, typing indicators
+- **Video SDK**: @stream-io/video-react-native-sdk (installed but requires EAS build activation)
+- **Configuration**: APP_ID, REGION, AUTH_KEY (frontend), API_KEY (backend secret)
+- **Features Used**: Group chat, direct messaging, file attachments, custom messages, message listeners
 
-**Session Management:**
-- JWT tokens with configurable expiration
-- Secure password hashing with bcrypt
-- Password reset tokens with 1-hour expiration
-- One-time use tokens (cleared after successful reset)
+**Supabase Backend-as-a-Service**
+- **Client Library**: @supabase/supabase-js v2.84.0
+- **Services**: PostgreSQL database, potential for auth/storage (database-only currently active)
+- **Environment Variables**: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
 
-## External Dependencies
+**Push Notifications: Expo Notifications**
+- **Implementation**: expo-notifications with expo-server-sdk backend support
+- **Configuration**: Notification handler with iOS silent mode bypass for emergency alerts
+- **Permissions**: Requested at runtime, graceful degradation if denied
 
-### Third-Party Services
+**Location Services: Expo Location + React Native Maps**
+- **Location Tracking**: expo-location for GPS coordinates with accuracy metadata
+- **Map Visualization**: react-native-maps (requires EAS build, graceful fallback in Expo Go)
+- **Permissions**: Platform-specific (NSLocationWhenInUseUsageDescription for iOS)
+- **Use Case**: Real-time team location sharing in group context
 
-**CometChat (Primary Chat Service):**
-- Real-time messaging infrastructure
-- Group chat with hierarchical support
-- User presence and typing indicators
-- Message history and read receipts
-- Server-side authentication token generation
+**Media Handling**
+- **Image Picker**: expo-image-picker for camera and photo library access
+- **Document Picker**: expo-document-picker for file attachments
+- **Audio Playback**: expo-av for emergency alert sounds with silent mode override
+- **File System**: expo-file-system for media operations
 
-**Supabase (Database & Auth):**
-- PostgreSQL database hosting
-- Built-in authentication system
-- Service role API for admin operations
-- Anon key for client-side operations
-- Real-time subscriptions for data sync
+**Device Integration**
+- **Haptics**: expo-haptics for tactile feedback (triple heavy impact on emergency alerts)
+- **Contacts**: expo-contacts for contact sharing functionality
+- **Clipboard**: expo-clipboard for copy/paste operations
+- **Image Optimization**: expo-image for performant image rendering
 
-**Expo Services:**
-- Expo.dev hosting for mobile frontend
-- Push notification service (expo-notifications)
-- OTA updates capability
-- EAS Build for native compilation
+**Security & Monitoring**
+- **Dependency Auditing**: Automated npm audit on server startup with vulnerability logging
+- **Security Dashboard**: Admin panel feature for real-time security monitoring
+- **Helmet Middleware**: HTTP security headers (CSP, X-Frame-Options, HSTS)
+- **Rate Limiter**: express-rate-limit for brute force protection
 
-### Key NPM Packages
-
-**Frontend:**
-- `@cometchat/chat-sdk-react-native`: Chat functionality
-- `@react-navigation/native`: Navigation system
-- `@supabase/supabase-js`: Database client
-- `expo-av`, `expo-audio`: Emergency alert sounds
-- `expo-haptics`: Vibration feedback
-- `expo-location`: Location tracking
-- `react-native-maps`: Map integration
-
-**Backend:**
-- `express`: Web server framework
-- `@supabase/supabase-js`: Database operations
-- `helmet`: Security headers
-- `express-rate-limit`: Rate limiting
-- `bcrypt`: Password hashing
-- `jsonwebtoken`: JWT token generation
-- `cors`: Cross-origin resource sharing
-
-### Deployment Infrastructure
-
-**Frontend Deployment:**
-- Platform: Expo.dev
-- Environment: Expo Go (development) or EAS Build (production)
-- Dynamic URL construction via `REPLIT_DEV_DOMAIN` for development
-
-**Backend Deployment:**
-- Platform: Replit
-- Command: `node backend/src/server.js`
-- Static file serving: `backend/public/` directory
-- Environment variables via Replit Secrets
-
-**Database:**
-- Hosted: Supabase cloud PostgreSQL
-- Connection: Service role key for backend, anon key for frontend
-- Schema management: SQL migrations via Supabase SQL Editor
+**Development & Build Tools**
+- **EAS Build**: Expo Application Services for native builds (required for maps, video calling)
+- **Concurrently**: Parallel execution of frontend and backend dev servers
+- **TypeScript**: Type safety with path aliases (@/ prefix for imports)
+- **Babel**: Module resolution with react-native-reanimated plugin
