@@ -1136,10 +1136,14 @@ app.get("/api/services/status", async (req, res) => {
   // Check CometChat
   if (cometchat.isConfigured()) {
     services.cometchat.status = "connected";
+    services.cometchat.appId = cometchat.COMETCHAT_APP_ID;
+    services.cometchat.region = cometchat.COMETCHAT_REGION;
   } else {
     services.cometchat.status = "disconnected";
     services.cometchat.error = "CometChat not configured";
     services.cometchat.severity = "critical";
+    services.cometchat.appId = null;
+    services.cometchat.region = null;
     addLog("ERROR", "CometChat", "CometChat credentials not configured");
   }
 

@@ -1641,6 +1641,14 @@
                 statusElement.style.color = '#4CAF50';
                 errorElement.style.display = 'none';
                 indicatorElement.style.display = 'none';
+                
+                // Update CometChat specific fields
+                if (serviceName === 'cometchat') {
+                    const appIdElement = document.getElementById('cometchatAppId');
+                    const regionElement = document.getElementById('cometchatRegion');
+                    if (appIdElement) appIdElement.textContent = serviceData.appId || 'N/A';
+                    if (regionElement) regionElement.textContent = (serviceData.region || 'N/A').toUpperCase();
+                }
             } else if (serviceData.status === 'disconnected' || serviceData.status === 'error') {
                 statusElement.textContent = serviceData.status === 'disconnected' ? 'Disconnected' : 'Error';
                 statusElement.style.color = '#FF6B6B';
@@ -1659,6 +1667,14 @@
                     indicatorElement.title = 'Caution - Minor error';
                 }
                 indicatorElement.style.display = 'block';
+                
+                // Update CometChat specific fields with error state
+                if (serviceName === 'cometchat') {
+                    const appIdElement = document.getElementById('cometchatAppId');
+                    const regionElement = document.getElementById('cometchatRegion');
+                    if (appIdElement) appIdElement.textContent = 'Not configured';
+                    if (regionElement) regionElement.textContent = 'Not configured';
+                }
             }
         }
 
