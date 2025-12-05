@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, StyleSheet, Pressable, RefreshControl } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
+import { View, StyleSheet, Pressable, RefreshControl, Modal, FlatList, Text, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
@@ -7,6 +7,8 @@ import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { AppHeader } from '@/components/AppHeader';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import { useCometChatAuth } from '@/utils/cometChatAuth';
+import { fetchUsers, addUserListener, removeUserListener } from '@/utils/cometChatClient';
 
 interface CallLogEntry {
   id: string;
@@ -16,6 +18,12 @@ interface CallLogEntry {
   direction: 'incoming' | 'outgoing' | 'missed';
   duration: number;
   timestamp: Date;
+}
+
+interface Contact {
+  id: string;
+  name: string;
+  status?: 'online' | 'offline' | 'away';
 }
 
 function formatDuration(seconds: number): string {
@@ -105,16 +113,118 @@ function CallLogItem({ call }: { call: CallLogEntry }) {
   );
 }
 
+function ContactSelector({ contact, selected, onToggle, theme }: { contact: Contact; selected: boolean; onToggle: (id: string) => void; theme: any }) {
+  return (
+    <Pressable
+      style={[styles.contactSelectorItem, { backgroundColor: theme.surface }]}
+      onPress={() => onToggle(contact.id)}
+    >
+      <Pressable
+        style={[
+          styles.checkbox,
+          selected && { backgroundColor: theme.primary, borderColor: theme.primary }
+        ]}
+        onPress={() => onToggle(contact.id)}
+      >
+        {selected && <Feather name="check" size={14} color="#FFFFFF" />}
+      </Pressable>
+      <View style={styles.contactSelectorInfo}>
+        <ThemedText style={styles.contactSelectorName}>{contact.name}</ThemedText>
+        <Text style={[styles.contactSelectorStatus, { color: theme.textSecondary }]}>
+          {contact.status === 'online' ? 'Online' : 'Offline'}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function CallLogScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { user, cometChatUser } = useCometChatAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [calls] = useState<CallLogEntry[]>([]);
+  const [showContactSelector, setShowContactSelector] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [loadingContacts, setLoadingContacts] = useState(false);
+
+  useEffect(() => {
+    if (showContactSelector) {
+      loadContacts();
+    }
+  }, [showContactSelector]);
+
+  const loadContacts = useCallback(async () => {
+    setLoadingContacts(true);
+    try {
+      const usersList = await fetchUsers();
+      setContacts(usersList);
+    } catch (err) {
+      console.error('Failed to load contacts:', err);
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setRefreshing(false);
+  };
+
+  const handleContactToggle = useCallback((contactId: string) => {
+    setSelectedContacts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
+      } else {
+        newSet.add(contactId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleStartCall = useCallback(() => {
+    if (selectedContacts.size === 0) {
+      Alert.alert('No contacts selected', 'Please select at least one contact to call.');
+      return;
+    }
+
+    const selectedList = Array.from(selectedContacts);
+    const isGroupCall = selectedList.length > 1;
+
+    if (Platform.OS === 'web') {
+      Alert.alert('Not available on web', 'Video calling requires the Expo Go app. Please use the mobile app to make calls.');
+    } else {
+      const callType = isGroupCall ? `group call with ${selectedList.length} people` : 'call';
+      Alert.alert(
+        'Start Call',
+        `Would you like to start a ${callType}?`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => setSelectedContacts(new Set()) },
+          { 
+            text: 'Voice Call', 
+            onPress: () => {
+              Alert.alert('Coming Soon', 'Voice calling will be available in the next update.');
+              setSelectedContacts(new Set());
+            }
+          },
+          { 
+            text: 'Video Call', 
+            onPress: () => {
+              Alert.alert('Coming Soon', 'Video calling will be available in the next update.');
+              setSelectedContacts(new Set());
+            }
+          },
+        ]
+      );
+    }
+  }, [selectedContacts]);
+
+  const handleCloseSelector = () => {
+    setShowContactSelector(false);
+    setSelectedContacts(new Set());
   };
 
   return (
@@ -142,6 +252,60 @@ export default function CallLogScreen() {
           </View>
         )}
       </ScreenScrollView>
+
+      <Pressable
+        style={[styles.fab, { backgroundColor: theme.primary, bottom: insets.bottom + Spacing.lg }]}
+        onPress={() => setShowContactSelector(true)}
+      >
+        <Feather name="phone" size={28} color="#FFFFFF" />
+      </Pressable>
+
+      <Modal
+        visible={showContactSelector}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={handleCloseSelector}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+            <Pressable onPress={handleCloseSelector}>
+              <Feather name="x" size={24} color={theme.text} />
+            </Pressable>
+            <ThemedText style={styles.modalTitle}>Select Contacts</ThemedText>
+            <Pressable 
+              onPress={handleStartCall}
+              disabled={selectedContacts.size === 0}
+            >
+              <ThemedText style={[
+                styles.modalDone,
+                selectedContacts.size === 0 && { color: theme.textSecondary }
+              ]}>
+                Call
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          {loadingContacts ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+          ) : (
+            <FlatList
+              data={contacts}
+              renderItem={({ item }) => (
+                <ContactSelector
+                  contact={item}
+                  selected={selectedContacts.has(item.id)}
+                  onToggle={handleContactToggle}
+                  theme={theme}
+                />
+              )}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.contactList}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -219,5 +383,76 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 13,
+  },
+  fab: {
+    position: 'absolute',
+    right: Spacing.lg,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalDone: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D4AF37',
+  },
+  contactSelectorItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D0D0D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  contactSelectorInfo: {
+    flex: 1,
+  },
+  contactSelectorName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  contactSelectorStatus: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  contactList: {
+    paddingVertical: Spacing.sm,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
