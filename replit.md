@@ -4,6 +4,50 @@
 
 WorldRisk Nexus Coms is a production-ready enterprise mobile communication platform built with Expo React Native. It provides real-time group messaging, emergency alert capabilities, and secure authentication for teams requiring reliable communication infrastructure. The application features hierarchical group organization, file sharing, location tracking, and a comprehensive emergency notification system with audio alerts and haptic feedback.
 
+## Monorepo Structure
+
+This project uses a monorepo structure with three main directories:
+
+```
+/
+├── frontend/          # Expo React Native mobile app
+│   ├── App.tsx       # Main app entry
+│   ├── screens/      # Screen components
+│   ├── components/   # Reusable UI components
+│   ├── navigation/   # React Navigation setup
+│   ├── utils/        # Helper functions & CometChat client
+│   ├── contexts/     # React contexts (Theme, Auth, Settings)
+│   ├── hooks/        # Custom React hooks
+│   ├── constants/    # Theme and app constants
+│   ├── assets/       # Static assets (icons, images)
+│   ├── scripts/      # Static deployment scripts
+│   └── package.json  # Frontend dependencies
+│
+├── backend/          # Express.js API server
+│   ├── src/          # Server source code
+│   │   └── server.js # Main server entry
+│   ├── public/       # Admin dashboard HTML/CSS/JS
+│   ├── logs/         # Server logs
+│   └── package.json  # Backend dependencies
+│
+├── docs/             # Documentation
+│   ├── design_guidelines.md
+│   ├── BACKEND_*.md  # Backend documentation
+│   ├── SECURITY.md
+│   └── replit.md     # Project memory
+│
+├── README.md         # Project overview
+├── .gitignore        # Git ignore rules
+└── .replit           # Replit configuration
+```
+
+## Workflow Commands
+
+To run the application from the monorepo structure:
+- **Frontend**: `cd frontend && npx expo start`
+- **Backend**: `cd backend && node src/server.js`
+- **Both**: Run each in separate terminals or use parallel execution
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
