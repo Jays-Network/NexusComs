@@ -254,7 +254,7 @@ export default function CallLogScreen() {
       </ScreenScrollView>
 
       <Pressable
-        style={[styles.fab, { backgroundColor: theme.primary, bottom: insets.bottom + Spacing.lg }]}
+        style={[styles.fab, { backgroundColor: theme.primary, bottom: 80 + Spacing.lg }]}
         onPress={() => setShowContactSelector(true)}
       >
         <Feather name="phone" size={28} color="#FFFFFF" />
