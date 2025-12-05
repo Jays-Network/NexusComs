@@ -109,6 +109,15 @@ args = "cd frontend && npx expo start"
 task = "shell.exec"
 args = "node backend/src/server.js"
 
+[[workflows.workflow]]
+name = "Backend start"
+mode = "sequential"
+author = 48266707
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node backend/src/server.js"
+
 [agent]
 stack = "EXPO"
 

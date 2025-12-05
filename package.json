@@ -1,0 +1,34 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "Production-ready mobile chat application built with Expo React Native and CometChat, featuring real-time group messaging, emergency alert system, and secure backend authentication.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jays-Network/PastedComprehensivePrompt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jays-Network/PastedComprehensivePrompt/issues"
+  },
+  "homepage": "https://github.com/Jays-Network/PastedComprehensivePrompt#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.86.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "expo-server-sdk": "^4.0.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
