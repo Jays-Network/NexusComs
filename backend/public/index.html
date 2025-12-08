@@ -2409,6 +2409,11 @@
             const planConfig = BILLING_PLANS[billingPlan] || BILLING_PLANS.basic;
             const planPerms = planConfig.permissions;
             
+            // Get contact visibility and allowed contacts
+            const contactVisibility = document.getElementById('contactVisibility').value;
+            const allowedContactCheckboxes = document.querySelectorAll('.allowed-contact:checked');
+            const allowedContacts = Array.from(allowedContactCheckboxes).map(cb => cb.value);
+            
             // Build permissions based on billing plan restrictions
             const permissions = {
                 is_enabled: document.getElementById('isEnabled').checked,
@@ -2420,7 +2425,10 @@
                 // Store additional billing plan metadata
                 location_tracking_level: planPerms.location_tracking,
                 contact_list_access: planPerms.contact_list,
-                group_management_level: planPerms.group_management
+                group_management_level: planPerms.group_management,
+                // Contact visibility settings
+                contact_visibility: contactVisibility,
+                allowed_contacts: contactVisibility === 'allowed_only' ? allowedContacts : []
             };
 
             try {
