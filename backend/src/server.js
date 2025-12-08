@@ -894,6 +894,48 @@ app.get("/api/users", sessionMiddleware, async (req, res) => {
   }
 });
 
+// Get available users for group assignment (with billing plan info)
+// IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
+app.get("/api/users/available", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, billing_plan, cometchat_uid")
+      .order("username");
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Error fetching available users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// Get users with location tracking enabled (for admin dashboard)
+// IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
+app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, location_tracking, last_latitude, last_longitude, last_location_update, last_device")
+      .eq("location_tracking", true)
+      .order("last_location_update", { ascending: false, nullsFirst: false });
+
+    if (error) {
+      console.error("Error fetching tracked users:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Error fetching tracked users:", error);
+    res.status(500).json({ error: "Failed to fetch tracked users" });
+  }
+});
+
 // Get single user
 app.get("/api/users/:id", sessionMiddleware, async (req, res) => {
   try {
@@ -1394,47 +1436,7 @@ app.get("/api/billing-plans/:plan/can-access/:feature", async (req, res) => {
   res.json({ canAccess, accessLevel, permission });
 });
 
-// Get available users for group assignment (with billing plan info)
-app.get("/api/users/available", sessionMiddleware, async (req, res) => {
-  try {
-    const { data: users, error } = await supabase
-      .from("users")
-      .select("id, username, email, billing_plan, cometchat_uid")
-      .order("username");
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    res.json(users || []);
-  } catch (error) {
-    console.error("Error fetching available users:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
-  }
-});
-
 // ============= USER TRACKING ENDPOINTS =============
-
-// Get users with location tracking enabled (for admin dashboard)
-app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
-  try {
-    const { data: users, error } = await supabase
-      .from("users")
-      .select("id, username, email, location_tracking, last_latitude, last_longitude, last_location_update, last_device")
-      .eq("location_tracking", true)
-      .order("last_location_update", { ascending: false, nullsFirst: false });
-
-    if (error) {
-      console.error("Error fetching tracked users:", error);
-      return res.status(500).json({ error: error.message });
-    }
-
-    res.json(users || []);
-  } catch (error) {
-    console.error("Error fetching tracked users:", error);
-    res.status(500).json({ error: "Failed to fetch tracked users" });
-  }
-});
 
 // Update user location (from mobile app)
 app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
