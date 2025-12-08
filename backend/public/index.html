@@ -1901,15 +1901,6 @@
             }
         };
 
-        // Check if logged in - defer to ensure all variables are initialized
-        setTimeout(function() {
-            if (token) {
-                showDashboard();
-                loadUsers();
-                loadServiceStatus();
-            }
-        }, 0);
-
         // Load and display service status dynamically
         async function loadServiceStatus() {
             const checkTime = new Date();
@@ -4312,6 +4303,13 @@
             } catch (error) {
                 alert('Failed to clear alerts: ' + error.message);
             }
+        }
+
+        // Initialize on page load - all functions are now defined
+        if (token) {
+            showDashboard();
+            loadUsers();
+            loadServiceStatus();
         }
     </script>
 </body>
