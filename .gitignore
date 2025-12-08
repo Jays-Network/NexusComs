@@ -75,3 +75,4 @@ logs/
 /tmp/
 *.tmp
 .env.backup
+.env.eas
