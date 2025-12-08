@@ -898,12 +898,14 @@ app.get("/api/users", sessionMiddleware, async (req, res) => {
 // IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
 app.get("/api/users/available", sessionMiddleware, async (req, res) => {
   try {
+    // Query only columns that definitely exist in the database
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, username, email, billing_plan, cometchat_uid")
+      .select("id, username, email, billing_plan")
       .order("username");
 
     if (error) {
+      console.error("Error fetching available users:", error);
       return res.status(500).json({ error: error.message });
     }
 
