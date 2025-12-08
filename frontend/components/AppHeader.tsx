@@ -1,10 +1,16 @@
-import React, { useState } from "react";
-import { View, StyleSheet, Image, Pressable, Modal, FlatList, Text } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import React, { useState, useMemo } from "react";
+import { View, StyleSheet, Image, Pressable, Modal, FlatList, Text, Alert, Platform } from "react-native";
+import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing } from "@/constants/theme";
 import { useCometChatAuth } from "@/utils/cometChatAuth";
+
+interface MenuOption {
+  id: string;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+}
 
 export function AppHeader() {
   const { theme } = useTheme();
@@ -12,17 +18,73 @@ export function AppHeader() {
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
 
-  const menuOptions = [
-    { id: "new-group", label: "New Group", icon: "plus-circle" },
-    { id: "settings", label: "Settings", icon: "settings" },
-  ];
+  const currentTabName = useNavigationState((state) => {
+    if (!state || !state.routes) return 'ChatsTab';
+    const route = state.routes[state.index];
+    return route?.name || 'ChatsTab';
+  });
+
+  const menuOptions = useMemo((): MenuOption[] => {
+    const baseOptions: MenuOption[] = [];
+    
+    switch (currentTabName) {
+      case 'ChatsTab':
+        baseOptions.push({ id: "new-chat", label: "New Chat", icon: "edit" });
+        break;
+      case 'GroupsTab':
+        baseOptions.push({ id: "new-group", label: "New Group", icon: "users" });
+        break;
+      case 'AlertsTab':
+        baseOptions.push({ id: "refresh-alerts", label: "Refresh", icon: "refresh-cw" });
+        break;
+      case 'ContactsTab':
+        baseOptions.push({ id: "refresh-contacts", label: "Refresh", icon: "refresh-cw" });
+        break;
+      case 'CallLogTab':
+        baseOptions.push({ id: "new-call", label: "New Call", icon: "phone-call" });
+        baseOptions.push({ id: "new-group-call", label: "New Group Call", icon: "video" });
+        break;
+    }
+    
+    baseOptions.push({ id: "settings", label: "Settings", icon: "settings" });
+    return baseOptions;
+  }, [currentTabName]);
 
   const handleMenuOption = (option: string) => {
     setMenuVisible(false);
-    if (option === "settings") {
-      navigation.navigate("SettingsTab");
-    } else if (option === "new-group") {
-      navigation.navigate("ChatsTab", { screen: "CreateGroup" });
+    
+    switch (option) {
+      case "settings":
+        navigation.navigate("SettingsTab");
+        break;
+      case "new-chat":
+        navigation.navigate("ChatsTab", { screen: "DirectChatsList", params: { openNewChat: true } });
+        break;
+      case "new-group":
+        navigation.navigate("GroupsTab", { screen: "CreateGroup" });
+        break;
+      case "refresh-alerts":
+        navigation.navigate("AlertsTab", { screen: "EmergencyList", params: { refresh: Date.now() } });
+        break;
+      case "refresh-contacts":
+        navigation.navigate("ContactsTab", { screen: "ContactList", params: { refresh: Date.now() } });
+        break;
+      case "new-call":
+        if (Platform.OS === 'web') {
+          window.alert('Voice calls require the mobile app');
+        } else {
+          Alert.alert('New Call', 'Select a contact to start a call');
+          navigation.navigate("ContactsTab", { screen: "ContactList", params: { initiateCall: true } });
+        }
+        break;
+      case "new-group-call":
+        if (Platform.OS === 'web') {
+          window.alert('Video calls require the mobile app');
+        } else {
+          Alert.alert('Group Call', 'Select a group to start a video call');
+          navigation.navigate("GroupsTab", { screen: "GroupList", params: { initiateGroupCall: true } });
+        }
+        break;
     }
   };
 
