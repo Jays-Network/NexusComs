@@ -7,9 +7,9 @@ function getApiUrl(): string {
   
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const hostname = window.location?.hostname || '';
-    if (hostname.includes('replit.dev') || hostname.includes('repl.co')) {
-      const backendUrl = `https://${hostname.replace(':8081', '')}:3003`;
-      console.log('[CometChatApi] Using dev backend URL:', backendUrl);
+    if (hostname.includes('replit.dev') || hostname.includes('repl.co') || hostname.includes('platform.replit.com')) {
+      const backendUrl = 'https://NexusComs.replit.app';
+      console.log('[CometChatApi] Using production backend URL for web:', backendUrl);
       return backendUrl;
     }
   }
@@ -19,7 +19,7 @@ function getApiUrl(): string {
     if (hostMatch) {
       const host = hostMatch[1];
       if (host.includes('replit.dev') || host.includes('repl.co') || host.includes('worf.replit.dev')) {
-        const backendUrl = `https://${host}:3003`;
+        const backendUrl = `https://${host}:3000`;
         console.log('[CometChatApi] Using mobile dev backend URL:', backendUrl);
         return backendUrl;
       }
