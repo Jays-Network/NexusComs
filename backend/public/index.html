@@ -784,7 +784,7 @@
                     <div class="section-content">
                         <h2 style="margin-bottom: 30px; font-size: 24px; color: #D4AF37;">System Logs</h2>
                         
-                        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                        <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;">
                             <select id="logFilter" style="padding: 10px 16px; background: #1a1a1a; border: 2px solid #404040; border-radius: 6px; color: #FFFFFF; font-size: 14px;">
                                 <option value="">All Logs</option>
                                 <option value="ERROR">Errors Only</option>
@@ -795,9 +795,15 @@
                                 <option value="supabase">Supabase Service</option>
                                 <option value="brevo">Brevo Service</option>
                             </select>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #b0b0b0; font-size: 13px;">Source:</span>
+                                <button id="logSourceBtn" onclick="toggleLogSource()" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">Database</button>
+                            </div>
                             <button onclick="clearLogs()" style="padding: 10px 20px; background: #FF6B6B; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Clear Logs</button>
                             <button onclick="refreshLogs()" style="padding: 10px 20px; background: #D4AF37; color: #1a1a1a; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Refresh</button>
                         </div>
+                        
+                        <p style="color: #808080; font-size: 12px; margin-bottom: 16px;">Database logs persist across server restarts. Memory logs are only available during the current session.</p>
 
                         <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 8px; max-height: 600px; overflow-y: auto;">
                             <table id="logsTable" style="width: 100%; border-collapse: collapse;">
@@ -807,10 +813,11 @@
                                         <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Level</th>
                                         <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Source</th>
                                         <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">Message</th>
+                                        <th style="padding: 12px 16px; text-align: left; border-bottom: 2px solid #404040; color: #D4AF37; font-size: 13px; font-weight: 600;">User</th>
                                     </tr>
                                 </thead>
                                 <tbody id="logsTableBody">
-                                    <tr><td colspan="4" style="padding: 20px; text-align: center; color: #808080;">Loading logs...</td></tr>
+                                    <tr><td colspan="5" style="padding: 20px; text-align: center; color: #808080;">Loading logs...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2567,10 +2574,16 @@
         }
 
         // ============= LOGS FUNCTIONS =============
+        let loadFromDatabase = true;
+        
         async function loadLogs(filter = '') {
             try {
-                const filterParam = filter ? `?filter=${encodeURIComponent(filter)}` : '';
-                const response = await fetch(`/api/logs${filterParam}`, {
+                let params = new URLSearchParams();
+                if (filter) params.set('filter', filter);
+                if (loadFromDatabase) params.set('source', 'database');
+                
+                const queryString = params.toString() ? '?' + params.toString() : '';
+                const response = await fetch(`/api/logs${queryString}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -2581,7 +2594,7 @@
             } catch (error) {
                 console.error('Error loading logs:', error);
                 document.getElementById('logsTableBody').innerHTML = 
-                    '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #FF6B6B;">Failed to load logs: ' + error.message + '</td></tr>';
+                    '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #FF6B6B;">Failed to load logs: ' + error.message + '</td></tr>';
             }
         }
 
@@ -2589,7 +2602,7 @@
             const tbody = document.getElementById('logsTableBody');
             
             if (!logs || logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #808080;">No logs found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #808080;">No logs found. Logs will persist after actions are taken.</td></tr>';
                 return;
             }
 
@@ -2600,6 +2613,7 @@
                 
                 const timestamp = new Date(log.timestamp).toLocaleString();
                 const details = log.details ? ` - ${log.details}` : '';
+                const userInfo = log.user ? `<span style="color: #D4AF37;">${log.user}</span>` : '<span style="color: #666;">-</span>';
                 
                 return `
                     <tr style="border-bottom: 1px solid #333;">
@@ -2607,9 +2621,20 @@
                         <td style="padding: 12px 16px;"><span style="color: ${levelColor}; font-weight: 600; font-size: 12px;">${log.level}</span></td>
                         <td style="padding: 12px 16px; color: #D4AF37; font-size: 13px;">${log.source}</td>
                         <td style="padding: 12px 16px; color: #FFFFFF; font-size: 13px;">${log.message}${details}</td>
+                        <td style="padding: 12px 16px; font-size: 12px;">${userInfo}</td>
                     </tr>
                 `;
             }).join('');
+        }
+
+        function toggleLogSource() {
+            loadFromDatabase = !loadFromDatabase;
+            const btn = document.getElementById('logSourceBtn');
+            if (btn) {
+                btn.textContent = loadFromDatabase ? 'Database' : 'Memory';
+                btn.style.background = loadFromDatabase ? '#4CAF50' : '#2a2a2a';
+            }
+            refreshLogs();
         }
 
         function refreshLogs() {

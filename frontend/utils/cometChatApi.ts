@@ -69,11 +69,34 @@ export interface LoginResponse {
   };
 }
 
+function getDeviceInfo(): string {
+  const platform = Platform.OS;
+  const version = Platform.Version;
+  const deviceName = Constants.deviceName || 'Unknown Device';
+  
+  let deviceString = '';
+  if (platform === 'ios') {
+    deviceString = `iOS ${version} - ${deviceName}`;
+  } else if (platform === 'android') {
+    deviceString = `Android ${version} - ${deviceName}`;
+  } else if (platform === 'web') {
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown Browser';
+    deviceString = `Web - ${userAgent.substring(0, 100)}`;
+  } else {
+    deviceString = `${platform} - ${deviceName}`;
+  }
+  
+  return deviceString;
+}
+
 export async function loginWithUsernamePassword(
   username: string,
   password: string
 ): Promise<LoginResponse> {
   try {
+    const deviceInfo = getDeviceInfo();
+    console.log('[CometChatApi] Sending login with device_info:', deviceInfo);
+    
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
@@ -82,6 +105,7 @@ export async function loginWithUsernamePassword(
       body: JSON.stringify({
         username,
         password,
+        device_info: deviceInfo,
       }),
     });
 

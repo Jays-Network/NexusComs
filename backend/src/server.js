@@ -1084,26 +1084,84 @@ app.get("/", (req, res) => {
 let systemLogs = [];
 const MAX_LOGS = 1000;
 
-// Function to add log entry
-function addLog(level, source, message, details = null) {
+// Function to add log entry with Supabase persistence (fire-and-forget safe)
+function addLog(level, source, message, details = null, userInfo = null, ipAddress = null) {
   const logEntry = {
     timestamp: new Date().toISOString(),
     level,
     source,
     message,
     details,
+    user: userInfo ? (userInfo.email || userInfo.username || userInfo.id) : null,
   };
-  systemLogs.unshift(logEntry); // Add to beginning
+  systemLogs.unshift(logEntry);
   if (systemLogs.length > MAX_LOGS) {
-    systemLogs.pop(); // Remove oldest
+    systemLogs.pop();
   }
   console.log(`[${level}] ${source}: ${message}`);
+  
+  // Fire-and-forget persistence to Supabase with isolated error handling
+  if (supabase) {
+    supabase.from('system_logs').insert({
+      action: source,
+      details: details || null,
+      user_id: userInfo ? (userInfo.id || userInfo.username) : null,
+      user_email: userInfo ? userInfo.email : null,
+      ip_address: ipAddress,
+      timestamp: logEntry.timestamp,
+      metadata: { level, source, message }
+    }).then(({ error }) => {
+      if (error) {
+        console.error('Failed to persist log to Supabase:', error.message);
+      }
+    }).catch(err => {
+      console.error('Supabase log persistence error:', err.message);
+    });
+  }
 }
 
-// Get logs endpoint
+// Get logs endpoint - fetches from Supabase or in-memory
 app.get("/api/logs", sessionMiddleware, async (req, res) => {
   try {
-    const { filter, limit = 100 } = req.query;
+    const { filter, limit = 100, source: dbSource } = req.query;
+    const limitNum = parseInt(limit) || 100;
+    
+    // If database source requested, fetch from Supabase
+    if (dbSource === 'database') {
+      if (!supabase) {
+        return res.status(500).json({ error: 'Database not configured' });
+      }
+      
+      let query = supabase.from('system_logs').select('*').order('timestamp', { ascending: false }).limit(limitNum);
+      
+      if (filter) {
+        if (filter === 'ERROR' || filter === 'WARN' || filter === 'INFO') {
+          query = query.contains('metadata', { level: filter });
+        } else {
+          query = query.ilike('action', `%${filter}%`);
+        }
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Supabase logs fetch error:', error.message);
+        return res.status(500).json({ error: 'Failed to fetch logs from database: ' + error.message });
+      }
+      
+      const formattedLogs = (data || []).map(log => ({
+        timestamp: log.timestamp,
+        level: log.metadata?.level || 'INFO',
+        source: log.metadata?.source || log.action || 'System',
+        message: log.metadata?.message || log.details || '',
+        details: log.details,
+        user: log.user_email,
+        ip: log.ip_address
+      }));
+      return res.json(formattedLogs);
+    }
+    
+    // Default: fetch from in-memory logs
     let filteredLogs = systemLogs;
 
     if (filter) {
@@ -1116,7 +1174,7 @@ app.get("/api/logs", sessionMiddleware, async (req, res) => {
       }
     }
 
-    res.json(filteredLogs.slice(0, parseInt(limit)));
+    res.json(filteredLogs.slice(0, limitNum));
   } catch (error) {
     console.error("Error fetching logs:", error);
     res.status(500).json({ error: "Failed to fetch logs" });
