@@ -2,9 +2,15 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const COMETCHAT_APP_ID = process.env.EXPO_PUBLIC_COMETCHAT_APP_ID || '';
-const COMETCHAT_REGION = process.env.EXPO_PUBLIC_COMETCHAT_REGION || 'us';
-const COMETCHAT_AUTH_KEY = process.env.EXPO_PUBLIC_COMETCHAT_AUTH_KEY || '';
+// Production CometChat credentials - fallback for EAS builds where env vars may not be configured
+const PRODUCTION_COMETCHAT_APP_ID = '16723866734b9d81b';
+const PRODUCTION_COMETCHAT_REGION = 'eu';
+const PRODUCTION_COMETCHAT_AUTH_KEY = 'cefc57f3a9505c02da5ba48636c534ee53d1ab5f';
+
+// Use env vars if available, otherwise fall back to production values for EAS builds
+const COMETCHAT_APP_ID = process.env.EXPO_PUBLIC_COMETCHAT_APP_ID || PRODUCTION_COMETCHAT_APP_ID;
+const COMETCHAT_REGION = process.env.EXPO_PUBLIC_COMETCHAT_REGION || PRODUCTION_COMETCHAT_REGION;
+const COMETCHAT_AUTH_KEY = process.env.EXPO_PUBLIC_COMETCHAT_AUTH_KEY || PRODUCTION_COMETCHAT_AUTH_KEY;
 
 const CONNECTION_TIMEOUT = 30000;
 const MAX_RETRY_ATTEMPTS = 3;

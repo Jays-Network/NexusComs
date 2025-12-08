@@ -1,19 +1,29 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+const PRODUCTION_BACKEND_URL = 'https://NexusComs.replit.app';
+
 function getApiUrl(): string {
   const manifest = Constants.expoConfig || Constants.manifest2 || Constants.manifest;
   const debuggerHost = Constants.expoGoConfig?.debuggerHost || (manifest as any)?.debuggerHost;
   
+  // Check for explicitly configured API URL first (for EAS builds)
+  if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL.trim();
+    console.log('[CometChatApi] Using configured API URL:', apiUrl);
+    return apiUrl;
+  }
+  
+  // For web on Replit domains
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     const hostname = window.location?.hostname || '';
     if (hostname.includes('replit.dev') || hostname.includes('repl.co') || hostname.includes('platform.replit.com')) {
-      const backendUrl = 'https://NexusComs.replit.app';
-      console.log('[CometChatApi] Using production backend URL for web:', backendUrl);
-      return backendUrl;
+      console.log('[CometChatApi] Using production backend URL for web:', PRODUCTION_BACKEND_URL);
+      return PRODUCTION_BACKEND_URL;
     }
   }
   
+  // For mobile development with Expo Go on Replit
   if (debuggerHost && (Platform.OS === 'android' || Platform.OS === 'ios')) {
     const hostMatch = debuggerHost.match(/^([^:]+)/);
     if (hostMatch) {
@@ -26,12 +36,14 @@ function getApiUrl(): string {
     }
   }
   
-  if (process.env.EXPO_PUBLIC_API_URL && typeof process.env.EXPO_PUBLIC_API_URL === 'string' && process.env.EXPO_PUBLIC_API_URL.length > 0) {
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL.trim();
-    console.log('[CometChatApi] Using configured API URL:', apiUrl);
-    return apiUrl;
+  // For EAS builds (production/preview) without EXPO_PUBLIC_API_URL set, use production backend
+  // This is the fallback for standalone builds where env vars may not be configured
+  if (!debuggerHost && (Platform.OS === 'android' || Platform.OS === 'ios')) {
+    console.log('[CometChatApi] Using production backend URL for standalone build:', PRODUCTION_BACKEND_URL);
+    return PRODUCTION_BACKEND_URL;
   }
   
+  // Local development fallback
   console.log('[CometChatApi] Using default localhost fallback');
   return 'http://localhost:3000';
 }
