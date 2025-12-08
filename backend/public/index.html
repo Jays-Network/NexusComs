@@ -2400,16 +2400,26 @@
         async function openEditUserModal(userId) {
             currentUserId = userId;
             try {
+                console.log('[Step 1] Fetching user with ID:', userId);
                 const response = await fetch(`/api/users/${userId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!response.ok) throw new Error('Failed to fetch user');
+                console.log('[Step 2] Response status:', response.status);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[Step 2] Error response:', errorText);
+                    throw new Error(`Failed to fetch user: ${response.status} - ${errorText}`);
+                }
                 currentUserData = await response.json();
+                console.log('[Step 3] User data loaded successfully');
 
                 // Load accounts for dropdown
+                console.log('[Step 4] Loading accounts for dropdown...');
                 await loadAccountsForDropdown();
+                console.log('[Step 5] Populating account dropdown...');
                 populateAccountDropdown(currentUserData.account_name || '');
 
+                console.log('[Step 6] Setting modal fields...');
                 document.getElementById('modalTitle').textContent = 'Edit User';
                 document.getElementById('userName').value = currentUserData.username || '';
                 document.getElementById('userEmail').value = currentUserData.email || '';
@@ -2419,6 +2429,7 @@
                 document.getElementById('lastVisit').value = currentUserData.last_login ? new Date(currentUserData.last_login).toLocaleString() : 'Never';
                 document.getElementById('lastDevice').value = currentUserData.last_device || '';
 
+                console.log('[Step 7] Setting permissions...');
                 const perms = currentUserData.permissions || {};
                 document.getElementById('isEnabled').checked = perms.is_enabled !== false;
                 document.getElementById('canChangePassword').checked = perms.can_change_password !== false;
@@ -2427,23 +2438,32 @@
                 document.getElementById('canEditProfile').checked = perms.can_edit_profile || false;
                 
                 // Set contact visibility
+                console.log('[Step 8] Setting contact visibility...');
                 const contactVisibility = perms.contact_visibility || 'all';
                 document.getElementById('contactVisibility').value = contactVisibility;
                 handleContactVisibilityChange();
                 
+                console.log('[Step 9] Setting location tracking...');
                 document.getElementById('locationTracking').checked = currentUserData.location_tracking || false;
 
                 // Clear password fields when editing (user can optionally set new password)
+                console.log('[Step 10] Clearing password fields...');
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmPassword').value = '';
 
                 // Apply billing plan restrictions dynamically
+                console.log('[Step 11] Applying billing plan restrictions...');
                 applyBillingPlanRestrictions();
 
+                console.log('[Step 12] Opening modal...');
                 document.getElementById('userModal').classList.add('active');
+                console.log('[Step 13] Edit modal opened successfully!');
             } catch (error) {
                 console.error('Error loading user:', error);
-                alert('Failed to load user');
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                alert('Failed to load user: ' + (error.message || 'Unknown error'));
             }
         }
 

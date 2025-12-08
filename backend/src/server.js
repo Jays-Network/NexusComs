@@ -888,20 +888,30 @@ app.get("/api/users", sessionMiddleware, async (req, res) => {
 // Get single user
 app.get("/api/users/:id", sessionMiddleware, async (req, res) => {
   try {
+    const userId = req.params.id;
+    console.log(`[GET /api/users/:id] Fetching user: ${userId}`);
+    
     const { data, error } = await supabase
       .from("users")
       .select("*")
-      .eq("id", req.params.id)
+      .eq("id", userId)
       .single();
 
     if (error) {
+      console.error(`[GET /api/users/:id] Supabase error for ID ${userId}:`, error);
+      return res.status(404).json({ error: "User not found", details: error.message });
+    }
+
+    if (!data) {
+      console.error(`[GET /api/users/:id] No data returned for ID ${userId}`);
       return res.status(404).json({ error: "User not found" });
     }
 
+    console.log(`[GET /api/users/:id] User found: ${data.email}`);
     res.json(data);
   } catch (error) {
-    console.error("Get user error:", error);
-    res.status(500).json({ error: "Failed to fetch user" });
+    console.error("[GET /api/users/:id] Exception:", error);
+    res.status(500).json({ error: "Failed to fetch user", details: error.message });
   }
 });
 
