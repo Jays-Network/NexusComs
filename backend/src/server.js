@@ -922,9 +922,9 @@ app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, username, email, location_tracking, last_latitude, last_longitude, last_location_update, last_device")
+      .select("id, username, email, location_tracking, last_device, updated_at")
       .eq("location_tracking", true)
-      .order("last_location_update", { ascending: false, nullsFirst: false });
+      .order("updated_at", { ascending: false, nullsFirst: false });
 
     if (error) {
       console.error("Error fetching tracked users:", error);
