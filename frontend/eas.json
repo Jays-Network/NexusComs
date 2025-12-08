@@ -33,6 +33,17 @@
       }
     }
   },
+  "publish": {
+    "production": {
+      "android": "internal"
+    },
+    "preview": {
+      "android": "internal"
+    },
+    "development": {
+      "android": "internal"
+    }
+  },
   "submit": {
     "production": {
       "ios": {
