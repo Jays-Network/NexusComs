@@ -498,9 +498,10 @@ app.post("/api/auth/verify-code", async (req, res) => {
 app.post("/api/auth/login", async (req, res) => {
   try {
     console.log("🔐 [LOGIN] Received login request");
-    const { username, email, password } = req.body;
+    const { username, email, password, device_info } = req.body;
     const loginIdentifier = username || email;
     console.log("📝 [LOGIN] Identifier:", loginIdentifier);
+    console.log("📱 [LOGIN] Device info:", device_info);
 
     if (!loginIdentifier || !password) {
       console.warn("⚠️ [LOGIN] Missing username/email or password");
@@ -560,10 +561,20 @@ app.post("/api/auth/login", async (req, res) => {
       { expiresIn: "7d" },
     );
 
-    // Update last_login
+    // Update last_login and last_device
+    const updateData = { 
+      last_login: new Date().toISOString() 
+    };
+    
+    // Add device info if provided
+    if (device_info) {
+      updateData.last_device = typeof device_info === 'string' ? device_info : JSON.stringify(device_info);
+      console.log("📱 [LOGIN] Updating last_device:", updateData.last_device);
+    }
+    
     await supabase
       .from("users")
-      .update({ last_login: new Date().toISOString() })
+      .update(updateData)
       .eq("id", users.id);
 
     console.log("✅ [LOGIN] Successful login for user:", username, "billing_plan:", users.billing_plan);
@@ -1519,6 +1530,124 @@ app.delete("/api/groups/:groupId", sessionMiddleware, async (req, res) => {
     console.error("Delete group error:", error);
     addLog("ERROR", "Groups", "Server error deleting group", error.message);
     res.status(500).json({ error: "Failed to delete group" });
+  }
+});
+
+// Get single group by ID
+app.get("/api/groups/:groupId", sessionMiddleware, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    const { data: group, error } = await supabase
+      .from("groups")
+      .select(`
+        *,
+        group_members(user_id)
+      `)
+      .eq("id", groupId)
+      .single();
+
+    if (error || !group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    // Get member details
+    const memberIds = (group.group_members || []).map(m => m.user_id);
+    
+    res.json({
+      ...group,
+      memberIds,
+      group_members: undefined
+    });
+  } catch (error) {
+    console.error("Get group error:", error);
+    res.status(500).json({ error: "Failed to get group" });
+  }
+});
+
+// Update group
+app.put("/api/groups/:groupId", sessionMiddleware, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { name, description, parent_group_id, memberIds } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: "Group name is required" });
+    }
+
+    // Update group in Supabase
+    const { data: updatedGroup, error: updateError } = await supabase
+      .from("groups")
+      .update({
+        name,
+        description: description || null,
+        parent_group_id: parent_group_id || null,
+      })
+      .eq("id", groupId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Update group error:", updateError);
+      addLog("ERROR", "Groups", "Failed to update group", updateError.message);
+      return res.status(500).json({ error: "Failed to update group" });
+    }
+
+    // Update CometChat group name if configured
+    if (cometchat.isConfigured()) {
+      try {
+        const cometGroupId = `group_${groupId}`;
+        await cometchat.updateGroup(cometGroupId, name, description);
+        console.log(`[CometChat] Updated group: ${cometGroupId}`);
+      } catch (chatError) {
+        console.warn(`[CometChat] Could not update group: ${chatError.message}`);
+      }
+    }
+
+    // Update members if provided
+    if (memberIds && Array.isArray(memberIds)) {
+      // Remove existing members
+      await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", groupId);
+
+      // Add new members
+      if (memberIds.length > 0) {
+        const memberInserts = memberIds.map(userId => ({
+          group_id: parseInt(groupId),
+          user_id: userId,
+          joined_at: new Date().toISOString()
+        }));
+
+        const { error: memberError } = await supabase
+          .from("group_members")
+          .insert(memberInserts);
+
+        if (memberError) {
+          console.warn("Error updating group members:", memberError);
+        }
+
+        // Update CometChat group members
+        if (cometchat.isConfigured()) {
+          try {
+            const cometGroupId = `group_${groupId}`;
+            const memberUids = memberIds.map(id => cometchat.sanitizeUid(id));
+            await cometchat.addGroupMembers(cometGroupId, memberUids);
+            addLog("INFO", "CometChat", `Updated members for group ${name}`);
+          } catch (memberError) {
+            addLog("WARN", "CometChat", `Could not update group members`, memberError.message);
+          }
+        }
+      }
+    }
+
+    addLog("INFO", "Groups", `Updated group: ${name}`, `ID: ${groupId}`);
+    res.json({ message: "Group updated successfully", group: updatedGroup });
+  } catch (error) {
+    console.error("Update group error:", error);
+    addLog("ERROR", "Groups", "Server error updating group", error.message);
+    res.status(500).json({ error: "Failed to update group" });
   }
 });
 
