@@ -22,6 +22,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
+import { startLocationTracking, stopLocationTracking } from "@/utils/locationTracker";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -64,11 +65,13 @@ function AppContent() {
       // Request location permission on first login for tracking
       requestLocationPermission();
     } else {
-      console.log('[App.tsx] Stopping Supabase sync (no user)');
+      console.log('[App.tsx] Stopping Supabase sync and location tracking (no user)');
       stopSync();
+      stopLocationTracking();
     }
     return () => {
       stopSync();
+      stopLocationTracking();
     };
   }, [user]);
 
@@ -100,6 +103,13 @@ function AppContent() {
             console.warn(`[App.tsx] Failed to update tracking: ${response.status}`);
           } else {
             console.log(`[App.tsx] Location tracking ${enabled ? 'enabled' : 'disabled'} successfully`);
+            
+            // Start or stop the 5-minute interval location tracker
+            if (enabled) {
+              startLocationTracking(user.id);
+            } else {
+              stopLocationTracking();
+            }
           }
         } catch (err) {
           console.warn('[App.tsx] Could not update location tracking:', err);

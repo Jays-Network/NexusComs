@@ -1507,7 +1507,114 @@ app.get("/api/billing-plans/:plan/can-access/:feature", async (req, res) => {
 
 // ============= USER TRACKING ENDPOINTS =============
 
-// Update user location (from mobile app)
+// Update user location (from mobile app) - stores in user_locations table
+app.post("/api/location/update", sessionMiddleware, async (req, res) => {
+  try {
+    const { user_id, latitude, longitude, accuracy, timestamp } = req.body;
+
+    // Verify user can only update their own location
+    if (req.user.id !== user_id) {
+      return res.status(403).json({ error: "Not authorized to update this user's location" });
+    }
+
+    // Check if user has location tracking enabled
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("location_tracking")
+      .eq("id", user_id)
+      .single();
+
+    if (userError || !userData?.location_tracking) {
+      return res.status(403).json({ error: "Location tracking is disabled" });
+    }
+
+    // Insert new location record (keeps history)
+    const { data, error } = await supabase
+      .from("user_locations")
+      .insert({
+        user_id,
+        latitude,
+        longitude,
+        accuracy,
+        timestamp,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error inserting location:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`[Location] Updated location for user ${user_id}`);
+    res.json({ message: "Location updated", location: data });
+  } catch (error) {
+    console.error("Error updating user location:", error);
+    res.status(500).json({ error: "Failed to update location" });
+  }
+});
+
+// Get latest locations for all members of a group
+app.get("/api/location/group/:groupId", sessionMiddleware, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    // Get group members
+    const { data: members, error: membersError } = await supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", groupId);
+
+    if (membersError) {
+      return res.status(500).json({ error: membersError.message });
+    }
+
+    if (!members || members.length === 0) {
+      return res.json([]);
+    }
+
+    const memberIds = members.map(m => m.user_id);
+
+    // Get latest location for each member using a subquery approach
+    const { data: locations, error: locError } = await supabase
+      .from("user_locations")
+      .select(`
+        id,
+        user_id,
+        latitude,
+        longitude,
+        accuracy,
+        created_at,
+        users!inner(id, display_name, avatar_url)
+      `)
+      .in("user_id", memberIds)
+      .order("created_at", { ascending: false });
+
+    if (locError) {
+      console.error("Error fetching locations:", locError);
+      return res.status(500).json({ error: locError.message });
+    }
+
+    // Filter to get only the latest location per user
+    const latestLocations = [];
+    const seenUsers = new Set();
+    for (const loc of locations || []) {
+      if (!seenUsers.has(loc.user_id)) {
+        seenUsers.add(loc.user_id);
+        latestLocations.push(loc);
+      }
+    }
+
+    res.json(latestLocations);
+  } catch (error) {
+    console.error("Error fetching group locations:", error);
+    res.status(500).json({ error: "Failed to fetch locations" });
+  }
+});
+
+// Legacy endpoint - redirect to new endpoint
 app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
   try {
     const { latitude, longitude, device } = req.body;
@@ -1518,15 +1625,18 @@ app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
       return res.status(403).json({ error: "Not authorized to update this user's location" });
     }
 
+    // Insert into user_locations table
     const { data, error } = await supabase
-      .from("users")
-      .update({
-        last_latitude: latitude,
-        last_longitude: longitude,
-        last_location_update: new Date().toISOString(),
-        last_device: device || req.user.last_device
+      .from("user_locations")
+      .insert({
+        user_id: userId,
+        latitude,
+        longitude,
+        accuracy: null,
+        timestamp: Date.now(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      .eq("id", userId)
       .select()
       .single();
 
@@ -1534,7 +1644,7 @@ app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    res.json({ message: "Location updated", user: data });
+    res.json({ message: "Location updated", location: data });
   } catch (error) {
     console.error("Error updating user location:", error);
     res.status(500).json({ error: "Failed to update location" });
