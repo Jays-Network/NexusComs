@@ -157,6 +157,7 @@ EXPO_PUBLIC_COMETCHAT_AUTH_KEY = "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
 COMETCHAT_APP_ID = "16723866734b9d81b"
 COMETCHAT_REGION = "eu"
 COMETCHAT_AUTH_KEY = "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
+SUPABASE_URL = "https://pyqjpymkckmhtnacqqtd.supabase.co"
 
 [userenv.development]
 EXPO_PUBLIC_API_URL = "http://localhost:3000"
