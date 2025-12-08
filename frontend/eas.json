@@ -12,6 +12,14 @@
       },
       "android": {
         "resourceClass": "medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://NexusComs.replit.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pyqjpymkckmhtnacqqtd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5cWpweW1rY2ttaHRuYWNxcXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0ODY5MzksImV4cCI6MjA3OTA2MjkzOX0.4ZlouMFZbGBogXnbRv8q8TRZ5P1rttaVk4N-gf2T14M",
+        "EXPO_PUBLIC_COMETCHAT_APP_ID": "16723866734b9d81b",
+        "EXPO_PUBLIC_COMETCHAT_REGION": "eu",
+        "EXPO_PUBLIC_COMETCHAT_AUTH_KEY": "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
       }
     },
     "preview": {
@@ -21,6 +29,14 @@
       },
       "android": {
         "resourceClass": "medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://NexusComs.replit.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pyqjpymkckmhtnacqqtd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5cWpweW1rY2ttaHRuYWNxcXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0ODY5MzksImV4cCI6MjA3OTA2MjkzOX0.4ZlouMFZbGBogXnbRv8q8TRZ5P1rttaVk4N-gf2T14M",
+        "EXPO_PUBLIC_COMETCHAT_APP_ID": "16723866734b9d81b",
+        "EXPO_PUBLIC_COMETCHAT_REGION": "eu",
+        "EXPO_PUBLIC_COMETCHAT_AUTH_KEY": "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
       }
     },
     "production": {
@@ -30,6 +46,14 @@
       },
       "android": {
         "resourceClass": "medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://NexusComs.replit.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pyqjpymkckmhtnacqqtd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5cWpweW1rY2ttaHRuYWNxcXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0ODY5MzksImV4cCI6MjA3OTA2MjkzOX0.4ZlouMFZbGBogXnbRv8q8TRZ5P1rttaVk4N-gf2T14M",
+        "EXPO_PUBLIC_COMETCHAT_APP_ID": "16723866734b9d81b",
+        "EXPO_PUBLIC_COMETCHAT_REGION": "eu",
+        "EXPO_PUBLIC_COMETCHAT_AUTH_KEY": "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
       }
     }
   }

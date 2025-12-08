@@ -34,7 +34,9 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -60,7 +62,9 @@
         {
           "icon": "./assets/images/world-risk-logo.png",
           "color": "#FFFFFF",
-          "sounds": ["./assets/sounds/emergency.wav"]
+          "sounds": [
+            "./assets/sounds/emergency.wav"
+          ]
         }
       ],
       [
@@ -73,6 +77,11 @@
     ],
     "experiments": {
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "46607011-72f5-4fd2-9b2a-e673cf3d7380"
+      }
     }
   }
 }
