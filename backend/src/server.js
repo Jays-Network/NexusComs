@@ -332,7 +332,16 @@ app.use('/api/auth/', authLimiter);
 app.use(securityMonitor);
 
 // Serve static CMS files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files with no-cache headers to ensure latest version is served
+app.use(express.static(path.join(__dirname, '../public'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+}));
 
 // Session middleware
 const sessionMiddleware = (req, res, next) => {
