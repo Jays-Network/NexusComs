@@ -2343,16 +2343,30 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
-                    cachedAccounts = await response.json();
+                    const data = await response.json();
+                    // API returns { accounts: [], tree: [] }, we need the flat accounts array
+                    cachedAccounts = data.accounts || data || [];
+                    // Ensure cachedAccounts is always an array
+                    if (!Array.isArray(cachedAccounts)) {
+                        console.warn('cachedAccounts is not an array, resetting to empty array');
+                        cachedAccounts = [];
+                    }
                 }
             } catch (error) {
                 console.error('Error loading accounts:', error);
+                cachedAccounts = []; // Ensure it's an array even on error
             }
         }
 
         function populateAccountDropdown(selectedAccountName = '') {
             const select = document.getElementById('userAccount');
             select.innerHTML = '<option value="">Select an account...</option>';
+            
+            // Defensive check to ensure cachedAccounts is an array
+            if (!Array.isArray(cachedAccounts)) {
+                console.warn('populateAccountDropdown: cachedAccounts is not an array');
+                return;
+            }
             
             cachedAccounts.forEach(account => {
                 const option = document.createElement('option');
