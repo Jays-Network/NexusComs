@@ -153,10 +153,44 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 // Supabase client
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY,
+  supabaseKey,
 );
+
+// Log which key type is being used (for debugging production issues)
+console.log(`✓ Supabase using ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service role' : 'anon'} key`);
+
+// Check if system_logs table exists and provide guidance if not
+let systemLogsTableExists = false;
+(async () => {
+  try {
+    const { data, error } = await supabase.from('system_logs').select('id').limit(1);
+    if (error && error.message.includes('Could not find the table')) {
+      console.error('⚠️  system_logs table not found in Supabase!');
+      console.error('   Please create it by running this SQL in your Supabase SQL Editor:');
+      console.error('   CREATE TABLE IF NOT EXISTS system_logs (');
+      console.error('     id SERIAL PRIMARY KEY,');
+      console.error('     action VARCHAR(255) NOT NULL,');
+      console.error('     details TEXT,');
+      console.error('     user_id VARCHAR(255),');
+      console.error('     user_email VARCHAR(255),');
+      console.error('     ip_address VARCHAR(45),');
+      console.error('     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),');
+      console.error('     metadata JSONB');
+      console.error('   );');
+      console.error('   ALTER TABLE system_logs DISABLE ROW LEVEL SECURITY;');
+    } else if (error) {
+      console.error('⚠️  Error checking system_logs table:', error.message);
+    } else {
+      systemLogsTableExists = true;
+      console.log('✓ system_logs table verified');
+    }
+  } catch (e) {
+    console.error('⚠️  Error verifying system_logs table:', e.message);
+  }
+})();
 
 // Brevo API email sender using REST API
 const sendBrevoEmail = async (to, subject, html) => {
@@ -1101,7 +1135,8 @@ function addLog(level, source, message, details = null, userInfo = null, ipAddre
   console.log(`[${level}] ${source}: ${message}`);
   
   // Fire-and-forget persistence to Supabase with isolated error handling
-  if (supabase) {
+  // Only attempt if table was verified to exist
+  if (supabase && systemLogsTableExists) {
     supabase.from('system_logs').insert({
       action: source,
       details: details || null,
@@ -2447,4 +2482,37 @@ app.listen(PORT, "0.0.0.0", () => {
   );
   console.log(`✓ Brevo Email: ${process.env.BREVO_API_KEY ? "Configured" : "Missing"}`);
   console.log(`✓ API & CMS available at http://localhost:${PORT}`);
+  
+  // Log server startup to database for production monitoring
+  addLog("INFO", "Server", "Server started successfully", JSON.stringify({
+    port: PORT,
+    supabase: process.env.SUPABASE_URL ? "configured" : "missing",
+    cometchat: cometchat.isConfigured() ? "configured" : "missing",
+    brevo: process.env.BREVO_API_KEY ? "configured" : "missing",
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString()
+  }));
+  
+  // Test database persistence on startup (will log any errors)
+  // Wait a moment for the table check to complete
+  setTimeout(() => {
+    if (supabase && supabaseKey && systemLogsTableExists) {
+      supabase.from('system_logs').insert({
+        action: 'Server',
+        details: 'Startup database test',
+        timestamp: new Date().toISOString(),
+        metadata: { level: 'INFO', source: 'Server', message: 'Database persistence verified' }
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Startup database test failed:', error.message);
+        } else {
+          console.log('✓ Database persistence verified');
+        }
+      }).catch(err => {
+        console.error('❌ Startup database test exception:', err.message);
+      });
+    } else if (supabase && supabaseKey && !systemLogsTableExists) {
+      console.log('ℹ️  Skipping database persistence test - system_logs table not available');
+    }
+  }, 2000);
 });
