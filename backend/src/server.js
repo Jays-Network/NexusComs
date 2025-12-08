@@ -938,6 +938,44 @@ app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
   }
 });
 
+// Update user location tracking preference (from mobile app)
+// IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
+app.post("/api/users/:id/location-tracking", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled } = req.body;
+
+    // Security: User can only update their own location tracking (or admin)
+    const isAdmin = req.user.role === 'admin' || 
+                    req.user.permissions?.can_access_cms === true ||
+                    req.user.permissions?.admin === true ||
+                    req.user.billing_plan === 'executive';
+    if (req.user.id !== id && !isAdmin) {
+      return res.status(403).json({ error: "Not authorized to update this user's settings" });
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({ 
+        location_tracking: enabled === true,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      console.error("Error updating location tracking:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`[Location Tracking] Updated for user ${id}: ${enabled}`);
+    res.json({ success: true, location_tracking: enabled });
+  } catch (error) {
+    console.error("Error updating location tracking:", error);
+    res.status(500).json({ error: "Failed to update location tracking" });
+  }
+});
+
 // Get single user
 app.get("/api/users/:id", sessionMiddleware, async (req, res) => {
   try {
