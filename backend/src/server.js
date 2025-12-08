@@ -982,6 +982,19 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
     const tempPassword = Math.random().toString(36).slice(-8);
     const password_hash = await bcrypt.hash(tempPassword, 10);
 
+    // Look up account_id from account_name
+    let account_id = null;
+    if (account_name) {
+      const { data: matchingAccount } = await supabase
+        .from("accounts")
+        .select("id")
+        .ilike("name", account_name)
+        .single();
+      if (matchingAccount) {
+        account_id = matchingAccount.id;
+      }
+    }
+
     const { data, error } = await supabase
       .from("users")
       .insert([
@@ -991,6 +1004,7 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
           password_hash,
           creator_id: req.user.id,
           account_name: account_name || "",
+          account_id: account_id,
           billing_plan: billing_plan || "basic",
           location_tracking: false,
           last_device: null,
@@ -1027,7 +1041,22 @@ app.put("/api/users/:id", sessionMiddleware, async (req, res) => {
 
     const updateData = {};
     if (username) updateData.username = username;
-    if (account_name) updateData.account_name = account_name;
+    if (account_name !== undefined) {
+      updateData.account_name = account_name;
+      // Sync account_id when account_name is updated
+      if (account_name) {
+        const { data: matchingAccount } = await supabase
+          .from("accounts")
+          .select("id")
+          .ilike("name", account_name)
+          .single();
+        if (matchingAccount) {
+          updateData.account_id = matchingAccount.id;
+        }
+      } else {
+        updateData.account_id = null;
+      }
+    }
     if (billing_plan) updateData.billing_plan = billing_plan;
     if (permissions) updateData.permissions = permissions;
     if (location_tracking !== undefined) updateData.location_tracking = location_tracking;
