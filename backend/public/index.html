@@ -550,6 +550,20 @@
             padding: 40px;
             background: #1a1a1a;
         }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .ping-connected { background: #4CAF50 !important; }
+        .ping-disconnected { background: #FF6B6B !important; animation: none !important; }
+        .ping-checking { background: #FFB84D !important; }
     </style>
 </head>
 <body>
@@ -690,11 +704,20 @@
                             </div>
                         </div>
 
-                        <h3 style="color: #FFFFFF; margin: 30px 0 20px 0; font-size: 18px;">External Services</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 30px 0 20px 0;">
+                            <h3 style="color: #FFFFFF; font-size: 18px; margin: 0;">External Services</h3>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span id="servicesLastChecked" style="color: #808080; font-size: 11px;">Last checked: --</span>
+                                <button onclick="refreshServiceStatus()" id="refreshServicesBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <span id="refreshIcon" style="display: inline-block;">&#x21bb;</span> Refresh
+                                </button>
+                            </div>
+                        </div>
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                             <!-- COMETCHAT -->
                             <div onclick="openServiceModal('cometchat')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div id="cometchatErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
+                                <div id="cometchatPingIndicator" style="position: absolute; top: 12px; right: 40px; width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #6929C4 0%, #1192E8 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">C</div>
                                     <div>
@@ -704,18 +727,20 @@
                                 </div>
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Status:</p>
-                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="cometchatStatus">Connected</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="cometchatStatus">Checking...</p>
                                     <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="cometchatError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">App ID: <span style="color: #D4AF37;" id="cometchatAppId">Loading...</span></p>
-                                    <p style="color: #b0b0b0; margin: 0;">Region: <span style="color: #D4AF37;" id="cometchatRegion">Loading...</span></p>
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">Region: <span style="color: #D4AF37;" id="cometchatRegion">Loading...</span></p>
+                                    <p style="color: #808080; margin: 0; font-size: 10px;" id="cometchatLastPing">Last ping: --</p>
                                 </div>
                             </div>
 
                             <!-- SUPABASE -->
                             <div onclick="openServiceModal('supabase')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div id="supabaseErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
+                                <div id="supabasePingIndicator" style="position: absolute; top: 12px; right: 40px; width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3ECF8E 0%, #24B47E 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">DB</div>
                                     <div>
@@ -725,18 +750,20 @@
                                 </div>
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Database:</p>
-                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="supabaseStatus">Connected</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="supabaseStatus">Checking...</p>
                                     <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="supabaseError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">Type: <span style="color: #D4AF37;">PostgreSQL</span></p>
-                                    <p style="color: #b0b0b0; margin: 0;">Region: <span style="color: #D4AF37;" id="supabaseRegion">US East</span></p>
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">Region: <span style="color: #D4AF37;" id="supabaseRegion">US East</span></p>
+                                    <p style="color: #808080; margin: 0; font-size: 10px;" id="supabaseLastPing">Last ping: --</p>
                                 </div>
                             </div>
 
                             <!-- BREVO -->
                             <div onclick="openServiceModal('brevo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div id="brevoErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
+                                <div id="brevoPingIndicator" style="position: absolute; top: 12px; right: 40px; width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 18px;">B</div>
                                     <div>
@@ -746,18 +773,20 @@
                                 </div>
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Email Service:</p>
-                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="brevoStatus">Active</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="brevoStatus">Checking...</p>
                                     <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="brevoError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">Sender: <span style="color: #D4AF37;">noreply@worldrisk.co.za</span></p>
-                                    <p style="color: #b0b0b0; margin: 0;">SMTP: <span style="color: #D4AF37;">Configured</span></p>
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">SMTP: <span style="color: #D4AF37;">Configured</span></p>
+                                    <p style="color: #808080; margin: 0; font-size: 10px;" id="brevoLastPing">Last ping: --</p>
                                 </div>
                             </div>
 
                             <!-- EXPO -->
                             <div onclick="openServiceModal('expo')" style="cursor: pointer; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px; transition: all 0.3s; margin-bottom: 0; position: relative;" onmouseover="this.style.borderColor='#D4AF37'; this.style.background='#353535'" onmouseout="this.style.borderColor='#404040'; this.style.background='#2a2a2a'">
                                 <div id="expoErrorIndicator" style="position: absolute; top: 12px; right: 12px; font-size: 20px; display: none;"></div>
+                                <div id="expoPingIndicator" style="position: absolute; top: 12px; right: 40px; width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; animation: pulse 2s infinite;"></div>
                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
                                     <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #D4AF37; font-size: 18px;">E</div>
                                     <div>
@@ -767,12 +796,13 @@
                                 </div>
                                 <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
                                     <p style="color: #b0b0b0; font-size: 12px; margin: 0 0 4px 0;">Frontend Platform:</p>
-                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="expoStatus">Connected</p>
+                                    <p style="color: #4CAF50; font-size: 13px; font-weight: 600; margin: 0;" id="expoStatus">Checking...</p>
                                     <p style="color: #FFB84D; font-size: 11px; margin: 4px 0 0 0; display: none;" id="expoError"></p>
                                 </div>
                                 <div style="font-size: 12px;">
                                     <p style="color: #b0b0b0; margin: 0 0 4px 0;">SDK: <span style="color: #D4AF37;">54.x</span></p>
-                                    <p style="color: #b0b0b0; margin: 0;">React Native: <span style="color: #D4AF37;">0.75+</span></p>
+                                    <p style="color: #b0b0b0; margin: 0 0 4px 0;">React Native: <span style="color: #D4AF37;">0.75+</span></p>
+                                    <p style="color: #808080; margin: 0; font-size: 10px;" id="expoLastPing">Last ping: --</p>
                                 </div>
                             </div>
                         </div>
@@ -1689,32 +1719,118 @@
             loadServiceStatus();
         }
 
+        // Service status tracking
+        let serviceStatusInterval = null;
+        let lastServiceCheck = null;
+
         // Load and display service status dynamically
         async function loadServiceStatus() {
+            const checkTime = new Date();
+            
             try {
                 const response = await fetch('/api/services/status');
                 const services = await response.json();
 
                 // Update each service with fetched status
-                updateServiceCard('cometchat', services.cometchat);
-                updateServiceCard('supabase', services.supabase);
-                updateServiceCard('brevo', services.brevo);
-                updateServiceCard('expo', services.expo);
+                updateServiceCard('cometchat', services.cometchat, checkTime);
+                updateServiceCard('supabase', services.supabase, checkTime);
+                updateServiceCard('brevo', services.brevo, checkTime);
+                updateServiceCard('expo', services.expo, checkTime);
+                
+                // Update global last checked time
+                lastServiceCheck = checkTime;
+                updateLastCheckedDisplay();
             } catch (error) {
                 console.error('Error loading service status:', error);
             }
         }
 
-        function updateServiceCard(serviceName, serviceData) {
+        // Refresh service status with button animation
+        async function refreshServiceStatus() {
+            const btn = document.getElementById('refreshServicesBtn');
+            const icon = document.getElementById('refreshIcon');
+            
+            // Disable button and show spinning animation
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            icon.style.animation = 'spin 1s linear infinite';
+            
+            // Set all services to "Checking..." state
+            ['cometchat', 'supabase', 'brevo', 'expo'].forEach(service => {
+                const statusEl = document.getElementById(service + 'Status');
+                const pingEl = document.getElementById(service + 'PingIndicator');
+                if (statusEl) statusEl.textContent = 'Checking...';
+                if (pingEl) pingEl.className = 'ping-checking';
+            });
+            
+            try {
+                await loadServiceStatus();
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                icon.style.animation = 'none';
+            }
+        }
+
+        // Update the last checked timestamp display
+        function updateLastCheckedDisplay() {
+            const el = document.getElementById('servicesLastChecked');
+            if (el && lastServiceCheck) {
+                const now = new Date();
+                const diff = Math.floor((now - lastServiceCheck) / 1000);
+                
+                let timeStr;
+                if (diff < 5) {
+                    timeStr = 'Just now';
+                } else if (diff < 60) {
+                    timeStr = diff + 's ago';
+                } else if (diff < 3600) {
+                    timeStr = Math.floor(diff / 60) + 'm ago';
+                } else {
+                    timeStr = lastServiceCheck.toLocaleTimeString();
+                }
+                
+                el.textContent = 'Last checked: ' + timeStr;
+            }
+        }
+
+        // Start auto-refresh interval (every 30 seconds)
+        function startServiceStatusAutoRefresh() {
+            if (serviceStatusInterval) clearInterval(serviceStatusInterval);
+            serviceStatusInterval = setInterval(() => {
+                loadServiceStatus();
+                updateLastCheckedDisplay();
+            }, 30000);
+            
+            // Also update the "X ago" display every second
+            setInterval(updateLastCheckedDisplay, 1000);
+        }
+
+        function updateServiceCard(serviceName, serviceData, checkTime) {
             const statusElement = document.getElementById(serviceName + 'Status');
             const errorElement = document.getElementById(serviceName + 'Error');
             const indicatorElement = document.getElementById(serviceName + 'ErrorIndicator');
+            const pingIndicator = document.getElementById(serviceName + 'PingIndicator');
+            const lastPingElement = document.getElementById(serviceName + 'LastPing');
+
+            // Update last ping time
+            if (lastPingElement && checkTime) {
+                lastPingElement.textContent = 'Last ping: ' + checkTime.toLocaleTimeString();
+            }
 
             if (serviceData.status === 'connected') {
                 statusElement.textContent = 'Connected';
                 statusElement.style.color = '#4CAF50';
                 errorElement.style.display = 'none';
                 indicatorElement.style.display = 'none';
+                
+                // Update ping indicator
+                if (pingIndicator) {
+                    pingIndicator.className = '';
+                    pingIndicator.style.background = '#4CAF50';
+                    pingIndicator.style.animation = 'pulse 2s infinite';
+                }
                 
                 // Update CometChat specific fields
                 if (serviceName === 'cometchat') {
@@ -1727,6 +1843,13 @@
                 statusElement.textContent = serviceData.status === 'disconnected' ? 'Disconnected' : 'Error';
                 statusElement.style.color = '#FF6B6B';
                 
+                // Update ping indicator
+                if (pingIndicator) {
+                    pingIndicator.className = '';
+                    pingIndicator.style.background = '#FF6B6B';
+                    pingIndicator.style.animation = 'none';
+                }
+                
                 if (serviceData.error) {
                     errorElement.textContent = serviceData.error;
                     errorElement.style.display = 'block';
@@ -1734,10 +1857,12 @@
 
                 // Show appropriate indicator
                 if (serviceData.severity === 'critical') {
-                    indicatorElement.textContent = '🔴';
+                    indicatorElement.textContent = '!';
+                    indicatorElement.style.color = '#FF6B6B';
                     indicatorElement.title = 'Critical Error - App affected';
                 } else if (serviceData.severity === 'minor') {
-                    indicatorElement.textContent = '⚠️';
+                    indicatorElement.textContent = '!';
+                    indicatorElement.style.color = '#FFB84D';
                     indicatorElement.title = 'Caution - Minor error';
                 }
                 indicatorElement.style.display = 'block';
@@ -1857,6 +1982,9 @@
             document.getElementById('dashboard').style.display = 'block';
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             document.getElementById('currentUser').textContent = user.username || user.email;
+            
+            // Start auto-refresh for service status
+            startServiceStatusAutoRefresh();
         }
 
         async function loadUsers() {
