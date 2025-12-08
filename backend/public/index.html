@@ -1425,7 +1425,9 @@
                     </div>
                     <div class="form-group">
                         <label for="userAccount">Account</label>
-                        <input type="text" id="userAccount" placeholder="Account name">
+                        <select id="userAccount" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                            <option value="">Select an account...</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="userBillingPlan">Billing Plan</label>
@@ -1474,6 +1476,26 @@
                     <div class="checkbox-group">
                         <input type="checkbox" id="canEditProfile">
                         <label for="canEditProfile">Can edit profile on front end</label>
+                    </div>
+                    
+                    <!-- CONTACT RESTRICTIONS -->
+                    <div style="border-top: 1px solid #404040; padding-top: 20px; margin-top: 20px;">
+                        <h3 style="color: #D4AF37; font-size: 14px; margin-bottom: 16px;">Contact Restrictions</h3>
+                        <div class="form-group">
+                            <label for="contactVisibility">Contact Visibility</label>
+                            <select id="contactVisibility" onchange="handleContactVisibilityChange()" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                                <option value="all">Can see all contacts</option>
+                                <option value="same_account">Can only see contacts in same account</option>
+                                <option value="allowed_only">Can only see allowed contacts</option>
+                                <option value="none">Cannot see any contacts</option>
+                            </select>
+                        </div>
+                        <div id="allowedContactsSection" style="display: none;">
+                            <label>Allowed Contacts</label>
+                            <div id="allowedContactsContainer" style="max-height: 200px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-top: 8px;">
+                                <p style="color: #808080; text-align: center; padding: 10px;">Loading contacts...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1597,6 +1619,43 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeAssignChannelsModal()">Cancel</button>
                 <button class="btn-save" onclick="saveAssignedChannels()">Assign Channels</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT GROUP MODAL -->
+    <div class="modal" id="editGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editGroupModalTitle">Edit Group</h2>
+                <button class="close-btn" onclick="closeEditGroupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="editGroupError" class="error-message" style="display: none; color: #FF6B6B; margin-bottom: 16px;"></p>
+                <div class="form-group">
+                    <label for="editGroupName">Group Name *</label>
+                    <input type="text" id="editGroupName" placeholder="Enter group name">
+                </div>
+                <div class="form-group">
+                    <label for="editGroupDescription">Description</label>
+                    <input type="text" id="editGroupDescription" placeholder="Enter description (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="editGroupParent">Parent Group</label>
+                    <select id="editGroupParent" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                        <option value="">None (Top-Level Group)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Select Members</label>
+                    <div id="editGroupMembersContainer" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+                        <p style="color: #808080; text-align: center; padding: 20px;">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditGroupModal()">Cancel</button>
+                <button class="btn-save" onclick="saveGroupEdit()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -2155,6 +2214,71 @@
             }
         }
 
+        let cachedAccounts = [];
+
+        async function loadAccountsForDropdown() {
+            try {
+                const response = await fetch('/api/accounts', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    cachedAccounts = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading accounts:', error);
+            }
+        }
+
+        function populateAccountDropdown(selectedAccountName = '') {
+            const select = document.getElementById('userAccount');
+            select.innerHTML = '<option value="">Select an account...</option>';
+            
+            cachedAccounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = account.name;
+                option.textContent = account.name;
+                if (account.name === selectedAccountName) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+        function handleContactVisibilityChange() {
+            const visibility = document.getElementById('contactVisibility').value;
+            const allowedSection = document.getElementById('allowedContactsSection');
+            
+            if (visibility === 'allowed_only') {
+                allowedSection.style.display = 'block';
+                loadAllowedContacts();
+            } else {
+                allowedSection.style.display = 'none';
+            }
+        }
+
+        async function loadAllowedContacts() {
+            const container = document.getElementById('allowedContactsContainer');
+            const existingAllowed = currentUserData?.permissions?.allowed_contacts || [];
+            
+            if (!availableUsers || availableUsers.length === 0) {
+                await fetchAvailableUsers();
+            }
+            
+            let html = '';
+            availableUsers.forEach(user => {
+                if (user.id !== currentUserId) {
+                    const isChecked = existingAllowed.includes(user.id) ? 'checked' : '';
+                    html += `
+                        <label style="display: flex; align-items: center; padding: 6px; border-bottom: 1px solid #333; cursor: pointer;">
+                            <input type="checkbox" class="allowed-contact" value="${user.id}" ${isChecked} style="margin-right: 10px;">
+                            <span style="color: #FFFFFF; font-size: 13px;">${user.username || user.email}</span>
+                        </label>
+                    `;
+                }
+            });
+            container.innerHTML = html || '<p style="color: #808080; text-align: center; padding: 10px;">No other users available</p>';
+        }
+
         async function openEditUserModal(userId) {
             currentUserId = userId;
             try {
@@ -2164,10 +2288,13 @@
                 if (!response.ok) throw new Error('Failed to fetch user');
                 currentUserData = await response.json();
 
+                // Load accounts for dropdown
+                await loadAccountsForDropdown();
+                populateAccountDropdown(currentUserData.account_name || '');
+
                 document.getElementById('modalTitle').textContent = 'Edit User';
                 document.getElementById('userName').value = currentUserData.username || '';
                 document.getElementById('userEmail').value = currentUserData.email || '';
-                document.getElementById('userAccount').value = currentUserData.account_name || '';
                 document.getElementById('userBillingPlan').value = currentUserData.billing_plan || 'basic';
                 document.getElementById('creatorName').value = currentUserData.creator_id ? (currentUserData.creator_id === currentUserData.id ? 'System' : currentUserData.creator_id) : 'System';
                 document.getElementById('createdDate').value = currentUserData.created_at ? new Date(currentUserData.created_at).toLocaleString() : '';
@@ -2180,6 +2307,11 @@
                 document.getElementById('canCreateGroups').checked = perms.can_create_groups || false;
                 document.getElementById('canAccessCms').checked = perms.can_access_cms || false;
                 document.getElementById('canEditProfile').checked = perms.can_edit_profile || false;
+                
+                // Set contact visibility
+                const contactVisibility = perms.contact_visibility || 'all';
+                document.getElementById('contactVisibility').value = contactVisibility;
+                handleContactVisibilityChange();
                 
                 document.getElementById('locationTracking').checked = currentUserData.location_tracking || false;
 
@@ -2197,14 +2329,18 @@
             }
         }
 
-        function openAddUserModal() {
+        async function openAddUserModal() {
             currentUserId = null;
             currentUserData = null;
+            
+            // Load accounts for dropdown
+            await loadAccountsForDropdown();
+            populateAccountDropdown('');
+            
             document.getElementById('modalTitle').textContent = 'Add New User';
             document.getElementById('userEmail').disabled = false;
             document.getElementById('userName').value = '';
             document.getElementById('userEmail').value = '';
-            document.getElementById('userAccount').value = '';
             document.getElementById('userBillingPlan').value = 'basic';
             document.getElementById('creatorName').value = '';
             document.getElementById('createdDate').value = '';
@@ -2218,6 +2354,10 @@
             document.getElementById('canCreateGroups').checked = false;
             document.getElementById('canAccessCms').checked = false;
             document.getElementById('canEditProfile').checked = false;
+            
+            // Reset contact visibility
+            document.getElementById('contactVisibility').value = 'all';
+            document.getElementById('allowedContactsSection').style.display = 'none';
             
             document.getElementById('locationTracking').checked = false;
 
@@ -2269,6 +2409,11 @@
             const planConfig = BILLING_PLANS[billingPlan] || BILLING_PLANS.basic;
             const planPerms = planConfig.permissions;
             
+            // Get contact visibility and allowed contacts
+            const contactVisibility = document.getElementById('contactVisibility').value;
+            const allowedContactCheckboxes = document.querySelectorAll('.allowed-contact:checked');
+            const allowedContacts = Array.from(allowedContactCheckboxes).map(cb => cb.value);
+            
             // Build permissions based on billing plan restrictions
             const permissions = {
                 is_enabled: document.getElementById('isEnabled').checked,
@@ -2280,7 +2425,10 @@
                 // Store additional billing plan metadata
                 location_tracking_level: planPerms.location_tracking,
                 contact_list_access: planPerms.contact_list,
-                group_management_level: planPerms.group_management
+                group_management_level: planPerms.group_management,
+                // Contact visibility settings
+                contact_visibility: contactVisibility,
+                allowed_contacts: contactVisibility === 'allowed_only' ? allowedContacts : []
             };
 
             try {
@@ -2707,8 +2855,142 @@
             }
         }
 
-        function editGroup(groupId) {
-            alert('Edit group feature coming soon. Group ID: ' + groupId);
+        let currentEditGroupId = null;
+        let currentEditGroupData = null;
+
+        async function editGroup(groupId) {
+            currentEditGroupId = groupId;
+            const errorDiv = document.getElementById('editGroupError');
+            errorDiv.style.display = 'none';
+            
+            try {
+                // Fetch group details
+                const response = await fetch(`/api/groups/${groupId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load group');
+                currentEditGroupData = await response.json();
+                
+                // Populate form fields
+                document.getElementById('editGroupName').value = currentEditGroupData.name || '';
+                document.getElementById('editGroupDescription').value = currentEditGroupData.description || '';
+                
+                // Populate parent group dropdown
+                const parentSelect = document.getElementById('editGroupParent');
+                parentSelect.innerHTML = '<option value="">None (Top-Level Group)</option>';
+                
+                // Fetch all groups for parent selection
+                const groupsResponse = await fetch('/api/groups', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (groupsResponse.ok) {
+                    const allGroups = await groupsResponse.json();
+                    allGroups.forEach(g => {
+                        // Don't allow group to be its own parent or child's parent
+                        if (g.id !== groupId) {
+                            const option = document.createElement('option');
+                            option.value = g.id;
+                            option.textContent = g.name;
+                            if (currentEditGroupData.parent_group_id == g.id) {
+                                option.selected = true;
+                            }
+                            parentSelect.appendChild(option);
+                        }
+                    });
+                }
+                
+                // Load users for member selection
+                await fetchAvailableUsers();
+                renderEditGroupMemberCheckboxes();
+                
+                document.getElementById('editGroupModal').classList.add('active');
+            } catch (error) {
+                console.error('Error loading group:', error);
+                alert('Failed to load group: ' + error.message);
+            }
+        }
+
+        function renderEditGroupMemberCheckboxes() {
+            const container = document.getElementById('editGroupMembersContainer');
+            const existingMemberIds = currentEditGroupData.memberIds || [];
+            
+            if (!availableUsers || availableUsers.length === 0) {
+                container.innerHTML = '<p style="color: #808080; text-align: center; padding: 20px;">No users available</p>';
+                return;
+            }
+            
+            let html = '';
+            availableUsers.forEach(user => {
+                const isChecked = existingMemberIds.includes(user.id) ? 'checked' : '';
+                html += `
+                    <label style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #333; cursor: pointer;">
+                        <input type="checkbox" class="edit-group-member" value="${user.id}" ${isChecked} style="margin-right: 12px;">
+                        <span style="color: #FFFFFF;">${user.username || user.email}</span>
+                        ${user.email ? `<span style="color: #808080; margin-left: 8px; font-size: 12px;">(${user.email})</span>` : ''}
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function closeEditGroupModal() {
+            document.getElementById('editGroupModal').classList.remove('active');
+            currentEditGroupId = null;
+            currentEditGroupData = null;
+        }
+
+        async function saveGroupEdit() {
+            const name = document.getElementById('editGroupName').value.trim();
+            const description = document.getElementById('editGroupDescription').value.trim();
+            const parentGroupId = document.getElementById('editGroupParent').value;
+            const errorDiv = document.getElementById('editGroupError');
+            const btn = event.target;
+
+            if (!name) {
+                errorDiv.textContent = 'Group name is required';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const memberCheckboxes = document.querySelectorAll('.edit-group-member:checked');
+            const memberIds = Array.from(memberCheckboxes).map(cb => cb.value);
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/groups/${currentEditGroupId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        description,
+                        parent_group_id: parentGroupId || null,
+                        memberIds
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to update group');
+                }
+
+                alert('Group updated successfully!');
+                closeEditGroupModal();
+                loadGroups();
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            }
         }
 
         async function openAddEmergencyGroupModal() {
