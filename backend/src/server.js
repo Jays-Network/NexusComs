@@ -1359,6 +1359,63 @@ app.get("/api/users/available", sessionMiddleware, async (req, res) => {
   }
 });
 
+// ============= USER TRACKING ENDPOINTS =============
+
+// Get users with location tracking enabled (for admin dashboard)
+app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, location_tracking, last_latitude, last_longitude, last_location_update, last_device")
+      .eq("location_tracking", true)
+      .order("last_location_update", { ascending: false, nullsFirst: false });
+
+    if (error) {
+      console.error("Error fetching tracked users:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Error fetching tracked users:", error);
+    res.status(500).json({ error: "Failed to fetch tracked users" });
+  }
+});
+
+// Update user location (from mobile app)
+app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
+  try {
+    const { latitude, longitude, device } = req.body;
+    const userId = req.params.id;
+
+    // Verify user can only update their own location
+    if (req.user.id !== userId) {
+      return res.status(403).json({ error: "Not authorized to update this user's location" });
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        last_latitude: latitude,
+        last_longitude: longitude,
+        last_location_update: new Date().toISOString(),
+        last_device: device || req.user.last_device
+      })
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ message: "Location updated", user: data });
+  } catch (error) {
+    console.error("Error updating user location:", error);
+    res.status(500).json({ error: "Failed to update location" });
+  }
+});
+
 // ============= GROUPS & EMERGENCY GROUPS MANAGEMENT =============
 
 // Create a new group
@@ -1840,25 +1897,6 @@ app.get("/api/emergency-groups", sessionMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Fetch emergency groups error:", error);
     res.status(500).json({ error: "Failed to fetch emergency groups" });
-  }
-});
-
-// Get list of available users for member assignment
-app.get("/api/users/available", sessionMiddleware, async (req, res) => {
-  try {
-    const { data: users, error } = await supabase
-      .from("users")
-      .select("id, username, email, stream_id")
-      .order("username", { ascending: true });
-
-    if (error) {
-      return res.status(500).json({ error: "Failed to fetch users" });
-    }
-
-    res.json(users || []);
-  } catch (error) {
-    console.error("Fetch available users error:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 

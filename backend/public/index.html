@@ -1118,11 +1118,18 @@
                 <!-- TRACKING SECTION -->
                 <div id="tracking" class="section">
                     <div class="section-content">
-                        <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">User Tracking</h2>
+                        <div class="toolbar" style="margin-bottom: 20px;">
+                            <h2 style="font-size: 24px; color: #D4AF37; margin: 0;">User Tracking</h2>
+                            <button onclick="loadTrackedUsers()" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer;">Refresh</button>
+                        </div>
                         <div style="background: #2a2a2a; border-radius: 8px; padding: 40px; text-align: center; border: 1px solid #404040; margin-bottom: 20px;">
                             <p style="color: #808080; margin-bottom: 20px;">Map will display users with location tracking enabled</p>
-                            <div id="mapContainer" style="width: 100%; height: 500px; background: #1a1a1a; border-radius: 4px; border: 1px solid #404040; display: flex; align-items: center; justify-content: center;">
-                                <p style="color: #666;">Map initialization loading...</p>
+                            <div id="mapContainer" style="width: 100%; height: 400px; background: #1a1a1a; border-radius: 4px; border: 1px solid #404040; position: relative; overflow: hidden;">
+                                <div id="mapPlaceholder" style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column;">
+                                    <p style="color: #666; margin-bottom: 10px;">Location data will appear here</p>
+                                    <p style="color: #808080; font-size: 12px;">Enable location tracking for users to see their positions</p>
+                                </div>
+                                <div id="mapMarkers" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
                             </div>
                         </div>
                         <div class="table-container">
@@ -1130,14 +1137,15 @@
                                 <thead>
                                     <tr>
                                         <th>User</th>
+                                        <th>Email</th>
                                         <th>Latitude</th>
                                         <th>Longitude</th>
                                         <th>Last Updated</th>
                                         <th>Device</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr><td colspan="5" class="loading">Fetching tracked users...</td></tr>
+                                <tbody id="trackedUsersTableBody">
+                                    <tr><td colspan="6" class="loading">Loading tracked users...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1913,9 +1921,11 @@
             // Mark nav item as active
             event.target.classList.add('active');
             
-            // Load logs when switching to logs section
+            // Load section-specific data
             if (sectionId === 'logs-section') {
                 loadLogs();
+            } else if (sectionId === 'tracking') {
+                loadTrackedUsers();
             }
         }
 
@@ -2570,6 +2580,86 @@
             } catch (error) {
                 resetError.textContent = 'Network error: ' + error.message;
                 resetError.style.display = 'block';
+            }
+        }
+
+        // ============= USER TRACKING FUNCTIONS =============
+        async function loadTrackedUsers() {
+            const tbody = document.getElementById('trackedUsersTableBody');
+            const mapPlaceholder = document.getElementById('mapPlaceholder');
+            const mapMarkers = document.getElementById('mapMarkers');
+            
+            try {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading tracked users...</td></tr>';
+                
+                const response = await fetch('/api/users/tracked', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch tracked users');
+                
+                const users = await response.json();
+                
+                if (!users || users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #808080;">No users with location tracking enabled. Enable location tracking in user settings.</td></tr>';
+                    mapPlaceholder.style.display = 'flex';
+                    mapMarkers.style.display = 'none';
+                    return;
+                }
+                
+                // Render table
+                tbody.innerHTML = users.map(user => {
+                    const lastUpdate = user.last_location_update ? new Date(user.last_location_update).toLocaleString() : 'Never';
+                    const lat = user.last_latitude ? parseFloat(user.last_latitude).toFixed(6) : '-';
+                    const lng = user.last_longitude ? parseFloat(user.last_longitude).toFixed(6) : '-';
+                    const hasLocation = user.last_latitude && user.last_longitude;
+                    const locationStatus = hasLocation ? 
+                        '<span style="color: #4CAF50;">Active</span>' : 
+                        '<span style="color: #808080;">No location</span>';
+                    
+                    return `
+                        <tr style="border-bottom: 1px solid #333;">
+                            <td style="padding: 12px 16px; color: #FFFFFF;">${user.username || 'N/A'}</td>
+                            <td style="padding: 12px 16px; color: #b0b0b0;">${user.email || '-'}</td>
+                            <td style="padding: 12px 16px; color: #D4AF37; font-family: monospace;">${lat}</td>
+                            <td style="padding: 12px 16px; color: #D4AF37; font-family: monospace;">${lng}</td>
+                            <td style="padding: 12px 16px; color: #808080;">${lastUpdate}</td>
+                            <td style="padding: 12px 16px; color: #b0b0b0;">${user.last_device || '-'}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                // Show simple map visualization with user positions
+                const usersWithLocation = users.filter(u => u.last_latitude && u.last_longitude);
+                if (usersWithLocation.length > 0) {
+                    mapPlaceholder.style.display = 'none';
+                    mapMarkers.style.display = 'block';
+                    
+                    // Create simple visualization with markers
+                    let markersHtml = '<div style="position: absolute; top: 10px; left: 10px; color: #D4AF37; font-size: 12px;">Tracked Users: ' + usersWithLocation.length + '</div>';
+                    
+                    usersWithLocation.forEach((user, index) => {
+                        // Simple positioning based on coordinates (normalized for display)
+                        const x = ((parseFloat(user.last_longitude) + 180) / 360) * 100;
+                        const y = ((90 - parseFloat(user.last_latitude)) / 180) * 100;
+                        
+                        markersHtml += `
+                            <div style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%);" title="${user.username}: ${user.last_latitude}, ${user.last_longitude}">
+                                <div style="width: 12px; height: 12px; background: #D4AF37; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>
+                                <div style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; color: #fff; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 3px;">${user.username}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    mapMarkers.innerHTML = markersHtml;
+                } else {
+                    mapPlaceholder.innerHTML = '<p style="color: #666; margin-bottom: 10px;">Users found but no location data yet</p><p style="color: #808080; font-size: 12px;">Location data will appear once users share their position</p>';
+                    mapPlaceholder.style.display = 'flex';
+                    mapMarkers.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading tracked users:', error);
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #FF6B6B;">Failed to load tracked users: ' + error.message + '</td></tr>';
             }
         }
 
