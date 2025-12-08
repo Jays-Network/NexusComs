@@ -1711,17 +1711,204 @@
         let currentUserData = null;
         let currentResetToken = null;
         let currentEmail = null;
-
-        // Check if logged in
-        if (token) {
-            showDashboard();
-            loadUsers();
-            loadServiceStatus();
-        }
-
-        // Service status tracking
+        
+        // Service status tracking - must be declared before use
         let serviceStatusInterval = null;
         let lastServiceCheck = null;
+        
+        // Service details object - must be declared before use
+        const serviceDetails = {
+            cometchat: {
+                title: 'CometChat - Detailed Connection',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Operational</span></p>
+                        <p><span style="color: #b0b0b0;">App ID:</span> <span style="color: #D4AF37;" id="modalCometchatAppId">Loading...</span></p>
+                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;" id="modalCometchatRegion">Loading...</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">APIs & Endpoints</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #D4AF37; font-weight: 600;">Chat API:</p>
+                        <p style="color: #b0b0b0;">• POST /groups - Create/Update groups</p>
+                        <p style="color: #b0b0b0;">• GET /groups - List groups</p>
+                        <p style="color: #b0b0b0;">• POST /messages - Send messages</p>
+                        <p style="color: #b0b0b0;">• WebSocket: Real-time message sync</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Functions in Use</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">• createGroup() - Initialize group channels</p>
+                        <p style="color: #b0b0b0;">• sendTextMessage() - Post messages with emergency flag</p>
+                        <p style="color: #b0b0b0;">• addMessageListener() - Real-time updates</p>
+                        <p style="color: #b0b0b0;">• getUser() - User profile sync</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
+                        <p style="color: #FFD700;">Connection Timeout (30s)</p>
+                        <p style="color: #b0b0b0;">- Auto-retry with exponential backoff</p>
+                        <p style="color: #b0b0b0;">- Check frontend network connection</p>
+                        <p style="color: #b0b0b0;">- Verify CometChat App ID in environment</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">Invalid App ID / Auth Key</p>
+                        <p style="color: #b0b0b0;">- Verify COMETCHAT_APP_ID is correct</p>
+                        <p style="color: #b0b0b0;">- Verify COMETCHAT_AUTH_KEY for frontend</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">Message Send Failure</p>
+                        <p style="color: #b0b0b0;">- Queue locally & retry when online</p>
+                        <p style="color: #b0b0b0;">- Check browser DevTools > Network tab</p>
+                    </div>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
+                        <p style="color: #b0b0b0;">• Frontend: console.log() in utils/cometChatClient.ts</p>
+                        <p style="color: #b0b0b0;">• Monitor: Browser DevTools > Console tab</p>
+                        <p style="color: #b0b0b0;">• Test: Use Group List screen to verify connection</p>
+                        <p style="color: #b0b0b0;">• View: Check chat for real-time message updates</p>
+                    </div>
+                `
+            },
+            supabase: {
+                title: 'Supabase - Database Connection',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected</span></p>
+                        <p><span style="color: #b0b0b0;">Database:</span> <span style="color: #D4AF37;">PostgreSQL (Neon)</span></p>
+                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;">US East</span></p>
+                        <p><span style="color: #b0b0b0;">Response Time:</span> <span style="color: #D4AF37;">~45ms avg</span></p>
+                    </div>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Database Diagnostics</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p style="color: #b0b0b0; margin-bottom: 12px;">Run a comprehensive check of all database tables:</p>
+                        <button onclick="runDatabaseCheck()" id="dbCheckBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: all 0.3s;">
+                            Run Database Check
+                        </button>
+                        <div id="dbCheckStatus" style="margin-top: 12px; display: none;">
+                            <p style="color: #b0b0b0; font-size: 12px;"><span id="dbCheckTime"></span></p>
+                        </div>
+                    </div>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Debug Logs</h3>
+                    <div id="dbCheckOutput" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; min-height: 150px;">
+                        <p style="color: #666;">Click "Run Database Check" to see results...</p>
+                    </div>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Required Tables</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #D4AF37; font-weight: 600;">Core Tables:</p>
+                        <p style="color: #b0b0b0;">• users (id, email, name, role, account_id, cometchat_uid, permissions)</p>
+                        <p style="color: #b0b0b0;">• groups (id, name, description, created_by)</p>
+                        <p style="color: #b0b0b0;">• group_members (group_id, user_id, role)</p>
+                        <p style="color: #b0b0b0;">• emergency_groups (id, name, description, priority)</p>
+                        <p style="color: #b0b0b0;">• emergency_group_members (emergency_group_id, user_id)</p>
+                        <p style="color: #b0b0b0;">• accounts (id, name, parent_account_id, billing_plan)</p>
+                        <p style="color: #b0b0b0;">• account_channels (account_id, channel_id, access_level)</p>
+                    </div>
+                    
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
+                        <p style="color: #FFD700;">PGRST205 - Table not found</p>
+                        <p style="color: #b0b0b0;">→ Run the SQL schema in Supabase SQL Editor</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">42703 - Column does not exist</p>
+                        <p style="color: #b0b0b0;">→ Run ALTER TABLE to add missing columns</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">Connection Failed</p>
+                        <p style="color: #b0b0b0;">→ Verify SUPABASE_URL & SERVICE_ROLE_KEY</p>
+                    </div>
+                `
+            },
+            brevo: {
+                title: 'Brevo - Email Service',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Service Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Active & Operational</span></p>
+                        <p><span style="color: #b0b0b0;">Sender Email:</span> <span style="color: #D4AF37;">noreply@worldrisk.co.za</span></p>
+                        <p><span style="color: #b0b0b0;">SMTP:</span> <span style="color: #D4AF37;">smtp-relay.brevo.com:587</span></p>
+                        <p><span style="color: #b0b0b0;">Authentication:</span> <span style="color: #D4AF37;">API Key + SMTP</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Email Templates</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">• Verification Code (6-digit OTP)</p>
+                        <p style="color: #b0b0b0;">• Password Reset Link</p>
+                        <p style="color: #b0b0b0;">• Account Confirmation</p>
+                        <p style="color: #b0b0b0;">• Emergency Alert Notification</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">API Endpoints</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">POST /smtp/email - Send transactional email</p>
+                        <p style="color: #b0b0b0;">GET /smtp/stats - Email delivery stats</p>
+                        <p style="color: #b0b0b0;">Rate Limit: 500 emails/hour</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
+                        <p style="color: #FFD700;">Rate Limit Exceeded (500 emails/hour)</p>
+                        <p style="color: #b0b0b0;">→ Queue email & retry after 60s</p>
+                        <p style="color: #b0b0b0;">→ Monitor email send frequency</p>
+                        <p style="color: #b0b0b0;">→ Implement retry queue in backend</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">Invalid Email Address</p>
+                        <p style="color: #b0b0b0;">→ Validate & log error</p>
+                        <p style="color: #b0b0b0;">→ Check user email format</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">SMTP Connection Failed</p>
+                        <p style="color: #b0b0b0;">→ Fallback to REST API (auto-enabled)</p>
+                        <p style="color: #b0b0b0;">→ Verify BREVO_API_KEY configured</p>
+                    </div>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
+                        <p style="color: #b0b0b0;">• Backend Logs: Check console for email send attempts</p>
+                        <p style="color: #b0b0b0;">• Brevo Dashboard: View sent/failed emails at app.brevo.com</p>
+                        <p style="color: #b0b0b0;">• Test Send: Use password reset feature to trigger email</p>
+                        <p style="color: #b0b0b0;">• Monitor: Check spam folders for email delivery issues</p>
+                    </div>
+                `
+            },
+            expo: {
+                title: 'Expo - Frontend Platform',
+                html: `
+                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Platform Status</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
+                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Building</span></p>
+                        <p><span style="color: #b0b0b0;">SDK Version:</span> <span style="color: #D4AF37;">54.0.x</span></p>
+                        <p><span style="color: #b0b0b0;">React Native:</span> <span style="color: #D4AF37;">0.75+</span></p>
+                        <p><span style="color: #b0b0b0;">Build Method:</span> <span style="color: #D4AF37;">EAS Build</span></p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Features Enabled</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+                        <p style="color: #b0b0b0;">Hot Module Reloading (HMR)</p>
+                        <p style="color: #b0b0b0;">Over-the-Air Updates</p>
+                        <p style="color: #b0b0b0;">Push Notifications</p>
+                        <p style="color: #b0b0b0;">Gesture Handler & Reanimated</p>
+                        <p style="color: #b0b0b0;">Async Storage (Session Persistence)</p>
+                    </div>
+                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
+                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
+                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
+                        <p style="color: #FFD700;">Build Failed</p>
+                        <p style="color: #b0b0b0;">→ Check package.json dependencies</p>
+                        <p style="color: #b0b0b0;">→ Clear Metro cache: npx expo start -c</p>
+                        
+                        <p style="color: #FFD700; margin-top: 12px;">EAS Build Timeout</p>
+                        <p style="color: #b0b0b0;">→ Check EAS dashboard for queue status</p>
+                        <p style="color: #b0b0b0;">→ Verify build configuration in eas.json</p>
+                    </div>
+                `
+            }
+        };
+
+        // Check if logged in - defer to ensure all variables are initialized
+        setTimeout(function() {
+            if (token) {
+                showDashboard();
+                loadUsers();
+                loadServiceStatus();
+            }
+        }, 0);
 
         // Load and display service status dynamically
         async function loadServiceStatus() {
@@ -2058,211 +2245,6 @@
         }
 
         // SERVICE MODAL FUNCTIONS
-        const serviceDetails = {
-            cometchat: {
-                title: 'CometChat - Detailed Connection',
-                html: `
-                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Operational</span></p>
-                        <p><span style="color: #b0b0b0;">App ID:</span> <span style="color: #D4AF37;" id="modalCometchatAppId">Loading...</span></p>
-                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;" id="modalCometchatRegion">Loading...</span></p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">APIs & Endpoints</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #D4AF37; font-weight: 600;">Chat API:</p>
-                        <p style="color: #b0b0b0;">• POST /groups - Create/Update groups</p>
-                        <p style="color: #b0b0b0;">• GET /groups - List groups</p>
-                        <p style="color: #b0b0b0;">• POST /messages - Send messages</p>
-                        <p style="color: #b0b0b0;">• WebSocket: Real-time message sync</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Functions in Use</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">• createGroup() - Initialize group channels</p>
-                        <p style="color: #b0b0b0;">• sendTextMessage() - Post messages with emergency flag</p>
-                        <p style="color: #b0b0b0;">• addMessageListener() - Real-time updates</p>
-                        <p style="color: #b0b0b0;">• getUser() - User profile sync</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
-                        <p style="color: #FFD700;">Connection Timeout (30s)</p>
-                        <p style="color: #b0b0b0;">- Auto-retry with exponential backoff</p>
-                        <p style="color: #b0b0b0;">- Check frontend network connection</p>
-                        <p style="color: #b0b0b0;">- Verify CometChat App ID in environment</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">Invalid App ID / Auth Key</p>
-                        <p style="color: #b0b0b0;">- Verify COMETCHAT_APP_ID is correct</p>
-                        <p style="color: #b0b0b0;">- Verify COMETCHAT_AUTH_KEY for frontend</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">Message Send Failure</p>
-                        <p style="color: #b0b0b0;">- Queue locally & retry when online</p>
-                        <p style="color: #b0b0b0;">- Check browser DevTools > Network tab</p>
-                    </div>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
-                        <p style="color: #b0b0b0;">• Frontend: console.log() in utils/cometChatClient.ts</p>
-                        <p style="color: #b0b0b0;">• Monitor: Browser DevTools > Console tab</p>
-                        <p style="color: #b0b0b0;">• Test: Use Group List screen to verify connection</p>
-                        <p style="color: #b0b0b0;">• View: Check chat for real-time message updates</p>
-                    </div>
-                `
-            },
-            supabase: {
-                title: 'Supabase - Database Connection',
-                html: `
-                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Connection Status</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected</span></p>
-                        <p><span style="color: #b0b0b0;">Database:</span> <span style="color: #D4AF37;">PostgreSQL (Neon)</span></p>
-                        <p><span style="color: #b0b0b0;">Region:</span> <span style="color: #D4AF37;">US East</span></p>
-                        <p><span style="color: #b0b0b0;">Response Time:</span> <span style="color: #D4AF37;">~45ms avg</span></p>
-                    </div>
-                    
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Database Diagnostics</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                        <p style="color: #b0b0b0; margin-bottom: 12px;">Run a comprehensive check of all database tables:</p>
-                        <button onclick="runDatabaseCheck()" id="dbCheckBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: all 0.3s;">
-                            Run Database Check
-                        </button>
-                        <div id="dbCheckStatus" style="margin-top: 12px; display: none;">
-                            <p style="color: #b0b0b0; font-size: 12px;"><span id="dbCheckTime"></span></p>
-                        </div>
-                    </div>
-                    
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Debug Logs</h3>
-                    <div id="dbCheckOutput" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; min-height: 150px;">
-                        <p style="color: #666;">Click "Run Database Check" to see results...</p>
-                    </div>
-                    
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Required Tables</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #D4AF37; font-weight: 600;">Core Tables:</p>
-                        <p style="color: #b0b0b0;">• users (id, email, name, role, account_id, cometchat_uid, permissions)</p>
-                        <p style="color: #b0b0b0;">• groups (id, name, description, created_by)</p>
-                        <p style="color: #b0b0b0;">• group_members (group_id, user_id, role)</p>
-                        <p style="color: #b0b0b0;">• emergency_groups (id, name, description, priority)</p>
-                        <p style="color: #b0b0b0;">• emergency_group_members (emergency_group_id, user_id)</p>
-                        <p style="color: #b0b0b0;">• accounts (id, name, parent_account_id, billing_plan)</p>
-                        <p style="color: #b0b0b0;">• account_channels (account_id, channel_id, access_level)</p>
-                    </div>
-                    
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
-                        <p style="color: #FFD700;">PGRST205 - Table not found</p>
-                        <p style="color: #b0b0b0;">→ Run the SQL schema in Supabase SQL Editor</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">42703 - Column does not exist</p>
-                        <p style="color: #b0b0b0;">→ Run ALTER TABLE to add missing columns</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">Connection Failed</p>
-                        <p style="color: #b0b0b0;">→ Verify SUPABASE_URL & SERVICE_ROLE_KEY</p>
-                    </div>
-                `
-            },
-            brevo: {
-                title: 'Brevo - Email Service',
-                html: `
-                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Service Status</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Active & Operational</span></p>
-                        <p><span style="color: #b0b0b0;">Sender Email:</span> <span style="color: #D4AF37;">noreply@worldrisk.co.za</span></p>
-                        <p><span style="color: #b0b0b0;">SMTP:</span> <span style="color: #D4AF37;">smtp-relay.brevo.com:587</span></p>
-                        <p><span style="color: #b0b0b0;">Authentication:</span> <span style="color: #D4AF37;">API Key + SMTP</span></p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Email Templates</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">• Verification Code (6-digit OTP)</p>
-                        <p style="color: #b0b0b0;">• Password Reset Link</p>
-                        <p style="color: #b0b0b0;">• Account Confirmation</p>
-                        <p style="color: #b0b0b0;">• Emergency Alert Notification</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">API Endpoints</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">POST /smtp/email - Send transactional email</p>
-                        <p style="color: #b0b0b0;">GET /smtp/stats - Email delivery stats</p>
-                        <p style="color: #b0b0b0;">Rate Limit: 500 emails/hour</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
-                        <p style="color: #FFD700;">⚠️ Rate Limit Exceeded (500 emails/hour)</p>
-                        <p style="color: #b0b0b0;">→ Queue email & retry after 60s</p>
-                        <p style="color: #b0b0b0;">→ Monitor email send frequency</p>
-                        <p style="color: #b0b0b0;">→ Implement retry queue in backend</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Invalid Email Address</p>
-                        <p style="color: #b0b0b0;">→ Validate & log error</p>
-                        <p style="color: #b0b0b0;">→ Check user email format</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ SMTP Connection Failed</p>
-                        <p style="color: #b0b0b0;">→ Fallback to REST API (auto-enabled)</p>
-                        <p style="color: #b0b0b0;">→ Verify BREVO_API_KEY configured</p>
-                    </div>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Debug Tools:</p>
-                        <p style="color: #b0b0b0;">• Backend Logs: Check console for email send attempts</p>
-                        <p style="color: #b0b0b0;">• Brevo Dashboard: View sent/failed emails at app.brevo.com</p>
-                        <p style="color: #b0b0b0;">• Test Send: Use password reset feature to trigger email</p>
-                        <p style="color: #b0b0b0;">• Monitor: Check spam folders for email delivery issues</p>
-                    </div>
-                `
-            },
-            expo: {
-                title: 'Expo - Frontend Platform',
-                html: `
-                    <h3 style="color: #D4AF37; margin-bottom: 16px;">Platform Status</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                        <p><span style="color: #b0b0b0;">Status:</span> <span style="color: #4CAF50; font-weight: 600;">Connected & Building</span></p>
-                        <p><span style="color: #b0b0b0;">SDK Version:</span> <span style="color: #D4AF37;">54.0.x</span></p>
-                        <p><span style="color: #b0b0b0;">React Native:</span> <span style="color: #D4AF37;">0.75+</span></p>
-                        <p><span style="color: #b0b0b0;">Build Method:</span> <span style="color: #D4AF37;">EAS Build</span></p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Features Enabled</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">✓ Hot Module Reloading (HMR)</p>
-                        <p style="color: #b0b0b0;">✓ Over-the-Air Updates</p>
-                        <p style="color: #b0b0b0;">✓ Push Notifications</p>
-                        <p style="color: #b0b0b0;">✓ Gesture Handler & Reanimated</p>
-                        <p style="color: #b0b0b0;">✓ Async Storage (Session Persistence)</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Core Libraries</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
-                        <p style="color: #b0b0b0;">• react-navigation 7+ - App navigation</p>
-                        <p style="color: #b0b0b0;">• expo-camera - Camera access</p>
-                        <p style="color: #b0b0b0;">• expo-location - GPS tracking</p>
-                        <p style="color: #b0b0b0;">• expo-notifications - Push alerts</p>
-                    </div>
-                    <h3 style="color: #D4AF37; margin: 20px 0 16px 0;">Error Handling & Debugging</h3>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; margin-bottom: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Common Errors:</p>
-                        <p style="color: #FFD700;">⚠️ App Crash / Unhandled Error</p>
-                        <p style="color: #b0b0b0;">→ ErrorBoundary catches & offers restart</p>
-                        <p style="color: #b0b0b0;">→ Frontend logs error details to console</p>
-                        <p style="color: #b0b0b0;">→ Click "Try Again" to restart safely</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Module Load Failed / HMR Issues</p>
-                        <p style="color: #b0b0b0;">→ Clear cache (Ctrl+Shift+R on web)</p>
-                        <p style="color: #b0b0b0;">→ Expo Go: Force restart the app</p>
-                        <p style="color: #b0b0b0;">→ Check dependency versions in package.json</p>
-                        
-                        <p style="color: #FFD700; margin-top: 12px;">⚠️ Permission Denied</p>
-                        <p style="color: #b0b0b0;">→ Request permission with graceful fallback</p>
-                        <p style="color: #b0b0b0;">→ Location/camera disabled: show UI message</p>
-                    </div>
-                    <div style="background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 16px; font-size: 13px;">
-                        <p style="color: #FFD700; font-weight: 600;">Debug Tools & Performance:</p>
-                        <p style="color: #b0b0b0;">• Console: Browser DevTools > Console tab shows all errors</p>
-                        <p style="color: #b0b0b0;">• Network: DevTools > Network monitors API calls & response times</p>
-                        <p style="color: #b0b0b0;">• Performance: React DevTools Profiler shows render performance</p>
-                        <p style="color: #b0b0b0;">• HMR Status: Check if hot reload is working (Shows in console)</p>
-                        <p style="color: #b0b0b0;">• Frontend Logs: Available at app startup & stored in AsyncStorage</p>
-                    </div>
-                `
-            }
-        };
-
         function openServiceModal(service) {
             const data = serviceDetails[service];
             document.getElementById('serviceTitle').textContent = data.title;
