@@ -164,7 +164,7 @@ COMETCHAT_AUTH_KEY = "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
 SUPABASE_URL = "https://pyqjpymkckmhtnacqqtd.supabase.co"
 
 [userenv.development]
-EXPO_PUBLIC_API_URL = "http://localhost:3000"
+EXPO_PUBLIC_API_URL = "https://NexusComs.replit.app"
 
 [userenv.production]
 EXPO_PUBLIC_API_URL = "https://NexusComs.replit.app"
