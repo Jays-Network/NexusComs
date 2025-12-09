@@ -153,10 +153,44 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 // Supabase client
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY,
+  supabaseKey,
 );
+
+// Log which key type is being used (for debugging production issues)
+console.log(`✓ Supabase using ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'service role' : 'anon'} key`);
+
+// Check if system_logs table exists and provide guidance if not
+let systemLogsTableExists = false;
+(async () => {
+  try {
+    const { data, error } = await supabase.from('system_logs').select('id').limit(1);
+    if (error && error.message.includes('Could not find the table')) {
+      console.error('⚠️  system_logs table not found in Supabase!');
+      console.error('   Please create it by running this SQL in your Supabase SQL Editor:');
+      console.error('   CREATE TABLE IF NOT EXISTS system_logs (');
+      console.error('     id SERIAL PRIMARY KEY,');
+      console.error('     action VARCHAR(255) NOT NULL,');
+      console.error('     details TEXT,');
+      console.error('     user_id VARCHAR(255),');
+      console.error('     user_email VARCHAR(255),');
+      console.error('     ip_address VARCHAR(45),');
+      console.error('     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),');
+      console.error('     metadata JSONB');
+      console.error('   );');
+      console.error('   ALTER TABLE system_logs DISABLE ROW LEVEL SECURITY;');
+    } else if (error) {
+      console.error('⚠️  Error checking system_logs table:', error.message);
+    } else {
+      systemLogsTableExists = true;
+      console.log('✓ system_logs table verified');
+    }
+  } catch (e) {
+    console.error('⚠️  Error verifying system_logs table:', e.message);
+  }
+})();
 
 // Brevo API email sender using REST API
 const sendBrevoEmail = async (to, subject, html) => {
@@ -298,7 +332,16 @@ app.use('/api/auth/', authLimiter);
 app.use(securityMonitor);
 
 // Serve static CMS files from public directory
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files with no-cache headers to ensure latest version is served
+app.use(express.static(path.join(__dirname, '../public'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+}));
 
 // Session middleware
 const sessionMiddleware = (req, res, next) => {
@@ -851,23 +894,115 @@ app.get("/api/users", sessionMiddleware, async (req, res) => {
   }
 });
 
+// Get available users for group assignment (with billing plan info)
+// IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
+app.get("/api/users/available", sessionMiddleware, async (req, res) => {
+  try {
+    // Query only columns that definitely exist in the database
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, billing_plan")
+      .order("username");
+
+    if (error) {
+      console.error("Error fetching available users:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Error fetching available users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// Get users with location tracking enabled (for admin dashboard)
+// IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
+app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, username, email, location_tracking, last_device, updated_at")
+      .eq("location_tracking", true)
+      .order("updated_at", { ascending: false, nullsFirst: false });
+
+    if (error) {
+      console.error("Error fetching tracked users:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(users || []);
+  } catch (error) {
+    console.error("Error fetching tracked users:", error);
+    res.status(500).json({ error: "Failed to fetch tracked users" });
+  }
+});
+
+// Update user location tracking preference (from mobile app)
+// IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
+app.post("/api/users/:id/location-tracking", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled } = req.body;
+
+    // Security: User can only update their own location tracking (or admin)
+    const isAdmin = req.user.role === 'admin' || 
+                    req.user.permissions?.can_access_cms === true ||
+                    req.user.permissions?.admin === true ||
+                    req.user.billing_plan === 'executive';
+    if (req.user.id !== id && !isAdmin) {
+      return res.status(403).json({ error: "Not authorized to update this user's settings" });
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({ 
+        location_tracking: enabled === true,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      console.error("Error updating location tracking:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`[Location Tracking] Updated for user ${id}: ${enabled}`);
+    res.json({ success: true, location_tracking: enabled });
+  } catch (error) {
+    console.error("Error updating location tracking:", error);
+    res.status(500).json({ error: "Failed to update location tracking" });
+  }
+});
+
 // Get single user
 app.get("/api/users/:id", sessionMiddleware, async (req, res) => {
   try {
+    const userId = req.params.id;
+    console.log(`[GET /api/users/:id] Fetching user: ${userId}`);
+    
     const { data, error } = await supabase
       .from("users")
       .select("*")
-      .eq("id", req.params.id)
+      .eq("id", userId)
       .single();
 
     if (error) {
+      console.error(`[GET /api/users/:id] Supabase error for ID ${userId}:`, error);
+      return res.status(404).json({ error: "User not found", details: error.message });
+    }
+
+    if (!data) {
+      console.error(`[GET /api/users/:id] No data returned for ID ${userId}`);
       return res.status(404).json({ error: "User not found" });
     }
 
+    console.log(`[GET /api/users/:id] User found: ${data.email}`);
     res.json(data);
   } catch (error) {
-    console.error("Get user error:", error);
-    res.status(500).json({ error: "Failed to fetch user" });
+    console.error("[GET /api/users/:id] Exception:", error);
+    res.status(500).json({ error: "Failed to fetch user", details: error.message });
   }
 });
 
@@ -885,6 +1020,19 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
     const tempPassword = Math.random().toString(36).slice(-8);
     const password_hash = await bcrypt.hash(tempPassword, 10);
 
+    // Look up account_id from account_name
+    let account_id = null;
+    if (account_name) {
+      const { data: matchingAccount } = await supabase
+        .from("accounts")
+        .select("id")
+        .ilike("name", account_name)
+        .single();
+      if (matchingAccount) {
+        account_id = matchingAccount.id;
+      }
+    }
+
     const { data, error } = await supabase
       .from("users")
       .insert([
@@ -894,6 +1042,7 @@ app.post("/api/users", sessionMiddleware, async (req, res) => {
           password_hash,
           creator_id: req.user.id,
           account_name: account_name || "",
+          account_id: account_id,
           billing_plan: billing_plan || "basic",
           location_tracking: false,
           last_device: null,
@@ -930,7 +1079,22 @@ app.put("/api/users/:id", sessionMiddleware, async (req, res) => {
 
     const updateData = {};
     if (username) updateData.username = username;
-    if (account_name) updateData.account_name = account_name;
+    if (account_name !== undefined) {
+      updateData.account_name = account_name;
+      // Sync account_id when account_name is updated
+      if (account_name) {
+        const { data: matchingAccount } = await supabase
+          .from("accounts")
+          .select("id")
+          .ilike("name", account_name)
+          .single();
+        if (matchingAccount) {
+          updateData.account_id = matchingAccount.id;
+        }
+      } else {
+        updateData.account_id = null;
+      }
+    }
     if (billing_plan) updateData.billing_plan = billing_plan;
     if (permissions) updateData.permissions = permissions;
     if (location_tracking !== undefined) updateData.location_tracking = location_tracking;
@@ -1084,26 +1248,85 @@ app.get("/", (req, res) => {
 let systemLogs = [];
 const MAX_LOGS = 1000;
 
-// Function to add log entry
-function addLog(level, source, message, details = null) {
+// Function to add log entry with Supabase persistence (fire-and-forget safe)
+function addLog(level, source, message, details = null, userInfo = null, ipAddress = null) {
   const logEntry = {
     timestamp: new Date().toISOString(),
     level,
     source,
     message,
     details,
+    user: userInfo ? (userInfo.email || userInfo.username || userInfo.id) : null,
   };
-  systemLogs.unshift(logEntry); // Add to beginning
+  systemLogs.unshift(logEntry);
   if (systemLogs.length > MAX_LOGS) {
-    systemLogs.pop(); // Remove oldest
+    systemLogs.pop();
   }
   console.log(`[${level}] ${source}: ${message}`);
+  
+  // Fire-and-forget persistence to Supabase with isolated error handling
+  // Only attempt if table was verified to exist
+  if (supabase && systemLogsTableExists) {
+    supabase.from('system_logs').insert({
+      action: source,
+      details: details || null,
+      user_id: userInfo ? (userInfo.id || userInfo.username) : null,
+      user_email: userInfo ? userInfo.email : null,
+      ip_address: ipAddress,
+      timestamp: logEntry.timestamp,
+      metadata: { level, source, message }
+    }).then(({ error }) => {
+      if (error) {
+        console.error('Failed to persist log to Supabase:', error.message);
+      }
+    }).catch(err => {
+      console.error('Supabase log persistence error:', err.message);
+    });
+  }
 }
 
-// Get logs endpoint
+// Get logs endpoint - fetches from Supabase or in-memory
 app.get("/api/logs", sessionMiddleware, async (req, res) => {
   try {
-    const { filter, limit = 100 } = req.query;
+    const { filter, limit = 100, source: dbSource } = req.query;
+    const limitNum = parseInt(limit) || 100;
+    
+    // If database source requested, fetch from Supabase
+    if (dbSource === 'database') {
+      if (!supabase) {
+        return res.status(500).json({ error: 'Database not configured' });
+      }
+      
+      let query = supabase.from('system_logs').select('*').order('timestamp', { ascending: false }).limit(limitNum);
+      
+      if (filter) {
+        if (filter === 'ERROR' || filter === 'WARN' || filter === 'INFO') {
+          query = query.contains('metadata', { level: filter });
+        } else {
+          query = query.ilike('action', `%${filter}%`);
+        }
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Supabase logs fetch error:', error.message);
+        return res.status(500).json({ error: 'Failed to fetch logs from database: ' + error.message });
+      }
+      
+      const formattedLogs = (data || []).map(log => ({
+        timestamp: log.timestamp,
+        level: log.metadata?.level || 'INFO',
+        source: log.metadata?.source || log.action || 'System',
+        message: log.metadata?.message || log.details || '',
+        details: log.details,
+        user: log.user_email,
+        ip: log.ip_address
+      }));
+      return res.json(formattedLogs);
+    }
+    
+    // Default: fetch from in-memory logs
     let filteredLogs = systemLogs;
 
     if (filter) {
@@ -1116,7 +1339,7 @@ app.get("/api/logs", sessionMiddleware, async (req, res) => {
       }
     }
 
-    res.json(filteredLogs.slice(0, parseInt(limit)));
+    res.json(filteredLogs.slice(0, limitNum));
   } catch (error) {
     console.error("Error fetching logs:", error);
     res.status(500).json({ error: "Failed to fetch logs" });
@@ -1282,22 +1505,149 @@ app.get("/api/billing-plans/:plan/can-access/:feature", async (req, res) => {
   res.json({ canAccess, accessLevel, permission });
 });
 
-// Get available users for group assignment (with billing plan info)
-app.get("/api/users/available", sessionMiddleware, async (req, res) => {
+// ============= USER TRACKING ENDPOINTS =============
+
+// Update user location (from mobile app) - stores in user_locations table
+app.post("/api/location/update", sessionMiddleware, async (req, res) => {
   try {
-    const { data: users, error } = await supabase
+    const { user_id, latitude, longitude, accuracy, timestamp } = req.body;
+
+    // Verify user can only update their own location
+    if (req.user.id !== user_id) {
+      return res.status(403).json({ error: "Not authorized to update this user's location" });
+    }
+
+    // Check if user has location tracking enabled
+    const { data: userData, error: userError } = await supabase
       .from("users")
-      .select("id, username, email, billing_plan, cometchat_uid")
-      .order("username");
+      .select("location_tracking")
+      .eq("id", user_id)
+      .single();
+
+    if (userError || !userData?.location_tracking) {
+      return res.status(403).json({ error: "Location tracking is disabled" });
+    }
+
+    // Insert new location record (keeps history)
+    const { data, error } = await supabase
+      .from("user_locations")
+      .insert({
+        user_id,
+        latitude,
+        longitude,
+        accuracy,
+        timestamp,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error inserting location:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`[Location] Updated location for user ${user_id}`);
+    res.json({ message: "Location updated", location: data });
+  } catch (error) {
+    console.error("Error updating user location:", error);
+    res.status(500).json({ error: "Failed to update location" });
+  }
+});
+
+// Get latest locations for all members of a group
+app.get("/api/location/group/:groupId", sessionMiddleware, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    // Get group members
+    const { data: members, error: membersError } = await supabase
+      .from("group_members")
+      .select("user_id")
+      .eq("group_id", groupId);
+
+    if (membersError) {
+      return res.status(500).json({ error: membersError.message });
+    }
+
+    if (!members || members.length === 0) {
+      return res.json([]);
+    }
+
+    const memberIds = members.map(m => m.user_id);
+
+    // Get latest location for each member using a subquery approach
+    const { data: locations, error: locError } = await supabase
+      .from("user_locations")
+      .select(`
+        id,
+        user_id,
+        latitude,
+        longitude,
+        accuracy,
+        created_at,
+        users!inner(id, display_name, avatar_url)
+      `)
+      .in("user_id", memberIds)
+      .order("created_at", { ascending: false });
+
+    if (locError) {
+      console.error("Error fetching locations:", locError);
+      return res.status(500).json({ error: locError.message });
+    }
+
+    // Filter to get only the latest location per user
+    const latestLocations = [];
+    const seenUsers = new Set();
+    for (const loc of locations || []) {
+      if (!seenUsers.has(loc.user_id)) {
+        seenUsers.add(loc.user_id);
+        latestLocations.push(loc);
+      }
+    }
+
+    res.json(latestLocations);
+  } catch (error) {
+    console.error("Error fetching group locations:", error);
+    res.status(500).json({ error: "Failed to fetch locations" });
+  }
+});
+
+// Legacy endpoint - redirect to new endpoint
+app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
+  try {
+    const { latitude, longitude, device } = req.body;
+    const userId = req.params.id;
+
+    // Verify user can only update their own location
+    if (req.user.id !== userId) {
+      return res.status(403).json({ error: "Not authorized to update this user's location" });
+    }
+
+    // Insert into user_locations table
+    const { data, error } = await supabase
+      .from("user_locations")
+      .insert({
+        user_id: userId,
+        latitude,
+        longitude,
+        accuracy: null,
+        timestamp: Date.now(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
     if (error) {
       return res.status(500).json({ error: error.message });
     }
 
-    res.json(users || []);
+    res.json({ message: "Location updated", location: data });
   } catch (error) {
-    console.error("Error fetching available users:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
+    console.error("Error updating user location:", error);
+    res.status(500).json({ error: "Failed to update location" });
   }
 });
 
@@ -1782,25 +2132,6 @@ app.get("/api/emergency-groups", sessionMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Fetch emergency groups error:", error);
     res.status(500).json({ error: "Failed to fetch emergency groups" });
-  }
-});
-
-// Get list of available users for member assignment
-app.get("/api/users/available", sessionMiddleware, async (req, res) => {
-  try {
-    const { data: users, error } = await supabase
-      .from("users")
-      .select("id, username, email, stream_id")
-      .order("username", { ascending: true });
-
-    if (error) {
-      return res.status(500).json({ error: "Failed to fetch users" });
-    }
-
-    res.json(users || []);
-  } catch (error) {
-    console.error("Fetch available users error:", error);
-    res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
@@ -2351,4 +2682,37 @@ app.listen(PORT, "0.0.0.0", () => {
   );
   console.log(`✓ Brevo Email: ${process.env.BREVO_API_KEY ? "Configured" : "Missing"}`);
   console.log(`✓ API & CMS available at http://localhost:${PORT}`);
+  
+  // Log server startup to database for production monitoring
+  addLog("INFO", "Server", "Server started successfully", JSON.stringify({
+    port: PORT,
+    supabase: process.env.SUPABASE_URL ? "configured" : "missing",
+    cometchat: cometchat.isConfigured() ? "configured" : "missing",
+    brevo: process.env.BREVO_API_KEY ? "configured" : "missing",
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString()
+  }));
+  
+  // Test database persistence on startup (will log any errors)
+  // Wait a moment for the table check to complete
+  setTimeout(() => {
+    if (supabase && supabaseKey && systemLogsTableExists) {
+      supabase.from('system_logs').insert({
+        action: 'Server',
+        details: 'Startup database test',
+        timestamp: new Date().toISOString(),
+        metadata: { level: 'INFO', source: 'Server', message: 'Database persistence verified' }
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Startup database test failed:', error.message);
+        } else {
+          console.log('✓ Database persistence verified');
+        }
+      }).catch(err => {
+        console.error('❌ Startup database test exception:', err.message);
+      });
+    } else if (supabase && supabaseKey && !systemLogsTableExists) {
+      console.log('ℹ️  Skipping database persistence test - system_logs table not available');
+    }
+  }, 2000);
 });

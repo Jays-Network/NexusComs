@@ -461,32 +461,113 @@ router.get('/recommendations', (req, res) => {
   });
 });
 
-router.get('/alerts', (req, res) => {
-  const alerts = getAlerts();
+router.get('/alerts', async (req, res) => {
+  const { getAlerts, getAlertStats } = require('../utils/alerts');
+  const fromDatabase = req.query.source === 'database';
+  const alerts = await getAlerts({ fromDatabase });
+  const stats = await getAlertStats();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     totalAlerts: alerts.length,
+    stats,
     alerts: alerts.slice(0, 50)
   });
 });
 
-router.post('/alerts/:alertId/acknowledge', (req, res) => {
-  const { acknowledgeAlert } = require('../utils/alerts');
-  acknowledgeAlert(req.params.alertId);
-  res.json({ status: 'ok', message: 'Alert acknowledged' });
+router.post('/alerts/:alertId/acknowledge', async (req, res) => {
+  const { acknowledgeAlert, addSystemLog } = require('../utils/alerts');
+  const adminUser = req.user;
+  
+  if (!adminUser) {
+    return res.status(401).json({ error: 'Authentication required to acknowledge alerts' });
+  }
+  
+  const success = await acknowledgeAlert(req.params.alertId, adminUser);
+  
+  if (success) {
+    await addSystemLog(
+      'alert_acknowledged',
+      `Alert ${req.params.alertId} acknowledged`,
+      adminUser,
+      req.ip
+    );
+  }
+  
+  res.json({ 
+    status: 'ok', 
+    message: 'Alert acknowledged',
+    acknowledgedBy: adminUser.email
+  });
 });
 
-router.delete('/alerts', (req, res) => {
-  const { clearAlerts } = require('../utils/alerts');
+router.post('/alerts/acknowledge-ip', async (req, res) => {
+  const { acknowledgeAllForIP, addSystemLog } = require('../utils/alerts');
+  const adminUser = req.user;
+  const { ip } = req.body;
+  
+  if (!adminUser) {
+    return res.status(401).json({ error: 'Authentication required to acknowledge alerts' });
+  }
+  
+  if (!ip) {
+    return res.status(400).json({ error: 'IP address required' });
+  }
+  
+  const count = await acknowledgeAllForIP(ip, adminUser);
+  
+  await addSystemLog(
+    'ip_alerts_acknowledged',
+    `All alerts for IP ${ip} acknowledged (${count} alerts)`,
+    adminUser,
+    req.ip
+  );
+  
+  res.json({ 
+    status: 'ok', 
+    message: `Acknowledged all alerts for IP ${ip}`,
+    count,
+    acknowledgedBy: adminUser.email
+  });
+});
+
+router.delete('/alerts', async (req, res) => {
+  const { clearAlerts, addSystemLog } = require('../utils/alerts');
+  const adminUser = req.user;
+  
+  if (adminUser) {
+    await addSystemLog('alerts_cleared', 'All security alerts cleared', adminUser, req.ip);
+  }
+  
   clearAlerts();
   res.json({ status: 'ok', message: 'Alerts cleared' });
 });
 
-router.post('/alerts/clear', (req, res) => {
-  const { clearAlerts } = require('../utils/alerts');
+router.post('/alerts/clear', async (req, res) => {
+  const { clearAlerts, addSystemLog } = require('../utils/alerts');
+  const adminUser = req.user;
+  
+  if (adminUser) {
+    await addSystemLog('alerts_cleared', 'All security alerts cleared', adminUser, req.ip);
+  }
+  
   clearAlerts();
   res.json({ status: 'ok', message: 'Alerts cleared' });
+});
+
+router.get('/logs', async (req, res) => {
+  const { getSystemLogs } = require('../utils/alerts');
+  const limit = parseInt(req.query.limit) || 100;
+  const action = req.query.action;
+  
+  const logs = await getSystemLogs({ limit, action });
+  
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    totalLogs: logs.length,
+    logs
+  });
 });
 
 router.get('/status', async (req, res) => {
