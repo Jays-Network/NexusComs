@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -59,6 +59,41 @@ interface Message {
   attachment?: Attachment;
 }
 
+interface DateSeparator {
+  id: string;
+  type: 'date-separator';
+  label: string;
+  date: Date;
+}
+
+type ListItem = Message | DateSeparator;
+
+function isDateSeparator(item: ListItem): item is DateSeparator {
+  return 'type' in item && item.type === 'date-separator';
+}
+
+function getDateLabel(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const isToday = date.toDateString() === today.toDateString();
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  
+  return date.toLocaleDateString('en-US', { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  });
+}
+
+function getDateKey(date: Date): string {
+  return date.toDateString();
+}
+
 export default function ChatRoomScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation();
@@ -76,6 +111,31 @@ export default function ChatRoomScreen() {
   const { paddingBottom } = useScreenInsets();
   
   const receiverType = isDirectChat ? 'user' : 'group';
+
+  const listItems: ListItem[] = useMemo(() => {
+    if (messages.length === 0) return [];
+    
+    const items: ListItem[] = [];
+    let lastDateKey = '';
+    
+    for (const message of messages) {
+      const currentDateKey = getDateKey(message.sentAt);
+      
+      if (currentDateKey !== lastDateKey) {
+        items.push({
+          id: `date-${currentDateKey}`,
+          type: 'date-separator',
+          label: getDateLabel(message.sentAt),
+          date: message.sentAt,
+        });
+        lastDateKey = currentDateKey;
+      }
+      
+      items.push(message);
+    }
+    
+    return items;
+  }, [messages]);
 
   const transformMessage = useCallback((msg: any): Message => {
     const msgType = msg.getType?.() || msg.type || 'text';
@@ -597,7 +657,19 @@ export default function ChatRoomScreen() {
     }
   }, [theme]);
 
-  const renderMessage = useCallback(({ item }: { item: Message }) => {
+  const renderDateSeparator = useCallback((item: DateSeparator) => {
+    return (
+      <View style={styles.dateSeparatorContainer}>
+        <View style={[styles.dateSeparatorPill, { backgroundColor: theme.backgroundSecondary }]}>
+          <Text style={[styles.dateSeparatorText, { color: theme.textSecondary }]}>
+            {item.label}
+          </Text>
+        </View>
+      </View>
+    );
+  }, [theme]);
+
+  const renderMessageBubble = useCallback((item: Message) => {
     const isOwnMessage = item.senderId === user?.id;
     const isEmergency = item.isEmergency;
     const hasAttachment = item.attachment != null;
@@ -635,6 +707,13 @@ export default function ChatRoomScreen() {
       </View>
     );
   }, [user?.id, theme, renderAttachmentContent]);
+
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
+    if (isDateSeparator(item)) {
+      return renderDateSeparator(item);
+    }
+    return renderMessageBubble(item);
+  }, [renderDateSeparator, renderMessageBubble]);
 
   if (isLoading) {
     return (
@@ -684,9 +763,9 @@ export default function ChatRoomScreen() {
     >
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={listItems}
         keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
+        renderItem={renderItem}
         contentContainerStyle={styles.messagesList}
         style={{ backgroundColor: theme.backgroundRoot }}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
@@ -802,6 +881,21 @@ const styles = StyleSheet.create({
   messagesList: {
     padding: Spacing.md,
     paddingBottom: Spacing.xl,
+  },
+  dateSeparatorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    marginVertical: Spacing.sm,
+  },
+  dateSeparatorPill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.lg,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   messageBubble: {
     maxWidth: '80%',
