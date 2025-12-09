@@ -1,7 +1,7 @@
 import "react-native-gesture-handler";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { StyleSheet, View, Text, Alert, Platform } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -9,12 +9,14 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Location from "expo-location";
+import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { Feather } from "@expo/vector-icons";
 
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
+import CallScreen from "@/screens/CallScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { CometChatAuthProvider, useCometChatAuth } from "@/utils/cometChatAuth";
 import { SupabaseSyncProvider, useSupabaseSync } from "@/utils/supabaseSync";
@@ -23,6 +25,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
 import { startLocationTracking, stopLocationTracking } from "@/utils/locationTracker";
+import { addCallListener, removeCallListener, rejectCall } from "@/utils/cometChatClient";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -38,10 +41,13 @@ Notifications.setNotificationHandler({
 
 const Stack = createNativeStackNavigator();
 
+const navigationRef = useRef<NavigationContainerRef<any>>(null);
+
 function AppContent() {
   const { user, cometChatUser, isLoading, isInitialized } = useCometChatAuth();
   const { startSync, stopSync } = useSupabaseSync();
   const { theme } = useTheme();
+  const [incomingCall, setIncomingCall] = useState<any>(null);
 
   useEffect(() => {
     console.log('[App.tsx] AppContent state change:');
@@ -56,6 +62,76 @@ function AppContent() {
       SplashScreen.hideAsync();
     }
   }, [isLoading, user, cometChatUser, isInitialized, theme]);
+
+  useEffect(() => {
+    if (!isInitialized || !cometChatUser) return;
+
+    const listenerId = 'app_global_call_listener';
+    console.log('[App.tsx] Setting up global call listener');
+
+    addCallListener(listenerId, {
+      onIncomingCallReceived: (call: any) => {
+        console.log('[App.tsx] Incoming call received!');
+        const callerName = call.getSender?.()?.getName?.() || call.callInitiator?.name || 'Unknown';
+        const callType = call.getType?.() === 'video' ? 'video' : 'audio';
+        const sessionId = call.getSessionId?.();
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+        if (Platform.OS === 'web') {
+          const accept = window.confirm(`Incoming ${callType} call from ${callerName}. Accept?`);
+          if (accept && navigationRef.current) {
+            navigationRef.current.navigate('CallScreen', {
+              contactId: call.getSender?.()?.getUid?.() || call.callInitiator?.uid || '',
+              contactName: callerName,
+              callType: callType,
+              isIncoming: true,
+              sessionId: sessionId,
+            });
+          } else if (sessionId) {
+            rejectCall(sessionId, 'rejected');
+          }
+        } else {
+          Alert.alert(
+            `Incoming ${callType === 'video' ? 'Video' : 'Voice'} Call`,
+            `${callerName} is calling you`,
+            [
+              {
+                text: 'Decline',
+                style: 'destructive',
+                onPress: () => {
+                  if (sessionId) rejectCall(sessionId, 'rejected');
+                },
+              },
+              {
+                text: 'Accept',
+                onPress: () => {
+                  if (navigationRef.current) {
+                    navigationRef.current.navigate('CallScreen', {
+                      contactId: call.getSender?.()?.getUid?.() || call.callInitiator?.uid || '',
+                      contactName: callerName,
+                      callType: callType,
+                      isIncoming: true,
+                      sessionId: sessionId,
+                    });
+                  }
+                },
+              },
+            ],
+            { cancelable: false }
+          );
+        }
+      },
+      onIncomingCallCancelled: (call: any) => {
+        console.log('[App.tsx] Incoming call cancelled');
+        setIncomingCall(null);
+      },
+    });
+
+    return () => {
+      removeCallListener(listenerId);
+    };
+  }, [isInitialized, cometChatUser]);
 
   useEffect(() => {
     if (user && user.id) {
@@ -155,9 +231,17 @@ function AppContent() {
 
   console.log('Rendering main app for user:', user.name);
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabNavigator} />
+        <Stack.Screen 
+          name="CallScreen" 
+          component={CallScreen}
+          options={{ 
+            presentation: 'fullScreenModal',
+            gestureEnabled: false,
+          }}
+        />
       </Stack.Navigator>
       <StatusBar style="auto" />
       <EmergencyModal />

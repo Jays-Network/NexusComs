@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Pressable, RefreshControl, Modal, FlatList, Text, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
@@ -141,6 +142,7 @@ function ContactSelector({ contact, selected, onToggle, theme }: { contact: Cont
 export default function CallLogScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const { user, cometChatUser } = useCometChatAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [calls] = useState<CallLogEntry[]>([]);
@@ -195,8 +197,13 @@ export default function CallLogScreen() {
     const isGroupCall = selectedList.length > 1;
 
     if (Platform.OS === 'web') {
-      Alert.alert('Not available on web', 'Video calling requires the Expo Go app. Please use the mobile app to make calls.');
+      Alert.alert('Not available on web', 'Calling requires the mobile app. Please use the mobile app to make calls.');
     } else {
+      const selectedContact = contacts.find(c => c.id === selectedList[0]);
+      const contactName = isGroupCall 
+        ? `${selectedList.length} participants` 
+        : selectedContact?.name || 'Contact';
+      
       const callType = isGroupCall ? `group call with ${selectedList.length} people` : 'call';
       Alert.alert(
         'Start Call',
@@ -206,21 +213,35 @@ export default function CallLogScreen() {
           { 
             text: 'Voice Call', 
             onPress: () => {
-              Alert.alert('Coming Soon', 'Voice calling will be available in the next update.');
+              setShowContactSelector(false);
               setSelectedContacts(new Set());
+              (navigation as any).navigate('CallScreen', {
+                contactId: selectedList[0],
+                contactName: contactName,
+                callType: 'audio',
+                isIncoming: false,
+                isGroupCall: isGroupCall,
+              });
             }
           },
           { 
             text: 'Video Call', 
             onPress: () => {
-              Alert.alert('Coming Soon', 'Video calling will be available in the next update.');
+              setShowContactSelector(false);
               setSelectedContacts(new Set());
+              (navigation as any).navigate('CallScreen', {
+                contactId: selectedList[0],
+                contactName: contactName,
+                callType: 'video',
+                isIncoming: false,
+                isGroupCall: isGroupCall,
+              });
             }
           },
         ]
       );
     }
-  }, [selectedContacts]);
+  }, [selectedContacts, contacts, navigation]);
 
   const handleCloseSelector = () => {
     setShowContactSelector(false);
