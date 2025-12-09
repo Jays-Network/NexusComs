@@ -345,13 +345,20 @@ export default function ChatRoomScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const groupId = channelId.replace('group-', 'group_');
-              await sendTextMessage(
-                groupId,
+              console.log(`[ChatRoom] Sending emergency alert to ${receiverType}: ${channelId}`);
+              const sentMessage = await sendTextMessage(
+                channelId,
                 'EMERGENCY ALERT - Immediate assistance needed!',
-                'group',
+                receiverType,
                 { emergency: true }
               );
+              
+              const transformed = transformMessage(sentMessage);
+              setMessages(prev => [...prev, transformed]);
+              
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }, 100);
             } catch (error: any) {
               Alert.alert('Error', 'Failed to send emergency alert');
               console.error('Emergency alert error:', error);
@@ -360,7 +367,7 @@ export default function ChatRoomScreen() {
         },
       ]
     );
-  }, [channelId]);
+  }, [channelId, receiverType, transformMessage]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || isSending) return;
