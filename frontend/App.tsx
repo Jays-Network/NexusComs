@@ -1,5 +1,5 @@
 import "react-native-gesture-handler";
-import { useEffect, useCallback, useRef, useState } from "react";
+import React, { useEffect, useCallback, useState, createRef } from "react";
 import { StyleSheet, View, Text, Alert, Platform } from "react-native";
 import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -41,7 +41,7 @@ Notifications.setNotificationHandler({
 
 const Stack = createNativeStackNavigator();
 
-const navigationRef = useRef<NavigationContainerRef<any>>(null);
+const navigationRef = createRef<NavigationContainerRef<any>>();
 
 function AppContent() {
   const { user, cometChatUser, isLoading, isInitialized } = useCometChatAuth();
