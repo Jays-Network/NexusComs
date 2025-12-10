@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { View, StyleSheet, Image, Pressable, Modal, FlatList, Text, Alert, Platform } from "react-native";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing } from "@/constants/theme";
@@ -12,17 +12,28 @@ interface MenuOption {
   icon: keyof typeof Feather.glyphMap;
 }
 
-export function AppHeader() {
+interface AppHeaderProps {
+  tabName?: string;
+}
+
+export function AppHeader({ tabName }: AppHeaderProps) {
   const { theme } = useTheme();
   const { user } = useCometChatAuth();
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
+  const route = useRoute();
 
-  const currentTabName = useNavigationState((state) => {
-    if (!state || !state.routes) return 'ChatsTab';
-    const route = state.routes[state.index];
-    return route?.name || 'ChatsTab';
-  });
+  const currentTabName = useMemo(() => {
+    if (tabName) return tabName;
+    const routeName = route.name || '';
+    if (routeName.includes('DirectChat') || routeName === 'ChatsTab') return 'ChatsTab';
+    if (routeName.includes('Group') || routeName === 'GroupsTab') return 'GroupsTab';
+    if (routeName.includes('Emergency') || routeName.includes('Alert') || routeName === 'AlertsTab') return 'AlertsTab';
+    if (routeName.includes('Contact') || routeName === 'ContactsTab') return 'ContactsTab';
+    if (routeName.includes('CallLog') || routeName.includes('Call') || routeName === 'CallLogTab') return 'CallLogTab';
+    if (routeName.includes('Setting') || routeName === 'SettingsTab') return 'SettingsTab';
+    return 'ChatsTab';
+  }, [tabName, route.name]);
 
   const menuOptions = useMemo((): MenuOption[] => {
     const baseOptions: MenuOption[] = [];

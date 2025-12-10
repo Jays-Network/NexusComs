@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView, Linking } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
@@ -555,7 +555,17 @@ export default function ChatRoomScreen() {
         );
       case 'file':
         return (
-          <View style={styles.attachmentContainer}>
+          <Pressable 
+            style={styles.attachmentContainer}
+            onPress={() => {
+              if (attachment.url) {
+                Linking.openURL(attachment.url).catch(err => {
+                  console.error('[ChatRoom] Failed to open file:', err);
+                  Alert.alert('Error', 'Could not open file');
+                });
+              }
+            }}
+          >
             <View style={[styles.fileContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
               <Feather name="file-text" size={24} color={iconColor} />
               <View style={styles.fileInfo}>
@@ -568,12 +578,28 @@ export default function ChatRoomScreen() {
                   </Text>
                 )}
               </View>
+              <Feather name="download" size={18} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
-          </View>
+          </Pressable>
         );
       case 'location':
         return (
-          <View style={styles.attachmentContainer}>
+          <Pressable 
+            style={styles.attachmentContainer}
+            onPress={() => {
+              if (attachment.latitude && attachment.longitude) {
+                const url = Platform.select({
+                  ios: `maps://app?daddr=${attachment.latitude},${attachment.longitude}`,
+                  android: `geo:${attachment.latitude},${attachment.longitude}?q=${attachment.latitude},${attachment.longitude}`,
+                  default: `https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`
+                });
+                Linking.openURL(url).catch(err => {
+                  console.error('[ChatRoom] Failed to open map:', err);
+                  Linking.openURL(`https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`);
+                });
+              }
+            }}
+          >
             <View style={[styles.locationContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
               <Feather name="map-pin" size={24} color="#16A34A" />
               <View style={styles.locationInfo}>
@@ -582,13 +608,29 @@ export default function ChatRoomScreen() {
                   {attachment.latitude?.toFixed(4)}, {attachment.longitude?.toFixed(4)}
                 </Text>
               </View>
+              <Feather name="external-link" size={16} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
-          </View>
+          </Pressable>
         );
       case 'liveLocation':
         const isExpired = attachment.expiresAt ? new Date(attachment.expiresAt) < new Date() : false;
         return (
-          <View style={styles.attachmentContainer}>
+          <Pressable 
+            style={styles.attachmentContainer}
+            onPress={() => {
+              if (attachment.latitude && attachment.longitude) {
+                const url = Platform.select({
+                  ios: `maps://app?daddr=${attachment.latitude},${attachment.longitude}`,
+                  android: `geo:${attachment.latitude},${attachment.longitude}?q=${attachment.latitude},${attachment.longitude}`,
+                  default: `https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`
+                });
+                Linking.openURL(url).catch(err => {
+                  console.error('[ChatRoom] Failed to open map:', err);
+                  Linking.openURL(`https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`);
+                });
+              }
+            }}
+          >
             <View style={[styles.locationContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
               <View style={styles.liveLocationIcon}>
                 <Feather name="navigation" size={20} color="#FFFFFF" />
@@ -613,8 +655,9 @@ export default function ChatRoomScreen() {
                   </Text>
                 )}
               </View>
+              <Feather name="external-link" size={16} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
-          </View>
+          </Pressable>
         );
       case 'contact':
         return (
@@ -984,6 +1027,7 @@ const styles = StyleSheet.create({
   },
   attachmentContainer: {
     marginBottom: Spacing.sm,
+    minWidth: 200,
   },
   mediaPlaceholder: {
     width: 180,
@@ -1009,9 +1053,11 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     gap: Spacing.sm,
+    minWidth: 180,
   },
   fileInfo: {
     flex: 1,
+    minWidth: 120,
   },
   fileName: {
     fontSize: 14,
@@ -1027,9 +1073,11 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     gap: Spacing.sm,
+    minWidth: 180,
   },
   locationInfo: {
     flex: 1,
+    minWidth: 120,
   },
   locationLabel: {
     fontSize: 14,

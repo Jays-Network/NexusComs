@@ -920,6 +920,7 @@ app.get("/api/users/available", sessionMiddleware, async (req, res) => {
 // IMPORTANT: This must be BEFORE /api/users/:id or it will be caught by the wildcard
 app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
   try {
+    // Get users with location tracking enabled
     const { data: users, error } = await supabase
       .from("users")
       .select("id, username, email, location_tracking, last_device, updated_at")
@@ -931,7 +932,44 @@ app.get("/api/users/tracked", sessionMiddleware, async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    res.json(users || []);
+    if (!users || users.length === 0) {
+      return res.json([]);
+    }
+
+    // Get the latest location for each user from user_locations table
+    const userIds = users.map(u => u.id);
+    const { data: locations, error: locError } = await supabase
+      .from("user_locations")
+      .select("user_id, latitude, longitude, accuracy, created_at")
+      .in("user_id", userIds)
+      .order("created_at", { ascending: false });
+
+    if (locError) {
+      console.error("Error fetching user locations:", locError);
+      // Return users without location data if location fetch fails
+      return res.json(users);
+    }
+
+    // Create a map of latest location per user
+    const latestLocationByUser = {};
+    for (const loc of locations || []) {
+      if (!latestLocationByUser[loc.user_id]) {
+        latestLocationByUser[loc.user_id] = loc;
+      }
+    }
+
+    // Merge location data into users
+    const usersWithLocation = users.map(user => {
+      const location = latestLocationByUser[user.id];
+      return {
+        ...user,
+        last_latitude: location?.latitude || null,
+        last_longitude: location?.longitude || null,
+        last_location_update: location?.created_at || null
+      };
+    });
+
+    res.json(usersWithLocation);
   } catch (error) {
     console.error("Error fetching tracked users:", error);
     res.status(500).json({ error: "Failed to fetch tracked users" });

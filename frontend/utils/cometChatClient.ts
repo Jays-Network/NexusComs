@@ -742,6 +742,157 @@ export const sendCustomMessage = async (
   }
 };
 
+// ============= CALLING FUNCTIONS =============
+
+export const initiateCall = async (
+  receiverId: string,
+  callType: 'audio' | 'video',
+  receiverType: 'user' | 'group' = 'user'
+): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    const callTypeValue = callType === 'video' 
+      ? CometChat.CALL_TYPE.VIDEO 
+      : CometChat.CALL_TYPE.AUDIO;
+    
+    const receiverTypeValue = receiverType === 'group'
+      ? CometChat.RECEIVER_TYPE.GROUP
+      : CometChat.RECEIVER_TYPE.USER;
+
+    const call = new CometChat.Call(receiverId, callTypeValue, receiverTypeValue);
+    
+    console.log(`[CometChat] Initiating ${callType} call to ${receiverId}`);
+    const outgoingCall = await CometChat.initiateCall(call);
+    console.log('[CometChat] Call initiated successfully:', outgoingCall.getSessionId());
+    return outgoingCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to initiate call:', error);
+    throw error;
+  }
+};
+
+export const acceptCall = async (sessionId: string): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    console.log('[CometChat] Accepting call:', sessionId);
+    const acceptedCall = await CometChat.acceptCall(sessionId);
+    console.log('[CometChat] Call accepted successfully');
+    return acceptedCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to accept call:', error);
+    throw error;
+  }
+};
+
+export const rejectCall = async (sessionId: string, status: 'rejected' | 'cancelled' | 'busy' = 'rejected'): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    let statusValue;
+    switch (status) {
+      case 'cancelled':
+        statusValue = CometChat.CALL_STATUS.CANCELLED;
+        break;
+      case 'busy':
+        statusValue = CometChat.CALL_STATUS.BUSY;
+        break;
+      default:
+        statusValue = CometChat.CALL_STATUS.REJECTED;
+    }
+
+    console.log('[CometChat] Rejecting call:', sessionId, 'with status:', status);
+    const rejectedCall = await CometChat.rejectCall(sessionId, statusValue);
+    console.log('[CometChat] Call rejected successfully');
+    return rejectedCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to reject call:', error);
+    throw error;
+  }
+};
+
+export const endCall = async (sessionId: string): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    console.log('[CometChat] Ending call:', sessionId);
+    const endedCall = await CometChat.endCall(sessionId);
+    console.log('[CometChat] Call ended successfully');
+    return endedCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to end call:', error);
+    throw error;
+  }
+};
+
+export const addCallListener = (
+  listenerId: string,
+  callbacks: {
+    onIncomingCallReceived?: (call: any) => void;
+    onOutgoingCallAccepted?: (call: any) => void;
+    onOutgoingCallRejected?: (call: any) => void;
+    onIncomingCallCancelled?: (call: any) => void;
+    onCallEnded?: (call: any) => void;
+  }
+): void => {
+  if (!CometChat) {
+    console.error('[CometChat] SDK not loaded, cannot add call listener');
+    return;
+  }
+
+  console.log('[CometChat] Adding call listener:', listenerId);
+  
+  CometChat.addCallListener(
+    listenerId,
+    new CometChat.CallListener({
+      onIncomingCallReceived: (call: any) => {
+        console.log('[CometChat] Incoming call received:', call.getSessionId());
+        callbacks.onIncomingCallReceived?.(call);
+      },
+      onOutgoingCallAccepted: (call: any) => {
+        console.log('[CometChat] Outgoing call accepted:', call.getSessionId());
+        callbacks.onOutgoingCallAccepted?.(call);
+      },
+      onOutgoingCallRejected: (call: any) => {
+        console.log('[CometChat] Outgoing call rejected:', call.getSessionId());
+        callbacks.onOutgoingCallRejected?.(call);
+      },
+      onIncomingCallCancelled: (call: any) => {
+        console.log('[CometChat] Incoming call cancelled:', call.getSessionId());
+        callbacks.onIncomingCallCancelled?.(call);
+      },
+      onCallEnded: (call: any) => {
+        console.log('[CometChat] Call ended:', call.getSessionId());
+        callbacks.onCallEnded?.(call);
+      },
+    })
+  );
+};
+
+export const removeCallListener = (listenerId: string): void => {
+  if (!CometChat) {
+    return;
+  }
+  console.log('[CometChat] Removing call listener:', listenerId);
+  CometChat.removeCallListener(listenerId);
+};
+
+export const getActiveCall = (): any => {
+  if (!CometChat) {
+    return null;
+  }
+  return CometChat.getActiveCall?.() || null;
+};
+
 export {
   CometChat,
   COMETCHAT_APP_ID,
