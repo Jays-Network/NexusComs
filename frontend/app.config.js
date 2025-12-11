@@ -6,7 +6,7 @@ export default ({ config }) => ({
   slug: "worldrisk",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/world-risk-logo.png",
+  icon: "./assets/images/app-icon.png",
   scheme: "worldrisk",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
@@ -25,7 +25,7 @@ export default ({ config }) => ({
     package: "com.worldrisk.app",
     adaptiveIcon: {
       backgroundColor: "#000000",
-      foregroundImage: "./assets/images/world-risk-logo.png"
+      foregroundImage: "./assets/images/app-icon.png"
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
@@ -65,7 +65,7 @@ export default ({ config }) => ({
     [
       "expo-notifications",
       {
-        icon: "./assets/images/world-risk-logo.png",
+        icon: "./assets/images/app-icon.png",
         color: "#FFFFFF",
         sounds: [
           "./assets/sounds/emergency.wav"
