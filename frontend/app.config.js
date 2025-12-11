@@ -79,7 +79,10 @@ export default ({ config }) => ({
         locationWhenInUsePermission: "WorldRisk Nexus Coms needs access to your location to share it with your group members."
       }
     ],
-    "expo-asset"
+    "expo-asset",
+    "expo-audio",
+    "expo-secure-store",
+    "expo-video"
   ],
   experiments: {
     reactCompiler: true
