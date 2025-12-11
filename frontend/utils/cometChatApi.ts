@@ -228,3 +228,101 @@ export async function createGroup(
     throw error;
   }
 }
+
+// ============= EMERGENCY ALERT API =============
+
+export interface EmergencyTriggerRequest {
+  message: string;
+  location?: string;
+  source_group_id?: string;
+  source_group_name?: string;
+}
+
+export interface EmergencyTriggerResponse {
+  success: boolean;
+  emergency_group_id: string;
+  emergency_group_name: string;
+  members_added: number;
+  push_notifications_sent: number;
+  database_record_id?: number;
+}
+
+export async function triggerEmergencyAlert(
+  authToken: string,
+  data: EmergencyTriggerRequest
+): Promise<EmergencyTriggerResponse> {
+  try {
+    console.log('[CometChatApi] Triggering emergency alert:', data);
+    const response = await fetch(`${API_URL}/api/emergency/trigger`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to trigger emergency alert');
+    }
+
+    const result = await response.json();
+    console.log('[CometChatApi] Emergency alert triggered:', result);
+    return result;
+  } catch (error) {
+    console.warn('[CometChatApi] Trigger emergency failed:', error);
+    throw error;
+  }
+}
+
+export async function registerPushToken(
+  authToken: string,
+  pushToken: string
+): Promise<{ success: boolean }> {
+  try {
+    console.log('[CometChatApi] Registering push token');
+    const response = await fetch(`${API_URL}/api/push/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ push_token: pushToken }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to register push token');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.warn('[CometChatApi] Register push token failed:', error);
+    throw error;
+  }
+}
+
+export async function getActiveEmergencies(
+  authToken: string
+): Promise<{ emergencies: any[] }> {
+  try {
+    const response = await fetch(`${API_URL}/api/emergency/active`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch emergencies');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.warn('[CometChatApi] Fetch emergencies failed:', error);
+    throw error;
+  }
+}
+
+export { API_URL };

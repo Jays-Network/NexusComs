@@ -19,6 +19,8 @@ import {
   markAsRead,
   CometChat
 } from '@/utils/cometChatClient';
+import { triggerEmergencyAlert as triggerEmergencyApi } from '@/utils/cometChatApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'> & {
   params: {
@@ -337,7 +339,7 @@ export default function ChatRoomScreen() {
   const sendEmergencyAlert = useCallback(() => {
     Alert.alert(
       'Send Emergency Alert',
-      'This will send an emergency notification to all members of this channel.',
+      'This will send an emergency notification to all team members with emergency access and create a dedicated emergency response group.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -345,7 +347,32 @@ export default function ChatRoomScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log(`[ChatRoom] Sending emergency alert to ${receiverType}: ${channelId}`);
+              console.log(`[ChatRoom] Triggering emergency alert from ${receiverType}: ${channelId}`);
+              
+              // Get auth token for API call
+              const authToken = await AsyncStorage.getItem('authToken');
+              
+              if (authToken) {
+                // Call new emergency API - creates group, sends push notifications
+                const emergencyResult = await triggerEmergencyApi(authToken, {
+                  message: 'EMERGENCY ALERT - Immediate assistance needed!',
+                  source_group_id: channelId,
+                  source_group_name: channelName,
+                });
+                
+                console.log('[ChatRoom] Emergency API result:', emergencyResult);
+                
+                // Show success with navigation option
+                Alert.alert(
+                  'Emergency Alert Sent',
+                  `Alert sent to ${emergencyResult.members_added} team members.\n\nEmergency group "${emergencyResult.emergency_group_name}" has been created.`,
+                  [
+                    { text: 'OK', style: 'default' },
+                  ]
+                );
+              }
+              
+              // Also send emergency message to current channel for visibility
               const sentMessage = await sendTextMessage(
                 channelId,
                 'EMERGENCY ALERT - Immediate assistance needed!',
@@ -367,7 +394,7 @@ export default function ChatRoomScreen() {
         },
       ]
     );
-  }, [channelId, receiverType, transformMessage]);
+  }, [channelId, channelName, receiverType, transformMessage]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || isSending) return;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, CommonActions } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
@@ -18,19 +18,29 @@ interface EmergencyMessage {
   senderName: string;
   createdAt: string;
   groupName?: string;
+  groupId?: string;
+  conversationType?: 'group' | 'user';
+  conversationId?: string;
 }
 
-function EmergencyCard({ message }: { message: EmergencyMessage }) {
+interface EmergencyCardProps {
+  message: EmergencyMessage;
+  onPress: () => void;
+}
+
+function EmergencyCard({ message, onPress }: EmergencyCardProps) {
   const { theme } = useTheme();
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
         styles.messageCard,
         {
           backgroundColor: theme.backgroundSecondary,
           borderColor: theme.emergency,
-          borderWidth: 2
+          borderWidth: 2,
+          opacity: pressed ? 0.8 : 1,
         }
       ]}
     >
@@ -43,6 +53,8 @@ function EmergencyCard({ message }: { message: EmergencyMessage }) {
         <ThemedText style={[styles.senderName, { color: theme.emergency }]}>
           {message.senderName}
         </ThemedText>
+        <View style={{ flex: 1 }} />
+        <Feather name="chevron-right" size={20} color={theme.textSecondary} />
       </View>
 
       <ThemedText style={styles.messageContent}>
@@ -55,10 +67,15 @@ function EmergencyCard({ message }: { message: EmergencyMessage }) {
         </ThemedText>
       ) : null}
 
-      <ThemedText style={styles.timestamp}>
-        {message.createdAt ? new Date(message.createdAt).toLocaleString() : ''}
-      </ThemedText>
-    </View>
+      <View style={styles.cardFooter}>
+        <ThemedText style={styles.timestamp}>
+          {message.createdAt ? new Date(message.createdAt).toLocaleString() : ''}
+        </ThemedText>
+        <ThemedText style={[styles.tapHint, { color: theme.primary }]}>
+          Tap to open chat
+        </ThemedText>
+      </View>
+    </Pressable>
   );
 }
 
@@ -68,6 +85,59 @@ export default function EmergencyListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const { theme } = useTheme();
   const { cometChatUser, isInitialized } = useCometChatAuth();
+  const navigation = useNavigation<any>();
+
+  const handleEmergencyCardPress = useCallback((message: EmergencyMessage) => {
+    console.log('[EmergencyList] Card pressed:', message);
+    
+    // Navigate to the chat where the emergency was sent
+    if (message.conversationType === 'group' && message.groupId) {
+      // Navigate to group chat
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Chats',
+          params: {
+            screen: 'ChatRoom',
+            params: {
+              channelId: message.groupId,
+              channelName: message.groupName || 'Emergency Group',
+              isDirectChat: false,
+            },
+          },
+        })
+      );
+    } else if (message.conversationType === 'user' && message.conversationId) {
+      // Navigate to direct message
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Chats',
+          params: {
+            screen: 'ChatRoom',
+            params: {
+              channelId: message.conversationId,
+              channelName: message.senderName,
+              isDirectChat: true,
+            },
+          },
+        })
+      );
+    } else if (message.groupId) {
+      // Fallback: navigate to group
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Chats',
+          params: {
+            screen: 'ChatRoom',
+            params: {
+              channelId: message.groupId,
+              channelName: message.groupName || 'Emergency',
+              isDirectChat: false,
+            },
+          },
+        })
+      );
+    }
+  }, [navigation]);
 
   const loadEmergencyMessages = useCallback(async () => {
     if (!isInitialized || !cometChatUser) {
@@ -103,6 +173,9 @@ export default function EmergencyListScreen() {
                   senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
                   createdAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000).toISOString(),
                   groupName: groupName,
+                  groupId: guid,
+                  conversationType: 'group',
+                  conversationId: guid,
                 });
               }
             }
@@ -143,6 +216,8 @@ export default function EmergencyListScreen() {
                       senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
                       createdAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000).toISOString(),
                       groupName: `Chat with ${userName}`,
+                      conversationType: 'user',
+                      conversationId: userId,
                     });
                   }
                 }
@@ -239,7 +314,11 @@ export default function EmergencyListScreen() {
           ) : (
             <View style={styles.messagesList}>
               {messages.map((message) => (
-                <EmergencyCard key={message.id} message={message} />
+                <EmergencyCard 
+                  key={message.id} 
+                  message={message} 
+                  onPress={() => handleEmergencyCardPress(message)}
+                />
               ))}
             </View>
           )}
@@ -323,5 +402,15 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.6)',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  tapHint: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

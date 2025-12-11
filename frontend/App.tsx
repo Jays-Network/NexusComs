@@ -26,6 +26,8 @@ import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
 import { startLocationTracking, stopLocationTracking } from "@/utils/locationTracker";
 import { addCallListener, removeCallListener, rejectCall } from "@/utils/cometChatClient";
+import { registerPushToken } from "@/utils/cometChatApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -140,6 +142,9 @@ function AppContent() {
       
       // Request location permission on first login for tracking
       requestLocationPermission();
+      
+      // Register push notification token for emergency alerts
+      registerPushNotificationToken();
     } else {
       console.log('[App.tsx] Stopping Supabase sync and location tracking (no user)');
       stopSync();
@@ -151,11 +156,57 @@ function AppContent() {
     };
   }, [user]);
 
+  async function registerPushNotificationToken() {
+    try {
+      // Skip on web - push tokens are mobile only
+      if (Platform.OS === 'web') {
+        console.log('[App.tsx] Skipping push token registration on web');
+        return;
+      }
+
+      console.log('[App.tsx] Registering push notification token...');
+      
+      // Request notification permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        console.log('[App.tsx] Push notification permission denied');
+        return;
+      }
+      
+      // Get push token
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
+      });
+      const pushToken = tokenData.data;
+      
+      console.log('[App.tsx] Got push token:', pushToken);
+      
+      // Get auth token and register with backend
+      const authToken = await AsyncStorage.getItem('authToken');
+      if (authToken && pushToken) {
+        try {
+          await registerPushToken(authToken, pushToken);
+          console.log('[App.tsx] Push token registered with backend');
+        } catch (err) {
+          console.warn('[App.tsx] Failed to register push token with backend:', err);
+        }
+      }
+    } catch (error) {
+      console.error('[App.tsx] Error registering push token:', error);
+    }
+  }
+
   async function requestLocationPermission() {
     try {
       const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const token = await AsyncStorage.getItem('@session_token');
       
       // Guard: Skip backend updates if no auth token available
