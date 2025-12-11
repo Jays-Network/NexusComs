@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { View, StyleSheet, Image, Pressable, Modal, FlatList, Text, Alert, Platform } from "react-native";
+import { View, StyleSheet, Image, Pressable, Modal, Text, Alert, Platform } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
@@ -139,24 +139,20 @@ export function AppHeader({ tabName }: AppHeaderProps) {
           onPress={() => setMenuVisible(false)}
         >
           <View style={[styles.menuContainer, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
-            <FlatList
-              data={menuOptions}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item, index }) => (
-                <Pressable
-                  onPress={() => handleMenuOption(item.id)}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    pressed && { opacity: 0.7 },
-                    index !== menuOptions.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 },
-                  ]}
-                >
-                  <Feather name={item.icon as any} size={18} color={theme.text} />
-                  <Text style={[styles.menuLabel, { color: theme.text }]}>{item.label}</Text>
-                </Pressable>
-              )}
-            />
+            {menuOptions.map((item, index) => (
+              <Pressable
+                key={item.id}
+                onPress={() => handleMenuOption(item.id)}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && { opacity: 0.7 },
+                  index !== menuOptions.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 },
+                ]}
+              >
+                <Feather name={item.icon as any} size={18} color={theme.text} />
+                <Text style={[styles.menuLabel, { color: theme.text }]}>{item.label}</Text>
+              </Pressable>
+            ))}
           </View>
         </Pressable>
       </Modal>
@@ -205,7 +201,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
-    minWidth: 150,
   },
   menuItem: {
     flexDirection: "row",
