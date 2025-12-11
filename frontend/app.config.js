@@ -57,7 +57,7 @@ export default ({ config }) => ({
           minSdkVersion: 24
         },
         ios: {
-          deploymentTarget: "13.4"
+          deploymentTarget: "15.1"
         }
       }
     ],
@@ -100,6 +100,7 @@ export default ({ config }) => ({
     reactCompiler: true
   },
   extra: {
+    apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://NexusComs.replit.app",
     eas: {
       projectId: process.env.EAS_PROJECT_ID || "46607011-72f5-4fd2-9b2a-e673cf3d7380",
     }

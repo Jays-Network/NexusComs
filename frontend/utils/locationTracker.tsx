@@ -1,5 +1,7 @@
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 const LOCATION_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 let locationInterval: NodeJS.Timeout | null = null;
@@ -12,15 +14,31 @@ interface LocationUpdate {
   timestamp: number;
 }
 
+function getApiUrl(): string {
+  const configUrl = Constants.expoConfig?.extra?.apiUrl;
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  const fallbackUrl = 'https://NexusComs.replit.app';
+  
+  const url = configUrl || envUrl || fallbackUrl;
+  console.log('[LocationTracker] Using API URL:', url);
+  return url;
+}
+
 async function sendLocationToServer(userId: string, location: LocationUpdate): Promise<boolean> {
   try {
-    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+    const API_URL = getApiUrl();
     const token = await AsyncStorage.getItem('@session_token');
     
     if (!token) {
       console.log('[LocationTracker] No auth token - skipping location update');
       return false;
     }
+
+    const deviceInfo = `${Platform.OS} ${Platform.Version}`;
+
+    console.log('[LocationTracker] Sending location update for user:', userId);
+    console.log('[LocationTracker] Coordinates:', location.latitude, location.longitude);
+    console.log('[LocationTracker] Device:', deviceInfo);
 
     const response = await fetch(`${API_URL}/api/location/update`, {
       method: 'POST',
@@ -33,7 +51,8 @@ async function sendLocationToServer(userId: string, location: LocationUpdate): P
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
-        timestamp: location.timestamp
+        timestamp: location.timestamp,
+        device_info: deviceInfo
       })
     });
 
@@ -41,7 +60,8 @@ async function sendLocationToServer(userId: string, location: LocationUpdate): P
       console.log('[LocationTracker] Location updated successfully');
       return true;
     } else {
-      console.warn(`[LocationTracker] Failed to update location: ${response.status}`);
+      const errorText = await response.text();
+      console.warn(`[LocationTracker] Failed to update location: ${response.status}`, errorText);
       return false;
     }
   } catch (error) {
@@ -52,15 +72,21 @@ async function sendLocationToServer(userId: string, location: LocationUpdate): P
 
 async function getCurrentLocationAndSend(userId: string): Promise<void> {
   try {
+    console.log('[LocationTracker] Getting current location...');
+    
     const { status } = await Location.getForegroundPermissionsAsync();
     if (status !== 'granted') {
-      console.log('[LocationTracker] Location permission not granted');
+      console.log('[LocationTracker] Location permission not granted - status:', status);
       return;
     }
 
+    console.log('[LocationTracker] Location permission granted, fetching position...');
+    
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced
     });
+
+    console.log('[LocationTracker] Got location:', location.coords.latitude, location.coords.longitude);
 
     const locationUpdate: LocationUpdate = {
       latitude: location.coords.latitude,
@@ -81,7 +107,7 @@ export function startLocationTracking(userId: string): void {
     return;
   }
 
-  console.log('[LocationTracker] Starting location tracking (5 min interval)');
+  console.log('[LocationTracker] Starting location tracking (5 min interval) for user:', userId);
   isTracking = true;
 
   // Send initial location immediately
@@ -104,4 +130,30 @@ export function stopLocationTracking(): void {
 
 export function isLocationTrackingActive(): boolean {
   return isTracking;
+}
+
+export async function sendLocationOnce(userId: string): Promise<boolean> {
+  try {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('[LocationTracker] Location permission not granted for single update');
+      return false;
+    }
+
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High
+    });
+
+    const locationUpdate: LocationUpdate = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      accuracy: location.coords.accuracy,
+      timestamp: location.timestamp
+    };
+
+    return await sendLocationToServer(userId, locationUpdate);
+  } catch (error) {
+    console.error('[LocationTracker] Error in sendLocationOnce:', error);
+    return false;
+  }
 }

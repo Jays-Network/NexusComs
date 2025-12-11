@@ -1548,21 +1548,34 @@ app.get("/api/billing-plans/:plan/can-access/:feature", async (req, res) => {
 // Update user location (from mobile app) - stores in user_locations table
 app.post("/api/location/update", sessionMiddleware, async (req, res) => {
   try {
-    const { user_id, latitude, longitude, accuracy, timestamp } = req.body;
+    const { user_id, latitude, longitude, accuracy, timestamp, device_info } = req.body;
+
+    console.log(`[Location] Received location update request from user ${user_id}`);
+    console.log(`[Location] Coordinates: ${latitude}, ${longitude}`);
+    console.log(`[Location] Device: ${device_info || 'unknown'}`);
 
     // Verify user can only update their own location
     if (req.user.id !== user_id) {
+      console.log(`[Location] Auth mismatch: req.user.id=${req.user.id} !== user_id=${user_id}`);
       return res.status(403).json({ error: "Not authorized to update this user's location" });
     }
 
-    // Check if user has location tracking enabled
+    // Check if user has location tracking enabled (default to true if column doesn't exist)
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("location_tracking")
       .eq("id", user_id)
       .single();
 
-    if (userError || !userData?.location_tracking) {
+    if (userError) {
+      console.log(`[Location] Error checking user tracking status:`, userError);
+    }
+
+    // Default to enabled if column doesn't exist or is null
+    const trackingEnabled = userData?.location_tracking !== false;
+    
+    if (!trackingEnabled) {
+      console.log(`[Location] Tracking disabled for user ${user_id}`);
       return res.status(403).json({ error: "Location tracking is disabled" });
     }
 
@@ -1582,14 +1595,27 @@ app.post("/api/location/update", sessionMiddleware, async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Error inserting location:", error);
+      console.error("[Location] Error inserting location:", error);
       return res.status(500).json({ error: error.message });
     }
 
-    console.log(`[Location] Updated location for user ${user_id}`);
+    // Also update device info on user if provided
+    if (device_info) {
+      await supabase
+        .from("users")
+        .update({ 
+          device_info,
+          last_latitude: latitude,
+          last_longitude: longitude,
+          last_location_update: new Date().toISOString()
+        })
+        .eq("id", user_id);
+    }
+
+    console.log(`[Location] Successfully updated location for user ${user_id}`);
     res.json({ message: "Location updated", location: data });
   } catch (error) {
-    console.error("Error updating user location:", error);
+    console.error("[Location] Error updating user location:", error);
     res.status(500).json({ error: "Failed to update location" });
   }
 });

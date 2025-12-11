@@ -29,6 +29,7 @@
     "expo": "~54.0.28",
     "expo-build-properties": "^1.0.10",
     "expo-camera": "^17.0.10",
+    "expo-device": "^8.0.10",
     "expo-image-picker": "~17.0.10",
     "expo-server-sdk": "^4.0.0",
     "express": "^5.2.1",

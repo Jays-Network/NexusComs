@@ -11,7 +11,9 @@ import {
 import { getCometChatToken, loginWithUsernamePassword } from './cometChatApi';
 
 interface User {
-  id: string;
+  id: string;           // Supabase UUID for backend API calls
+  cometChatId: string;  // CometChat UID for chat operations
+  email: string;        // Email for CometChat token requests
   name: string;
   image?: string;
 }
@@ -72,7 +74,32 @@ export const CometChatAuthProvider = ({ children }: { children: ReactNode }) => 
         console.log('[CometChatAuth] Restoring user session...');
         const userData = JSON.parse(storedUser);
         console.log('[CometChatAuth] Restoring user:', userData.name);
-        await loginUser(userData.id, userData.name, userData.image);
+        
+        // Check if this is a valid UUID (new format) or CometChat UID (old format)
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userData.id);
+        
+        if (isUUID && userData.cometChatId && userData.email) {
+          // New format with all required fields - restore user state directly
+          console.log('[CometChatAuth] Restoring user with new format (UUID + CometChat ID + Email)');
+          setUser(userData);
+          
+          // Try to log into CometChat if initialized
+          if (isInitialized) {
+            try {
+              const tokenResponse = await getCometChatToken(userData.email, userData.name, userData.image);
+              const ccUser = await loginCometChatUser(userData.cometChatId, tokenResponse.authToken);
+              setCometChatUser(ccUser);
+              console.log('[CometChatAuth] CometChat restored successfully');
+            } catch (e) {
+              console.warn('[CometChatAuth] Could not restore CometChat session:', e);
+            }
+          }
+        } else {
+          // Old format - require re-login to get proper IDs
+          console.log('[CometChatAuth] Legacy user data format detected - user will need to re-login');
+          await AsyncStorage.removeItem(STORAGE_KEY);
+          await AsyncStorage.removeItem('@session_token');
+        }
       } else {
         console.log('[CometChatAuth] No stored user - user will need to login');
       }
@@ -84,15 +111,16 @@ export const CometChatAuthProvider = ({ children }: { children: ReactNode }) => 
     }
   };
 
-  const loginUser = async (userId: string, userName: string, userImage?: string) => {
+  const loginUser = async (supabaseUserId: string, userEmail: string, userName: string, userImage?: string) => {
     console.log('[CometChatAuth] loginUser() called for:', userName);
+    console.log('[CometChatAuth] Supabase user ID:', supabaseUserId);
     try {
-      let cometchatUserId = userId;
+      let cometchatUserId = userEmail.replace(/[@.]/g, '_').toLowerCase();
       
       // Get CometChat token from backend
       console.log('[CometChatAuth] Requesting CometChat token...');
       try {
-        const tokenResponse = await getCometChatToken(userId, userName, userImage);
+        const tokenResponse = await getCometChatToken(userEmail, userName, userImage);
         console.log('[CometChatAuth] Got CometChat token for user:', tokenResponse.userId);
         
         cometchatUserId = tokenResponse.userId;
@@ -114,12 +142,15 @@ export const CometChatAuthProvider = ({ children }: { children: ReactNode }) => 
       }
       
       const userData: User = {
-        id: cometchatUserId,
+        id: supabaseUserId,           // Supabase UUID for backend API calls
+        cometChatId: cometchatUserId, // CometChat UID for chat operations
+        email: userEmail,             // Email for CometChat token requests
         name: userName,
         image: userImage,
       };
       
-      console.log('[CometChatAuth] Saving user to state with ID:', cometchatUserId);
+      console.log('[CometChatAuth] Saving user to state with Supabase ID:', supabaseUserId);
+      console.log('[CometChatAuth] CometChat ID:', cometchatUserId);
       setUser(userData);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
@@ -136,13 +167,14 @@ export const CometChatAuthProvider = ({ children }: { children: ReactNode }) => 
       console.log('[CometChatAuth] Authenticating with backend...');
       const { token: sessionToken, user: backendUser } = await loginWithUsernamePassword(username, password);
       console.log('[CometChatAuth] Backend authentication successful for:', backendUser.username);
+      console.log('[CometChatAuth] Supabase user ID:', backendUser.id);
       
       // Store session token for API calls
       await AsyncStorage.setItem('@session_token', sessionToken);
       setAuthToken(sessionToken);
       
-      // Pass the email to create a proper CometChat UID
-      await loginUser(backendUser.email, backendUser.username);
+      // Pass the Supabase ID and email for proper user creation
+      await loginUser(backendUser.id, backendUser.email, backendUser.username);
     } finally {
       setIsLoading(false);
     }
