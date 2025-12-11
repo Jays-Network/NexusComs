@@ -161,17 +161,29 @@ const COMETCHAT_CONFIG_VALID = isValidConfig(COMETCHAT_APP_ID, COMETCHAT_AUTH_KE
 console.log('[CometChat] Config validation result:', COMETCHAT_CONFIG_VALID);
 
 let CometChat: any = null;
+let CometChatCalls: any = null;
 let isInitialized = false;
+let isCallsInitialized = false;
 
 if (COMETCHAT_CONFIG_VALID) {
   try {
     const cometChatModule = require('@cometchat/chat-sdk-react-native');
     CometChat = cometChatModule.CometChat;
-    console.log('[CometChat] SDK module loaded');
+    console.log('[CometChat] Chat SDK module loaded');
     loadMessageQueue();
   } catch (e) {
-    console.error('[CometChat] Failed to load CometChat SDK:', e);
+    console.error('[CometChat] Failed to load CometChat Chat SDK:', e);
     CometChat = null;
+  }
+  
+  try {
+    const cometChatCallsModule = require('@cometchat/calls-sdk-react-native');
+    CometChatCalls = cometChatCallsModule.CometChatCalls;
+    console.log('[CometChat] Calls SDK module loaded');
+  } catch (e) {
+    console.error('[CometChat] Failed to load CometChat Calls SDK:', e);
+    console.error('[CometChat] Voice/video streaming will not be available');
+    CometChatCalls = null;
   }
 } else {
   console.error('[CometChat] Invalid configuration - CometChat will not be loaded');
@@ -209,7 +221,24 @@ export const initializeCometChat = async (retryAttempt: number = 0): Promise<boo
     
     isInitialized = true;
     isOnline = true;
-    console.log('[CometChat] Initialization successful');
+    console.log('[CometChat] Chat SDK initialization successful');
+    
+    // Initialize Calls SDK if available
+    if (CometChatCalls && !isCallsInitialized) {
+      try {
+        const callsAppSettings = new CometChatCalls.CallAppSettingsBuilder()
+          .setAppId(COMETCHAT_APP_ID)
+          .setRegion(COMETCHAT_REGION)
+          .build();
+        
+        await CometChatCalls.init(callsAppSettings);
+        isCallsInitialized = true;
+        console.log('[CometChat] Calls SDK initialization successful');
+      } catch (callsError: any) {
+        console.error('[CometChat] Calls SDK initialization failed:', callsError);
+        console.error('[CometChat] Voice/video streaming may not work');
+      }
+    }
     
     processMessageQueue();
     
@@ -893,11 +922,91 @@ export const getActiveCall = (): any => {
   return CometChat.getActiveCall?.() || null;
 };
 
+// ============= CALLS SDK SESSION FUNCTIONS =============
+
+export const isCallsSdkAvailable = (): boolean => {
+  return CometChatCalls !== null && isCallsInitialized;
+};
+
+export const generateCallToken = async (
+  sessionId: string,
+  userUid: string
+): Promise<string | null> => {
+  if (!CometChatCalls) {
+    console.error('[CometChat] Calls SDK not available for token generation');
+    return null;
+  }
+
+  try {
+    const authToken = await CometChatCalls.generateToken(sessionId, userUid);
+    console.log('[CometChat] Call token generated successfully');
+    return authToken;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to generate call token:', error);
+    return null;
+  }
+};
+
+export const startCallSession = async (
+  call: any,
+  audioOnly: boolean = false,
+  defaultLayout: boolean = true
+): Promise<any> => {
+  if (!CometChatCalls) {
+    throw new Error('CometChat Calling module not found. Please add the CometChat Calling dependency and try again.');
+  }
+
+  if (!isCallsInitialized) {
+    throw new Error('CometChat Calls SDK not initialized');
+  }
+
+  try {
+    const sessionId = call.getSessionId();
+    const user = await getLoggedInUser();
+    
+    if (!user) {
+      throw new Error('User not logged in');
+    }
+
+    const authToken = await CometChatCalls.generateToken(sessionId, user.getUid());
+    
+    const callSettings = new CometChatCalls.CallSettingsBuilder()
+      .enableDefaultLayout(defaultLayout)
+      .setIsAudioOnlyCall(audioOnly)
+      .setSessionID(sessionId)
+      .setAppID(COMETCHAT_APP_ID)
+      .setRegion(COMETCHAT_REGION)
+      .setAuthToken(authToken)
+      .build();
+
+    console.log('[CometChat] Starting call session:', sessionId);
+    return { callSettings, sessionId, authToken };
+  } catch (error: any) {
+    console.error('[CometChat] Failed to start call session:', error);
+    throw error;
+  }
+};
+
+export const endCallSession = async (): Promise<void> => {
+  if (!CometChatCalls) {
+    return;
+  }
+
+  try {
+    await CometChatCalls.endSession();
+    console.log('[CometChat] Call session ended');
+  } catch (error: any) {
+    console.error('[CometChat] Failed to end call session:', error);
+  }
+};
+
 export {
   CometChat,
+  CometChatCalls,
   COMETCHAT_APP_ID,
   COMETCHAT_REGION,
   COMETCHAT_AUTH_KEY,
   COMETCHAT_CONFIG_VALID,
   isInitialized,
+  isCallsInitialized,
 };
