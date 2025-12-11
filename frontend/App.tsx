@@ -188,8 +188,8 @@ function AppContent() {
       
       console.log('[App.tsx] Got push token:', pushToken);
       
-      // Get auth token and register with backend
-      const authToken = await AsyncStorage.getItem('authToken');
+      // Get auth token and register with backend (uses @session_token key)
+      const authToken = await AsyncStorage.getItem('@session_token');
       if (authToken && pushToken) {
         try {
           await registerPushToken(authToken, pushToken);
@@ -197,6 +197,8 @@ function AppContent() {
         } catch (err) {
           console.warn('[App.tsx] Failed to register push token with backend:', err);
         }
+      } else {
+        console.log('[App.tsx] No auth token available for push token registration');
       }
     } catch (error) {
       console.error('[App.tsx] Error registering push token:', error);
