@@ -41,7 +41,8 @@ export default ({ config }) => ({
       "android.permission.BLUETOOTH_CONNECT",
       "android.permission.MODIFY_AUDIO_SETTINGS",
       "android.permission.INTERNET",
-      "android.permission.ACCESS_NETWORK_STATE"
+      "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.WAKE_LOCK"
     ]
   },
   web: {
@@ -49,6 +50,17 @@ export default ({ config }) => ({
     favicon: "./assets/images/favicon.png"
   },
   plugins: [
+    [
+      "expo-build-properties",
+      {
+        android: {
+          minSdkVersion: 24
+        },
+        ios: {
+          deploymentTarget: "13.4"
+        }
+      }
+    ],
     [
       "expo-splash-screen",
       {

@@ -26,6 +26,7 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "expo-build-properties": "^1.0.10",
     "expo-camera": "^17.0.10",
     "expo-server-sdk": "^4.0.0",
     "express": "^5.2.1",
