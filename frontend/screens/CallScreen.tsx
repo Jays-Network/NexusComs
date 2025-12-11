@@ -11,7 +11,11 @@ import {
   rejectCall, 
   endCall, 
   addCallListener, 
-  removeCallListener 
+  removeCallListener,
+  isCallsSdkAvailable,
+  startCallSession,
+  endCallSession,
+  CometChatCalls
 } from '@/utils/cometChatClient';
 import * as Haptics from 'expo-haptics';
 
@@ -39,29 +43,51 @@ export default function CallScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(params.callType === 'audio');
+  const [callSettings, setCallSettings] = useState<any>(null);
+  const [callsSdkReady, setCallsSdkReady] = useState(isCallsSdkAvailable());
 
   useEffect(() => {
     const listenerId = 'call_screen_listener';
 
     addCallListener(listenerId, {
-      onOutgoingCallAccepted: (call: any) => {
+      onOutgoingCallAccepted: async (call: any) => {
         console.log('[CallScreen] Call accepted');
         setCallStatus('connected');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        // Start call session with Calls SDK if available
+        if (isCallsSdkAvailable()) {
+          try {
+            const settings = await startCallSession(call, params.callType === 'audio');
+            setCallSettings(settings);
+            console.log('[CallScreen] Call session started');
+          } catch (error) {
+            console.error('[CallScreen] Failed to start call session:', error);
+          }
+        }
       },
-      onOutgoingCallRejected: (call: any) => {
+      onOutgoingCallRejected: async (call: any) => {
         console.log('[CallScreen] Call rejected');
+        if (isCallsSdkAvailable()) {
+          await endCallSession();
+        }
         setCallStatus('rejected');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setTimeout(() => navigation.goBack(), 2000);
       },
-      onIncomingCallCancelled: (call: any) => {
+      onIncomingCallCancelled: async (call: any) => {
         console.log('[CallScreen] Call cancelled');
+        if (isCallsSdkAvailable()) {
+          await endCallSession();
+        }
         setCallStatus('cancelled');
         setTimeout(() => navigation.goBack(), 1500);
       },
-      onCallEnded: (call: any) => {
+      onCallEnded: async (call: any) => {
         console.log('[CallScreen] Call ended');
+        if (isCallsSdkAvailable()) {
+          await endCallSession();
+        }
         setCallStatus('ended');
         setTimeout(() => navigation.goBack(), 1500);
       },
@@ -69,6 +95,10 @@ export default function CallScreen() {
 
     return () => {
       removeCallListener(listenerId);
+      // Cleanup call session on unmount
+      if (isCallsSdkAvailable()) {
+        endCallSession().catch(console.error);
+      }
     };
   }, [navigation]);
 
@@ -108,9 +138,20 @@ export default function CallScreen() {
     if (!sessionId) return;
     
     try {
-      await acceptCall(sessionId);
+      const acceptedCall = await acceptCall(sessionId);
       setCallStatus('connected');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Start call session with Calls SDK if available
+      if (isCallsSdkAvailable() && acceptedCall) {
+        try {
+          const settings = await startCallSession(acceptedCall, params.callType === 'audio');
+          setCallSettings(settings);
+          console.log('[CallScreen] Call session started after accepting');
+        } catch (sessionError) {
+          console.error('[CallScreen] Failed to start call session:', sessionError);
+        }
+      }
     } catch (error: any) {
       console.error('[CallScreen] Failed to accept call:', error);
       Alert.alert('Error', 'Could not accept the call');
@@ -140,6 +181,11 @@ export default function CallScreen() {
     }
 
     try {
+      // End call session if active
+      if (callSettings && isCallsSdkAvailable()) {
+        await endCallSession();
+      }
+      
       if (callStatus === 'ringing' || callStatus === 'initiating') {
         await rejectCall(sessionId, 'cancelled');
       } else {
@@ -304,13 +350,27 @@ export default function CallScreen() {
 
         {params.callType === 'video' && callStatus === 'connected' && (
           <View style={[styles.videoPlaceholder, { backgroundColor: theme.surface }]}>
-            <Feather name="video" size={48} color={theme.textSecondary} />
-            <Text style={[styles.videoPlaceholderText, { color: theme.textSecondary }]}>
-              Video stream requires EAS build
-            </Text>
-            <Text style={[styles.videoPlaceholderSubtext, { color: theme.textSecondary }]}>
-              Audio is active
-            </Text>
+            {callsSdkReady && callSettings ? (
+              <>
+                <Feather name="video" size={48} color={theme.primary} />
+                <Text style={[styles.videoPlaceholderText, { color: theme.text }]}>
+                  Video call connected
+                </Text>
+                <Text style={[styles.videoPlaceholderSubtext, { color: theme.textSecondary }]}>
+                  Audio streaming active
+                </Text>
+              </>
+            ) : (
+              <>
+                <Feather name="video" size={48} color={theme.textSecondary} />
+                <Text style={[styles.videoPlaceholderText, { color: theme.textSecondary }]}>
+                  {callsSdkReady ? 'Initializing...' : 'Calls SDK loading...'}
+                </Text>
+                <Text style={[styles.videoPlaceholderSubtext, { color: theme.textSecondary }]}>
+                  Requires EAS preview build
+                </Text>
+              </>
+            )}
           </View>
         )}
       </View>
