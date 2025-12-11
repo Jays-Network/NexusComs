@@ -552,7 +552,20 @@ export default function ChatRoomScreen() {
     }
   }, [channelId, receiverType, transformMessage]);
 
-  const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean) => {
+  const navigateToLiveLocationMap = useCallback((attachment: Attachment, senderName: string, senderId: string) => {
+    navigation.navigate('LiveLocationMap' as never, {
+      groupId: channelId,
+      groupName: channelName,
+      initialLocation: {
+        latitude: attachment.latitude,
+        longitude: attachment.longitude,
+        senderName: senderName,
+        senderId: senderId
+      }
+    } as never);
+  }, [navigation, channelId, channelName]);
+
+  const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean, senderName?: string, senderId?: string) => {
     const iconColor = isOwnMessage ? '#000' : theme.primary;
     const textColor = isOwnMessage ? '#000' : theme.text;
 
@@ -614,6 +627,11 @@ export default function ChatRoomScreen() {
           <Pressable 
             style={styles.attachmentContainer}
             onPress={() => {
+              if (attachment.latitude && attachment.longitude && senderName && senderId) {
+                navigateToLiveLocationMap(attachment, senderName, senderId);
+              }
+            }}
+            onLongPress={() => {
               if (attachment.latitude && attachment.longitude) {
                 const url = Platform.select({
                   ios: `maps://app?daddr=${attachment.latitude},${attachment.longitude}`,
@@ -635,7 +653,7 @@ export default function ChatRoomScreen() {
                   {attachment.latitude?.toFixed(4)}, {attachment.longitude?.toFixed(4)}
                 </Text>
               </View>
-              <Feather name="external-link" size={16} color={iconColor} style={{ marginLeft: 4 }} />
+              <Feather name="chevron-right" size={16} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
           </Pressable>
         );
@@ -645,6 +663,11 @@ export default function ChatRoomScreen() {
           <Pressable 
             style={styles.attachmentContainer}
             onPress={() => {
+              if (attachment.latitude && attachment.longitude && senderName && senderId) {
+                navigateToLiveLocationMap(attachment, senderName, senderId);
+              }
+            }}
+            onLongPress={() => {
               if (attachment.latitude && attachment.longitude) {
                 const url = Platform.select({
                   ios: `maps://app?daddr=${attachment.latitude},${attachment.longitude}`,
@@ -682,7 +705,7 @@ export default function ChatRoomScreen() {
                   </Text>
                 )}
               </View>
-              <Feather name="external-link" size={16} color={iconColor} style={{ marginLeft: 4 }} />
+              <Feather name="chevron-right" size={16} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
           </Pressable>
         );
@@ -732,7 +755,7 @@ export default function ChatRoomScreen() {
       default:
         return null;
     }
-  }, [theme]);
+  }, [theme, navigateToLiveLocationMap]);
 
   const renderDateSeparator = useCallback((item: DateSeparator) => {
     return (
@@ -765,7 +788,7 @@ export default function ChatRoomScreen() {
             {item.senderName}
           </Text>
         )}
-        {hasAttachment && item.attachment && renderAttachmentContent(item.attachment, isOwnMessage)}
+        {hasAttachment && item.attachment && renderAttachmentContent(item.attachment, isOwnMessage, item.senderName, item.senderId)}
         {(!hasAttachment || item.messageType === 'text') && (
           <Text style={[
             styles.messageText,
