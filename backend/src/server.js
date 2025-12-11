@@ -2713,6 +2713,322 @@ app.get("/api/db-check", async (req, res) => {
   }
 });
 
+// ============= EMERGENCY ALERT SYSTEM =============
+
+// Helper function to send Expo push notifications
+const sendExpoPushNotifications = async (pushTokens, title, body, data = {}) => {
+  if (!pushTokens || pushTokens.length === 0) {
+    console.log('[EMERGENCY] No push tokens to send to');
+    return { success: 0, errors: [] };
+  }
+
+  const messages = pushTokens
+    .filter(token => token && token.startsWith('ExponentPushToken'))
+    .map(token => ({
+      to: token,
+      sound: 'default',
+      title: title,
+      body: body,
+      data: data,
+      priority: 'high',
+      channelId: 'emergency-alerts',
+    }));
+
+  if (messages.length === 0) {
+    console.log('[EMERGENCY] No valid Expo push tokens');
+    return { success: 0, errors: [] };
+  }
+
+  console.log(`[EMERGENCY] Sending ${messages.length} push notifications`);
+
+  return new Promise((resolve) => {
+    const postData = JSON.stringify(messages);
+    
+    const options = {
+      hostname: 'exp.host',
+      port: 443,
+      path: '/--/api/v2/push/send',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          console.log('[EMERGENCY] Push notification result:', result);
+          resolve({ success: messages.length, result });
+        } catch (e) {
+          console.error('[EMERGENCY] Push notification parse error:', e);
+          resolve({ success: 0, errors: [e.message] });
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      console.error('[EMERGENCY] Push notification error:', e);
+      resolve({ success: 0, errors: [e.message] });
+    });
+
+    req.write(postData);
+    req.end();
+  });
+};
+
+// Register push token endpoint
+app.post("/api/push/register", sessionMiddleware, async (req, res) => {
+  try {
+    const { push_token } = req.body;
+    const userId = req.user.id;
+
+    if (!push_token) {
+      return res.status(400).json({ error: "Push token required" });
+    }
+
+    // Update user's push token
+    const { error } = await supabase
+      .from("users")
+      .update({ push_token: push_token })
+      .eq("id", userId);
+
+    if (error) {
+      console.error('[PUSH] Failed to save push token:', error);
+      return res.status(500).json({ error: "Failed to register push token" });
+    }
+
+    console.log(`[PUSH] Registered push token for user ${userId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[PUSH] Register token error:', error);
+    res.status(500).json({ error: "Failed to register push token" });
+  }
+});
+
+// Trigger emergency alert - creates group, adds members, sends notifications
+app.post("/api/emergency/trigger", sessionMiddleware, async (req, res) => {
+  try {
+    const { message, location, source_group_id, source_group_name } = req.body;
+    const senderId = req.user.id;
+    const senderName = req.user.username || req.user.email;
+    const senderCometChatUid = req.user.id;
+
+    console.log(`[EMERGENCY] Triggered by ${senderName} (${senderId})`);
+    console.log(`[EMERGENCY] Message: ${message}`);
+    console.log(`[EMERGENCY] Source group: ${source_group_name} (${source_group_id})`);
+
+    // 1. Get sender's CometChat UID
+    const { data: senderData, error: senderError } = await supabase
+      .from("users")
+      .select("cometchat_uid")
+      .eq("id", senderId)
+      .single();
+
+    const ownerUid = senderData?.cometchat_uid || cometchat.sanitizeUid(senderName);
+
+    // 2. Find all users with emergency access permission
+    const { data: usersWithAccess, error: usersError } = await supabase
+      .from("users")
+      .select("id, username, email, cometchat_uid, push_token, permissions");
+
+    if (usersError) {
+      console.error('[EMERGENCY] Failed to fetch users:', usersError);
+      return res.status(500).json({ error: "Failed to fetch users" });
+    }
+
+    // Filter users with emergency access (permissions.emergency_access or permissions.can_send_emergency)
+    const emergencyUsers = usersWithAccess.filter(user => {
+      const perms = user.permissions || {};
+      return perms.emergency_access === true || 
+             perms.can_send_emergency === true ||
+             perms.can_receive_emergency === true ||
+             perms.admin === true ||
+             perms.superAdmin === true;
+    });
+
+    console.log(`[EMERGENCY] Found ${emergencyUsers.length} users with emergency access`);
+
+    // If no users have explicit emergency access, include all users
+    const targetUsers = emergencyUsers.length > 0 ? emergencyUsers : usersWithAccess;
+    console.log(`[EMERGENCY] Target users: ${targetUsers.length}`);
+
+    // 3. Create emergency group in CometChat
+    const timestamp = Date.now();
+    const groupId = `emergency-${timestamp}`;
+    const groupName = `Emergency: ${new Date().toLocaleString('en-ZA', { 
+      day: '2-digit', 
+      month: 'short', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })}`;
+
+    console.log(`[EMERGENCY] Creating CometChat group: ${groupId}`);
+
+    let cometChatGroup = null;
+    try {
+      cometChatGroup = await cometchat.createGroup(
+        groupId,
+        groupName,
+        'private',
+        `Emergency alert from ${senderName}: ${message}`,
+        ownerUid
+      );
+      console.log('[EMERGENCY] CometChat group created:', cometChatGroup);
+    } catch (groupError) {
+      console.error('[EMERGENCY] Failed to create CometChat group:', groupError);
+      // Continue without CometChat group - still send notifications
+    }
+
+    // 4. Add members to the CometChat group
+    if (cometChatGroup) {
+      const memberUids = targetUsers
+        .filter(u => u.cometchat_uid && u.cometchat_uid !== ownerUid)
+        .map(u => u.cometchat_uid);
+
+      if (memberUids.length > 0) {
+        try {
+          await cometchat.addGroupMembers(groupId, memberUids);
+          console.log(`[EMERGENCY] Added ${memberUids.length} members to group`);
+        } catch (memberError) {
+          console.error('[EMERGENCY] Failed to add members:', memberError);
+        }
+      }
+
+      // 5. Send initial message to the group
+      try {
+        await cometchat.sendGroupMessage(
+          groupId,
+          `EMERGENCY ALERT\n\nFrom: ${senderName}\nMessage: ${message}\n${location ? `Location: ${location}` : ''}\n\nOriginal group: ${source_group_name || 'Direct'}`,
+          ownerUid,
+          { emergency: true, source_group_id, source_group_name }
+        );
+        console.log('[EMERGENCY] Initial message sent to group');
+      } catch (msgError) {
+        console.error('[EMERGENCY] Failed to send initial message:', msgError);
+      }
+    }
+
+    // 6. Save emergency record to database
+    let emergencyRecord = null;
+    try {
+      const { data: record, error: recordError } = await supabase
+        .from("emergency_groups")
+        .insert({
+          name: groupName,
+          description: message,
+          created_by: senderId,
+          cometchat_guid: groupId,
+          source_group_id: source_group_id,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (!recordError && record) {
+        emergencyRecord = record;
+        console.log('[EMERGENCY] Database record created:', record.id);
+      }
+    } catch (dbError) {
+      console.error('[EMERGENCY] Failed to save to database:', dbError);
+    }
+
+    // 7. Send push notifications to all target users
+    const pushTokens = targetUsers
+      .filter(u => u.push_token && u.id !== senderId)
+      .map(u => u.push_token);
+
+    console.log(`[EMERGENCY] Sending push to ${pushTokens.length} devices`);
+
+    const pushResult = await sendExpoPushNotifications(
+      pushTokens,
+      'EMERGENCY ALERT',
+      `${senderName}: ${message}`,
+      {
+        type: 'emergency',
+        emergency_group_id: groupId,
+        sender_name: senderName,
+        message: message,
+        source_group_id: source_group_id,
+      }
+    );
+
+    // 8. Log the emergency
+    addLog("EMERGENCY", "Server", `Emergency alert triggered by ${senderName}`, JSON.stringify({
+      message,
+      group_id: groupId,
+      target_users: targetUsers.length,
+      push_sent: pushResult.success,
+      location
+    }));
+
+    res.json({
+      success: true,
+      emergency_group_id: groupId,
+      emergency_group_name: groupName,
+      members_added: targetUsers.length,
+      push_notifications_sent: pushResult.success,
+      database_record_id: emergencyRecord?.id
+    });
+
+  } catch (error) {
+    console.error('[EMERGENCY] Trigger error:', error);
+    addLog("ERROR", "Server", "Emergency trigger failed", error.message);
+    res.status(500).json({ error: "Failed to trigger emergency alert" });
+  }
+});
+
+// Get active emergency alerts
+app.get("/api/emergency/active", sessionMiddleware, async (req, res) => {
+  try {
+    const { data: emergencies, error } = await supabase
+      .from("emergency_groups")
+      .select("*, users!created_by(username, email)")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error('[EMERGENCY] Failed to fetch active emergencies:', error);
+      return res.status(500).json({ error: "Failed to fetch emergencies" });
+    }
+
+    res.json({ emergencies: emergencies || [] });
+  } catch (error) {
+    console.error('[EMERGENCY] Get active error:', error);
+    res.status(500).json({ error: "Failed to fetch emergencies" });
+  }
+});
+
+// Resolve/close an emergency
+app.post("/api/emergency/:id/resolve", sessionMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { resolution_notes } = req.body;
+
+    const { error } = await supabase
+      .from("emergency_groups")
+      .update({ 
+        is_active: false,
+        resolved_at: new Date().toISOString(),
+        resolution_notes: resolution_notes
+      })
+      .eq("id", id);
+
+    if (error) {
+      return res.status(500).json({ error: "Failed to resolve emergency" });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to resolve emergency" });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✓ Hybrid API & CMS server running on port ${PORT}`);
   console.log(
