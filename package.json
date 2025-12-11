@@ -22,6 +22,7 @@
   "homepage": "https://github.com/Jays-Network/PastedComprehensivePrompt#readme",
   "dependencies": {
     "@cometchat/calls-sdk-react-native": "^4.4.0",
+    "@cometchat/chat-sdk-react-native": "^4.0.17",
     "@supabase/supabase-js": "^2.86.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
