@@ -9,7 +9,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
-import { fetchGroups as fetchCometChatGroups, fetchMessages } from '@/utils/cometChatClient';
+import { fetchGroups as fetchCometChatGroups, fetchMessages, fetchConversations } from '@/utils/cometChatClient';
 
 interface EmergencyMessage {
   id: string;
@@ -71,47 +71,107 @@ export default function EmergencyListScreen() {
 
   const loadEmergencyMessages = useCallback(async () => {
     if (!isInitialized || !cometChatUser) {
+      console.log('[EmergencyList] Not initialized or no user');
       setIsLoading(false);
       return;
     }
 
+    console.log('[EmergencyList] Loading emergency messages...');
+    
     try {
-      const groups = await fetchCometChatGroups(50);
       const emergencyMessages: EmergencyMessage[] = [];
       
-      for (const group of groups) {
-        try {
-          const guid = group.getGuid?.() || group.guid;
-          const groupName = group.getName?.() || group.name || 'Unknown Group';
-          const groupMessages = await fetchMessages(guid, 'group', 100);
-          
-          for (const msg of groupMessages) {
-            const metadata = msg.getMetadata?.() || msg.metadata || {};
-            if (metadata.emergency === true) {
-              emergencyMessages.push({
-                id: msg.getId?.() || msg.id || String(Date.now()),
-                text: msg.getText?.() || msg.text || 'Emergency!',
-                senderId: msg.getSender?.()?.getUid?.() || msg.sender?.uid || '',
-                senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
-                createdAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000).toISOString(),
-                groupName: groupName,
-              });
+      // Fetch from groups
+      try {
+        const groups = await fetchCometChatGroups(50);
+        console.log('[EmergencyList] Fetched', groups.length, 'groups');
+        
+        for (const group of groups) {
+          try {
+            const guid = group.getGuid?.() || group.guid;
+            const groupName = group.getName?.() || group.name || 'Unknown Group';
+            const groupMessages = await fetchMessages(guid, 'group', 100);
+            
+            for (const msg of groupMessages) {
+              const metadata = msg.getMetadata?.() || msg.metadata || {};
+              if (metadata.emergency === true) {
+                console.log('[EmergencyList] Found emergency in group:', groupName);
+                emergencyMessages.push({
+                  id: msg.getId?.() || msg.id || String(Date.now()),
+                  text: msg.getText?.() || msg.text || 'Emergency!',
+                  senderId: msg.getSender?.()?.getUid?.() || msg.sender?.uid || '',
+                  senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
+                  createdAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000).toISOString(),
+                  groupName: groupName,
+                });
+              }
             }
+          } catch (error) {
+            console.warn('[EmergencyList] Failed to query group:', error);
           }
-        } catch (error) {
-          console.warn('Failed to query group:', error);
         }
+      } catch (error) {
+        console.warn('[EmergencyList] Failed to fetch groups:', error);
+      }
+      
+      // Also fetch from direct message conversations
+      try {
+        const conversations = await fetchConversations(50);
+        console.log('[EmergencyList] Fetched', conversations.length, 'conversations');
+        
+        for (const conv of conversations) {
+          try {
+            const conversationType = conv.getConversationType?.() || conv.conversationType;
+            
+            // Only check user conversations (direct messages)
+            if (conversationType === 'user') {
+              const conversationWith = conv.getConversationWith?.() || conv.conversationWith;
+              const userId = conversationWith?.getUid?.() || conversationWith?.uid;
+              const userName = conversationWith?.getName?.() || conversationWith?.name || 'Unknown';
+              
+              if (userId) {
+                const userMessages = await fetchMessages(userId, 'user', 100);
+                
+                for (const msg of userMessages) {
+                  const metadata = msg.getMetadata?.() || msg.metadata || {};
+                  if (metadata.emergency === true) {
+                    console.log('[EmergencyList] Found emergency in DM with:', userName);
+                    emergencyMessages.push({
+                      id: msg.getId?.() || msg.id || String(Date.now()),
+                      text: msg.getText?.() || msg.text || 'Emergency!',
+                      senderId: msg.getSender?.()?.getUid?.() || msg.sender?.uid || '',
+                      senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
+                      createdAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000).toISOString(),
+                      groupName: `Chat with ${userName}`,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('[EmergencyList] Failed to query conversation:', error);
+          }
+        }
+      } catch (error) {
+        console.warn('[EmergencyList] Failed to fetch conversations:', error);
       }
 
+      // Sort by date (newest first)
       emergencyMessages.sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
         const dateB = new Date(b.createdAt).getTime();
         return dateB - dateA;
       });
+      
+      // Remove duplicates by ID
+      const uniqueMessages = emergencyMessages.filter((msg, index, self) => 
+        index === self.findIndex(m => m.id === msg.id)
+      );
 
-      setMessages(emergencyMessages);
+      console.log('[EmergencyList] Found', uniqueMessages.length, 'emergency messages');
+      setMessages(uniqueMessages);
     } catch (error) {
-      console.error('Load emergency messages error:', error);
+      console.error('[EmergencyList] Load emergency messages error:', error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);

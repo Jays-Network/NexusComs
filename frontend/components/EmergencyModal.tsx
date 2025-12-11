@@ -76,11 +76,27 @@ export default function EmergencyModal() {
     const handleNewMessage = (message: any) => {
       const metadata = message.getMetadata?.() || message.metadata || {};
       const senderId = message.getSender?.()?.getUid?.() || message.sender?.uid;
+      const messageText = message.getText?.() || message.text || '';
       
-      if (metadata.emergency === true && senderId !== user?.id) {
+      console.log('[EmergencyModal] Message received:', {
+        id: message.getId?.() || message.id,
+        senderId,
+        currentUserId: user?.id,
+        metadata,
+        hasEmergencyFlag: metadata.emergency === true,
+        isFromOtherUser: senderId !== user?.id,
+        text: messageText.substring(0, 50),
+      });
+      
+      // Check for emergency flag in metadata OR emergency text pattern
+      const isEmergencyMessage = metadata.emergency === true || 
+        messageText.toUpperCase().includes('EMERGENCY ALERT');
+      
+      if (isEmergencyMessage && senderId !== user?.id) {
+        console.log('[EmergencyModal] TRIGGERING EMERGENCY ALERT!');
         handleEmergencyAlert({
           id: message.getId?.() || message.id || String(Date.now()),
-          text: message.getText?.() || message.text || 'Emergency!',
+          text: messageText || 'Emergency!',
           senderId: senderId,
           senderName: message.getSender?.()?.getName?.() || message.sender?.name || 'Unknown',
           createdAt: new Date((message.getSentAt?.() || message.sentAt || Date.now()) * 1000).toISOString(),
