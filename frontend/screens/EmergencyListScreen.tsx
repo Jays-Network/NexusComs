@@ -95,7 +95,7 @@ export default function EmergencyListScreen() {
       // Navigate to group chat
       navigation.dispatch(
         CommonActions.navigate({
-          name: 'Chats',
+          name: 'ChatsTab',
           params: {
             screen: 'ChatRoom',
             params: {
@@ -110,7 +110,7 @@ export default function EmergencyListScreen() {
       // Navigate to direct message
       navigation.dispatch(
         CommonActions.navigate({
-          name: 'Chats',
+          name: 'ChatsTab',
           params: {
             screen: 'ChatRoom',
             params: {
@@ -125,7 +125,7 @@ export default function EmergencyListScreen() {
       // Fallback: navigate to group
       navigation.dispatch(
         CommonActions.navigate({
-          name: 'Chats',
+          name: 'ChatsTab',
           params: {
             screen: 'ChatRoom',
             params: {
