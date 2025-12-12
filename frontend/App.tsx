@@ -156,6 +156,36 @@ function AppContent() {
     };
   }, [user]);
 
+  useEffect(() => {
+    const notificationResponseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('[App.tsx] Notification tapped:', response);
+      
+      const data = response.notification.request.content.data;
+      
+      if (data?.type === 'emergency' && data?.emergency_group_id) {
+        console.log('[App.tsx] Opening emergency group chat:', data.emergency_group_id);
+        
+        if (navigationRef.current) {
+          navigationRef.current.navigate('Main', {
+            screen: 'ChatsTab',
+            params: {
+              screen: 'ChatRoom',
+              params: {
+                channelId: data.emergency_group_id,
+                channelName: data.sender_name ? `Emergency: ${data.sender_name}` : 'Emergency Alert',
+                isDirectChat: false,
+              },
+            },
+          });
+        }
+      }
+    });
+
+    return () => {
+      notificationResponseSubscription.remove();
+    };
+  }, []);
+
   async function registerPushNotificationToken() {
     try {
       // Skip on web - push tokens are mobile only
