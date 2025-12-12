@@ -5,7 +5,7 @@ const frontendDir = path.join(__dirname, '..', 'frontend');
 
 console.log('Generating package-lock.json in:', frontendDir);
 
-const result = spawnSync('npm', ['install', '--package-lock-only'], {
+const result = spawnSync('npm', ['install'], {
   cwd: frontendDir,
   stdio: 'inherit',
   shell: true
