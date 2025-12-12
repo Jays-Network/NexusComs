@@ -349,8 +349,8 @@ export default function ChatRoomScreen() {
             try {
               console.log(`[ChatRoom] Triggering emergency alert from ${receiverType}: ${channelId}`);
               
-              // Get auth token for API call
-              const authToken = await AsyncStorage.getItem('authToken');
+              // Get auth token for API call (uses @session_token key)
+              const authToken = await AsyncStorage.getItem('@session_token');
               
               if (authToken) {
                 // Call new emergency API - creates group, sends push notifications
