@@ -2,30 +2,30 @@ import 'dotenv/config';
 
 export default ({ config }) => ({
   ...config,
-  name: "WorldRisk Nexus Coms",
-  slug: "worldrisk",
+  name: "Nexus Coms",
+  slug: "nexuscoms",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/app-icon.png",
-  scheme: "worldrisk",
+  icon: "./assets/images/nexus-coms-logo.jpg",
+  scheme: "nexuscoms",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.worldrisk.app",
     infoPlist: {
-      NSLocationAlwaysAndWhenInUseUsageDescription: "WorldRisk Nexus Coms needs access to your location to share it with your group members.",
-      NSLocationWhenInUseUsageDescription: "WorldRisk Nexus Coms needs access to your location to share it with your group members.",
-      NSCameraUsageDescription: "WorldRisk Nexus Coms needs access to your camera to share photos and videos.",
-      NSPhotoLibraryUsageDescription: "WorldRisk Nexus Coms needs access to your photo library to share photos and videos.",
-      NSMicrophoneUsageDescription: "WorldRisk Nexus Coms needs access to your microphone for voice and video calls."
+      NSLocationAlwaysAndWhenInUseUsageDescription: "Nexus Coms needs access to your location to share it with your group members.",
+      NSLocationWhenInUseUsageDescription: "Nexus Coms needs access to your location to share it with your group members.",
+      NSCameraUsageDescription: "Nexus Coms needs access to your camera to share photos and videos.",
+      NSPhotoLibraryUsageDescription: "Nexus Coms needs access to your photo library to share photos and videos.",
+      NSMicrophoneUsageDescription: "Nexus Coms needs access to your microphone for voice and video calls."
     }
   },
   android: {
     package: "com.worldrisk.app",
     adaptiveIcon: {
       backgroundColor: "#000000",
-      foregroundImage: "./assets/images/app-icon.png"
+      foregroundImage: "./assets/images/nexus-coms-logo.jpg"
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
@@ -64,7 +64,7 @@ export default ({ config }) => ({
     [
       "expo-splash-screen",
       {
-        image: "./assets/images/world-risk-logo.png",
+        image: "./assets/images/nexus-coms-logo.jpg",
         imageWidth: 300,
         resizeMode: "contain",
         backgroundColor: "#000000",
@@ -77,7 +77,7 @@ export default ({ config }) => ({
     [
       "expo-notifications",
       {
-        icon: "./assets/images/app-icon.png",
+        icon: "./assets/images/nexus-coms-logo.jpg",
         color: "#FFFFFF",
         sounds: [
           "./assets/sounds/emergency.wav"
@@ -87,8 +87,8 @@ export default ({ config }) => ({
     [
       "expo-location",
       {
-        locationAlwaysAndWhenInUsePermission: "WorldRisk Nexus Coms needs access to your location to share it with your group members.",
-        locationWhenInUsePermission: "WorldRisk Nexus Coms needs access to your location to share it with your group members."
+        locationAlwaysAndWhenInUsePermission: "Nexus Coms needs access to your location to share it with your group members.",
+        locationWhenInUsePermission: "Nexus Coms needs access to your location to share it with your group members."
       }
     ],
     "expo-asset",

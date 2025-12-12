@@ -14,11 +14,11 @@ export default function AboutScreen() {
       <View style={styles.container}>
         <View style={styles.logoSection}>
           <Image
-            source={require('@/assets/images/world-risk-logo.png')}
+            source={require('@/assets/images/nexus-coms-logo.jpg')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <ThemedText style={styles.appName}>World Risk</ThemedText>
+          <ThemedText style={styles.appName}>Nexus Coms</ThemedText>
           <ThemedText style={[styles.tagline, { color: theme.textSecondary }]}>
             Secure Communications Platform
           </ThemedText>
@@ -123,7 +123,7 @@ export default function AboutScreen() {
         </View>
 
         <ThemedText style={[styles.copyright, { color: theme.textSecondary }]}>
-          World Risk Global. All rights reserved.
+          Nexus Coms. All rights reserved.
         </ThemedText>
       </View>
     </ScreenScrollView>

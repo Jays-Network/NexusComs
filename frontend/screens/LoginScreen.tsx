@@ -46,7 +46,7 @@ export default function LoginScreen() {
     ]}>
       <View style={styles.content}>
         <Image
-          source={require('@/assets/images/world-risk-logo.png')}
+          source={require('@/assets/images/nexus-coms-logo.jpg')}
           style={styles.logo}
           resizeMode="contain"
         />
