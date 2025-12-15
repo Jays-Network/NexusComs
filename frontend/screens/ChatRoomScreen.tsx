@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView, Linking } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { useRoute, RouteProp, useNavigation, NavigationProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
@@ -553,16 +553,24 @@ export default function ChatRoomScreen() {
   }, [channelId, receiverType, transformMessage]);
 
   const navigateToLiveLocationMap = useCallback((attachment: Attachment, senderName: string, senderId: string) => {
-    navigation.navigate('LiveLocationMap' as never, {
+    console.log('[ChatRoom] Navigating to LiveLocationMap with:', {
+      groupId: channelId,
+      groupName: channelName,
+      latitude: attachment.latitude,
+      longitude: attachment.longitude,
+      senderName,
+      senderId
+    });
+    (navigation as NavigationProp<ChatsStackParamList>).navigate('LiveLocationMap', {
       groupId: channelId,
       groupName: channelName,
       initialLocation: {
-        latitude: attachment.latitude,
-        longitude: attachment.longitude,
+        latitude: attachment.latitude || 0,
+        longitude: attachment.longitude || 0,
         senderName: senderName,
         senderId: senderId
       }
-    } as never);
+    });
   }, [navigation, channelId, channelName]);
 
   const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean, senderName?: string, senderId?: string) => {
@@ -663,8 +671,16 @@ export default function ChatRoomScreen() {
           <Pressable 
             style={styles.attachmentContainer}
             onPress={() => {
-              if (attachment.latitude && attachment.longitude && senderName && senderId) {
-                navigateToLiveLocationMap(attachment, senderName, senderId);
+              console.log('[ChatRoom] Live location tapped:', { 
+                hasLatitude: !!attachment.latitude, 
+                hasLongitude: !!attachment.longitude, 
+                senderName, 
+                senderId 
+              });
+              if (attachment.latitude && attachment.longitude) {
+                navigateToLiveLocationMap(attachment, senderName || 'Unknown', senderId || 'unknown');
+              } else {
+                console.warn('[ChatRoom] Missing coordinates for live location');
               }
             }}
             onLongPress={() => {

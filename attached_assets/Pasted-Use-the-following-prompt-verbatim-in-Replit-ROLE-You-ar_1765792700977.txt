@@ -1,0 +1,158 @@
+Use the following prompt **verbatim** in Replit.
+
+---
+
+**ROLE**
+You are a senior full-stack mobile engineer with strong experience in **Expo (React Native)**, **Supabase**, and **CometChat**. You are working on an existing production chat application.
+
+---
+
+**OBJECTIVE**
+Fix and fully implement **Live Location Sharing** so that when a user shares their live location:
+
+1. A **map view opens** when the message is tapped
+2. The map displays **real-time locations** of all users who are actively sharing
+3. Each marker shows the **user’s profile photo or display name under the marker**
+4. This must work for both **Direct Messages** and **Group Chats**
+
+---
+
+**TECH STACK (MANDATORY)**
+
+* Frontend: **Expo (React Native)**
+* Maps: **react-native-maps (Expo compatible)**
+* Backend / Realtime DB: **Supabase (Postgres + Realtime)**
+* Chat SDK: **CometChat**
+
+---
+
+**FUNCTIONAL REQUIREMENTS**
+
+### 1. Location Sharing Flow
+
+* When a user taps **“Share Live Location”**:
+
+  * Request foreground location permission
+  * Start tracking the user’s GPS position
+  * Send a CometChat message of type `custom` with:
+
+    * `location_share_id`
+    * `chat_type` (`user` or `group`)
+    * `chat_id`
+    * `expires_at` (configurable, e.g. 15 / 30 / 60 min)
+
+---
+
+### 2. Supabase Database Design
+
+Create or update a table:
+
+```sql
+live_locations (
+  id uuid primary key,
+  user_id text,
+  chat_id text,
+  chat_type text, -- 'user' or 'group'
+  latitude double precision,
+  longitude double precision,
+  updated_at timestamp with time zone,
+  expires_at timestamp with time zone,
+  is_active boolean
+)
+```
+
+* Enable **Supabase Realtime** on this table
+* Auto-expire locations when `expires_at < now()`
+
+---
+
+### 3. Realtime Updates
+
+* On the Expo client:
+
+  * Subscribe to Supabase Realtime updates for:
+
+    * The current DM or Group ID
+  * Update map markers in **real time** as locations change
+* Stop tracking and remove marker when:
+
+  * User stops sharing
+  * Location expires
+  * App goes to background (optional configurable behavior)
+
+---
+
+### 4. Map Screen Behavior
+
+* Open a **full-screen map** when the live-location message is tapped
+* Show:
+
+  * One marker per active user
+  * Marker includes:
+
+    * User avatar (from CometChat profile)
+    * Fallback to user name initials
+* Auto-fit map bounds to all active markers
+* Smooth marker updates (no flickering)
+
+---
+
+### 5. CometChat Integration
+
+* Use CometChat to:
+
+  * Resolve `user_id` → profile photo + display name
+  * Distinguish DM vs Group chats
+* Ensure:
+
+  * Location messages are visible in chat history
+  * Tapping the message always opens the correct map session
+
+---
+
+### 6. Security & Validation
+
+* Supabase Row Level Security:
+
+  * Users can only read locations for chats they are members of
+  * Users can only write/update their own location
+* Validate location updates server-side
+* Prevent duplicate active location sessions per user per chat
+
+---
+
+### 7. Edge Cases to Handle
+
+* User closes app
+* User loses GPS signal
+* Group member joins late (should still see active locations)
+* Rapid location updates (throttling required)
+* Multiple users sharing at once
+
+---
+
+### 8. Deliverables (REQUIRED OUTPUT)
+
+* Updated Expo components:
+
+  * LiveLocationMessage
+  * LiveLocationMapScreen
+* Supabase SQL + RLS policies
+* Realtime subscription logic
+* CometChat custom message handling
+* Clear inline comments
+* No placeholder code
+* Production-ready implementation
+
+---
+
+**IMPORTANT RULES**
+
+* Do NOT remove existing chat functionality
+* Do NOT mock location data
+* Follow Expo best practices
+* Assume this is a production app
+
+---
+
+**START WORK NOW.**
