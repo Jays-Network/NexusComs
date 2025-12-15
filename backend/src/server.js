@@ -1715,6 +1715,170 @@ app.post("/api/users/:id/location", sessionMiddleware, async (req, res) => {
   }
 });
 
+// ============= LIVE LOCATION SHARING ENDPOINTS =============
+
+// Start sharing live location in a chat
+app.post("/api/location/live/start", sessionMiddleware, async (req, res) => {
+  try {
+    const { chat_id, chat_type, latitude, longitude, duration_minutes } = req.body;
+    const userId = req.user.id;
+
+    console.log(`[LiveLocation] Starting live location for user ${userId} in ${chat_type} ${chat_id}`);
+
+    const duration = duration_minutes || 15;
+    const expiresAt = new Date(Date.now() + duration * 60 * 1000);
+
+    // Deactivate any existing live location for this user in this chat
+    await supabase
+      .from("live_locations")
+      .update({ is_active: false })
+      .eq("user_id", userId)
+      .eq("chat_id", chat_id);
+
+    // Create new live location record
+    const { data, error } = await supabase
+      .from("live_locations")
+      .insert({
+        user_id: userId,
+        chat_id,
+        chat_type: chat_type || 'group',
+        latitude,
+        longitude,
+        duration_minutes: duration,
+        expires_at: expiresAt.toISOString(),
+        is_active: true,
+        started_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[LiveLocation] Error starting live location:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`[LiveLocation] Started live location: ${data.id}`);
+    res.json({ message: "Live location started", liveLocation: data });
+  } catch (error) {
+    console.error("[LiveLocation] Error:", error);
+    res.status(500).json({ error: "Failed to start live location" });
+  }
+});
+
+// Update live location position
+app.post("/api/location/live/update", sessionMiddleware, async (req, res) => {
+  try {
+    const { chat_id, latitude, longitude } = req.body;
+    const userId = req.user.id;
+
+    // Update the active live location for this user in this chat
+    const { data, error } = await supabase
+      .from("live_locations")
+      .update({
+        latitude,
+        longitude,
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", userId)
+      .eq("chat_id", chat_id)
+      .eq("is_active", true)
+      .gt("expires_at", new Date().toISOString())
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[LiveLocation] Error updating live location:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ message: "Live location updated", liveLocation: data });
+  } catch (error) {
+    console.error("[LiveLocation] Error:", error);
+    res.status(500).json({ error: "Failed to update live location" });
+  }
+});
+
+// Stop sharing live location
+app.post("/api/location/live/stop", sessionMiddleware, async (req, res) => {
+  try {
+    const { chat_id } = req.body;
+    const userId = req.user.id;
+
+    const { data, error } = await supabase
+      .from("live_locations")
+      .update({ is_active: false })
+      .eq("user_id", userId)
+      .eq("chat_id", chat_id)
+      .eq("is_active", true);
+
+    if (error) {
+      console.error("[LiveLocation] Error stopping live location:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ message: "Live location stopped" });
+  } catch (error) {
+    console.error("[LiveLocation] Error:", error);
+    res.status(500).json({ error: "Failed to stop live location" });
+  }
+});
+
+// Get all active live locations for a chat/group
+app.get("/api/location/group/:groupId/live", sessionMiddleware, async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const now = new Date().toISOString();
+
+    console.log(`[LiveLocation] Fetching live locations for group ${groupId}`);
+
+    // Get all active live locations for this chat
+    const { data: locations, error } = await supabase
+      .from("live_locations")
+      .select(`
+        id,
+        user_id,
+        latitude,
+        longitude,
+        started_at,
+        duration_minutes,
+        updated_at,
+        expires_at,
+        is_active,
+        users!inner(id, display_name, avatar_url)
+      `)
+      .eq("chat_id", groupId)
+      .eq("is_active", true)
+      .gt("expires_at", now);
+
+    if (error) {
+      console.error("[LiveLocation] Error fetching live locations:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Transform to expected format
+    const formattedLocations = (locations || []).map(loc => ({
+      id: loc.id.toString(),
+      senderId: loc.user_id,
+      senderName: loc.users?.display_name || 'Unknown',
+      senderAvatar: loc.users?.avatar_url,
+      latitude: parseFloat(loc.latitude),
+      longitude: parseFloat(loc.longitude),
+      startedAt: loc.started_at,
+      durationMinutes: loc.duration_minutes,
+      lastUpdated: loc.updated_at,
+      expiresAt: loc.expires_at,
+      isActive: loc.is_active
+    }));
+
+    console.log(`[LiveLocation] Found ${formattedLocations.length} active locations`);
+    res.json(formattedLocations);
+  } catch (error) {
+    console.error("[LiveLocation] Error:", error);
+    res.status(500).json({ error: "Failed to fetch live locations" });
+  }
+});
+
 // ============= GROUPS & EMERGENCY GROUPS MANAGEMENT =============
 
 // Create a new group
