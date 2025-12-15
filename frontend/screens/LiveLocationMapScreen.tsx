@@ -4,9 +4,9 @@ import { useRoute, RouteProp, useFocusEffect, useNavigation } from '@react-navig
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
-import { useCometChatAuth } from '@/utils/cometChatAuth';
 import { ThemedText } from '@/components/ThemedText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -43,7 +43,6 @@ export default function LiveLocationMapScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
   const { theme } = useTheme();
-  const { authToken } = useCometChatAuth();
   const mapRef = useRef<MapView>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const insets = useSafeAreaInsets();
@@ -85,10 +84,18 @@ export default function LiveLocationMapScreen() {
 
   async function loadLiveLocations() {
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+      const token = await AsyncStorage.getItem('@session_token');
+      
+      if (!token) {
+        console.log('[LiveLocationMap] No auth token available');
+        setIsLoading(false);
+        return;
+      }
+      
       const response = await fetch(`${API_URL}/api/location/group/${groupId}/live`, {
         headers: {
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${token}`
         }
       });
 

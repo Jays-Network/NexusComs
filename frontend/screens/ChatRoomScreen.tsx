@@ -496,6 +496,31 @@ export default function ChatRoomScreen() {
           };
           sentMessage = await sendCustomMessage(channelId, 'liveLocation', customData, receiverType);
           console.log('[ChatRoom] Live location message sent, will update for', data.durationMinutes, 'minutes');
+          
+          // Also register with backend for real-time map updates
+          try {
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+            const token = await AsyncStorage.getItem('@session_token');
+            if (token) {
+              await fetch(`${API_URL}/api/location/live/start`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  chat_id: channelId,
+                  chat_type: receiverType,
+                  latitude: data.latitude,
+                  longitude: data.longitude,
+                  duration_minutes: data.durationMinutes
+                })
+              });
+              console.log('[ChatRoom] Live location registered with backend');
+            }
+          } catch (backendError) {
+            console.warn('[ChatRoom] Failed to register live location with backend:', backendError);
+          }
           break;
         }
         case 'contact': {
