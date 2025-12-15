@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Updates from 'expo-updates';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 
 export type OTAUpdateStatus = 
   | 'idle'
@@ -10,6 +10,19 @@ export type OTAUpdateStatus =
   | 'error'
   | 'no-update';
 
+function logOTADebugInfo() {
+  console.log('[OTA Debug] ==================');
+  console.log('[OTA Debug] Platform:', Platform.OS);
+  console.log('[OTA Debug] Updates.isEnabled:', Updates.isEnabled);
+  console.log('[OTA Debug] Updates.isEmbeddedLaunch:', Updates.isEmbeddedLaunch);
+  console.log('[OTA Debug] Updates.channel:', Updates.channel);
+  console.log('[OTA Debug] Updates.runtimeVersion:', Updates.runtimeVersion);
+  console.log('[OTA Debug] Updates.updateId:', Updates.updateId);
+  console.log('[OTA Debug] Updates.createdAt:', Updates.createdAt);
+  console.log('[OTA Debug] Updates.manifest:', JSON.stringify(Updates.manifest, null, 2));
+  console.log('[OTA Debug] ==================');
+}
+
 interface OTAUpdateState {
   status: OTAUpdateStatus;
   message: string;
@@ -17,10 +30,21 @@ interface OTAUpdateState {
   error: string | null;
 }
 
+export interface OTADebugInfo {
+  platform: string;
+  isEnabled: boolean;
+  isEmbeddedLaunch: boolean;
+  channel: string | null;
+  runtimeVersion: string | null;
+  updateId: string | null;
+  createdAt: Date | null;
+}
+
 interface UseOTAUpdateReturn extends OTAUpdateState {
   checkForUpdate: () => Promise<void>;
   applyUpdate: () => Promise<void>;
   dismissModal: () => void;
+  debugInfo: OTADebugInfo;
 }
 
 export function useOTAUpdate(): UseOTAUpdateReturn {
@@ -120,7 +144,10 @@ export function useOTAUpdate(): UseOTAUpdateReturn {
   }, [updateState]);
 
   useEffect(() => {
+    logOTADebugInfo();
+    
     if (!Updates.isEnabled) {
+      console.log('[OTA Update] Updates not enabled - skipping check');
       return;
     }
 
@@ -148,10 +175,21 @@ export function useOTAUpdate(): UseOTAUpdateReturn {
     };
   }, [checkForUpdate, state.status]);
 
+  const debugInfo: OTADebugInfo = {
+    platform: Platform.OS,
+    isEnabled: Updates.isEnabled,
+    isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+    channel: Updates.channel,
+    runtimeVersion: Updates.runtimeVersion,
+    updateId: Updates.updateId,
+    createdAt: Updates.createdAt,
+  };
+
   return {
     ...state,
     checkForUpdate,
     applyUpdate,
     dismissModal,
+    debugInfo,
   };
 }

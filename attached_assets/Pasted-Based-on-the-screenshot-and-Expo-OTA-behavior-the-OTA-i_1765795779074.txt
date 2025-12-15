@@ -1,0 +1,204 @@
+Based on the screenshot and Expo OTA behavior, the OTA **is published correctly** but **clients are not pulling it**. This is almost always a **configuration or runtime mismatch**, not a publishing issue.
+
+Below is a **precise diagnostic**, ordered by likelihood.
+
+---
+
+## 1. Branch / Channel mismatch (MOST COMMON)
+
+From the screenshot:
+
+* OTA published to **branch: `preview`**
+* Channel: **`preview`**
+* Runtime: **`1.0.0`**
+
+Your app will **NOT download** this OTA unless **all three match at runtime**.
+
+### Verify in `app.json / app.config.js`
+
+```json
+{
+  "expo": {
+    "updates": {
+      "url": "https://u.expo.dev/<PROJECT_ID>"
+    },
+    "runtimeVersion": "1.0.0"
+  }
+}
+```
+
+### Verify channel at build time
+
+The installed app must be built with:
+
+```bash
+eas build --profile preview
+```
+
+And your `eas.json` must include:
+
+```json
+{
+  "build": {
+    "preview": {
+      "channel": "preview"
+    }
+  }
+}
+```
+
+❌ If the app was built on `production` or `default`, it will **never see this OTA**.
+
+---
+
+## 2. App was not restarted after install
+
+OTA updates are:
+
+* **Fetched in background**
+* **Applied on reload**
+
+If:
+
+* The app was installed
+* Opened once
+* Never restarted
+
+→ It may not check yet.
+
+### Force a check (for testing only):
+
+```ts
+import * as Updates from 'expo-updates';
+
+await Updates.checkForUpdateAsync();
+await Updates.fetchUpdateAsync();
+```
+
+Then **reload manually**.
+
+---
+
+## 3. You are testing in Expo Go (OTA will NOT work)
+
+OTA **does NOT work in Expo Go**.
+
+If you are using:
+
+* `expo start`
+* Expo Go app
+
+→ OTA downloads will show **zero downloads**.
+
+✅ OTA only works in:
+
+* EAS Dev Client
+* Preview build
+* Production build
+
+---
+
+## 4. Android downloaded once — further downloads won’t increment
+
+Your screenshot shows:
+
+* Android: **1 download**
+
+That means:
+
+* One device already fetched it
+* Further launches **do not re-download the same update**
+
+Expo does **deduplication by fingerprint**.
+
+This is expected behavior.
+
+---
+
+## 5. Runtime fingerprint mismatch
+
+If native code changed (e.g.:
+
+* new native module
+* Expo SDK change
+* config plugin change)
+
+Then:
+
+* Runtime fingerprint ≠ build fingerprint
+* OTA will be silently ignored
+
+### Check:
+
+* Did you recently change:
+
+  * Expo SDK version?
+  * Add/remove native libraries?
+  * Change app.json plugins?
+
+If yes → **new build required**, OTA cannot apply.
+
+---
+
+## 6. Updates disabled in config
+
+Confirm this is NOT present:
+
+```json
+"updates": {
+  "enabled": false
+}
+```
+
+Or environment override:
+
+```bash
+EXPO_UPDATES_ENABLED=false
+```
+
+---
+
+## 7. Correct expectations (important)
+
+What your screenshot means:
+
+| Item               | Status |
+| ------------------ | ------ |
+| OTA published      | ✅      |
+| Android compatible | ✅      |
+| iOS compatible     | ✅      |
+| Clients eligible   | ❓      |
+| Clients checking   | ❓      |
+
+The OTA system is **passive**.
+If clients don’t match **runtime + channel + build**, nothing happens.
+
+---
+
+## Immediate checklist (do these in order)
+
+1. Confirm the installed app was built with:
+
+   * `--profile preview`
+   * channel = `preview`
+2. Confirm `runtimeVersion` exactly matches `1.0.0`
+3. Confirm you are NOT using Expo Go
+4. Restart the app completely
+5. Add temporary logging:
+
+```ts
+console.log(Updates.channel);
+console.log(Updates.runtimeVersion);
+console.log(Updates.updateId);
+```
+
+---
+
+## If you want, I can:
+
+* Verify your `app.json`
+* Verify `eas.json`
+* Give you a **drop-in OTA debug logger**
+* Tell you exactly **why your current build is ignoring the update**
+
+Say which one you want next.
