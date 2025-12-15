@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView, Linking } from 'react-native';
-import { useRoute, RouteProp, useNavigation, NavigationProp } from '@react-navigation/native';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
@@ -98,7 +99,7 @@ function getDateKey(date: Date): string {
 
 export default function ChatRoomScreen() {
   const route = useRoute<RouteProps>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ChatsStackParamList>>();
   const { channelId, channelName, isDirectChat } = route.params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -561,7 +562,7 @@ export default function ChatRoomScreen() {
       senderName,
       senderId
     });
-    (navigation as NavigationProp<ChatsStackParamList>).navigate('LiveLocationMap', {
+    navigation.navigate('LiveLocationMap', {
       groupId: channelId,
       groupName: channelName,
       initialLocation: {
