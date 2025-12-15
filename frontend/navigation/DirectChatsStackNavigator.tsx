@@ -3,10 +3,21 @@ import { useTheme } from "@/hooks/useTheme";
 import { getCommonScreenOptions } from "./screenOptions";
 import DirectChatsScreen from "@/screens/DirectChatsScreen";
 import ChatRoomScreen from "@/screens/ChatRoomScreen";
+import LiveLocationMapScreen from "@/screens/LiveLocationMapScreen";
 
 export type DirectChatsStackParamList = {
   DirectChatsList: undefined;
   DirectChatRoom: { channelId: string; channelName: string; isDirectChat?: boolean };
+  LiveLocationMap: { 
+    groupId: string; 
+    groupName?: string;
+    initialLocation?: {
+      latitude: number;
+      longitude: number;
+      senderName: string;
+      senderId: string;
+    };
+  };
 };
 
 const Stack = createNativeStackNavigator<DirectChatsStackParamList>();
@@ -28,6 +39,13 @@ export default function DirectChatsStackNavigator() {
           title: route.params.channelName,
           headerTransparent: false
         })}
+      />
+      <Stack.Screen
+        name="LiveLocationMap"
+        component={LiveLocationMapScreen}
+        options={{ 
+          headerShown: false
+        }}
       />
     </Stack.Navigator>
   );
