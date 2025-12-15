@@ -18,12 +18,14 @@ import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
 import CallScreen from "@/screens/CallScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OTAUpdateModal } from "@/components/OTAUpdateModal";
 import { CometChatAuthProvider, useCometChatAuth } from "@/utils/cometChatAuth";
 import { SupabaseSyncProvider, useSupabaseSync } from "@/utils/supabaseSync";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import EmergencyModal from "@/components/EmergencyModal";
 import { useTheme } from "@/hooks/useTheme";
+import { useOTAUpdate } from "@/hooks/useOTAUpdate";
 import { startLocationTracking, stopLocationTracking } from "@/utils/locationTracker";
 import { addCallListener, removeCallListener, rejectCall } from "@/utils/cometChatClient";
 import { registerPushToken } from "@/utils/cometChatApi";
@@ -50,6 +52,14 @@ function AppContent() {
   const { startSync, stopSync } = useSupabaseSync();
   const { theme } = useTheme();
   const [incomingCall, setIncomingCall] = useState<any>(null);
+  
+  const { 
+    status: otaStatus, 
+    message: otaMessage, 
+    isModalVisible: isOTAModalVisible, 
+    applyUpdate, 
+    dismissModal: dismissOTAModal 
+  } = useOTAUpdate();
 
   useEffect(() => {
     console.log('[App.tsx] AppContent state change:');
@@ -328,6 +338,13 @@ function AppContent() {
       </Stack.Navigator>
       <StatusBar style="auto" />
       <EmergencyModal />
+      <OTAUpdateModal
+        visible={isOTAModalVisible}
+        status={otaStatus}
+        message={otaMessage}
+        onRefresh={applyUpdate}
+        onDismiss={dismissOTAModal}
+      />
     </NavigationContainer>
   );
 }
