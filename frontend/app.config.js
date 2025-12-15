@@ -99,6 +99,16 @@ export default ({ config }) => ({
   experiments: {
     reactCompiler: true
   },
+  doctor: {
+    reactNativeDirectoryCheck: {
+      exclude: [
+        "react-native-background-timer",
+        "react-native-webrtc",
+        "@cometchat/calls-sdk-react-native",
+        "@cometchat/chat-sdk-react-native"
+      ]
+    }
+  },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL || "https://NexusComs.replit.app",
     eas: {
