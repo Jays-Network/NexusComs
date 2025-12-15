@@ -22,6 +22,7 @@ import {
 } from '@/utils/cometChatClient';
 import { triggerEmergencyAlert as triggerEmergencyApi } from '@/utils/cometChatApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'> & {
   params: {
@@ -111,6 +112,9 @@ export default function ChatRoomScreen() {
   const { user, cometChatUser, isInitialized } = useCometChatAuth();
   const flatListRef = useRef<FlatList>(null);
   const listenerIdRef = useRef<string>(`chat_${channelId}_${Date.now()}`);
+  const liveLocationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const liveLocationExpiresRef = useRef<number | null>(null);
+  const stopLiveLocationRef = useRef<(() => Promise<void>) | null>(null);
   const { paddingBottom } = useScreenInsets();
   
   const receiverType = isDirectChat ? 'user' : 'group';
@@ -321,8 +325,125 @@ export default function ChatRoomScreen() {
 
     return () => {
       removeMessageListener(listenerIdRef.current);
+      if (liveLocationIntervalRef.current && stopLiveLocationRef.current) {
+        stopLiveLocationRef.current();
+      }
     };
   }, [isInitialized, cometChatUser, channelId, channelName, isDirectChat, receiverType, transformMessage]);
+
+  const stopLiveLocationSharing = useCallback(async () => {
+    if (liveLocationIntervalRef.current) {
+      clearInterval(liveLocationIntervalRef.current);
+      liveLocationIntervalRef.current = null;
+    }
+    liveLocationExpiresRef.current = null;
+    
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+      const token = await AsyncStorage.getItem('@session_token');
+      if (token) {
+        await fetch(`${API_URL}/api/location/live/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            chat_id: channelId,
+            chat_type: receiverType
+          })
+        });
+        console.log('[ChatRoom] Live location sharing stopped');
+      }
+    } catch (error) {
+      console.warn('[ChatRoom] Failed to stop live location:', error);
+    }
+  }, [channelId, receiverType]);
+
+  useEffect(() => {
+    stopLiveLocationRef.current = stopLiveLocationSharing;
+  }, [stopLiveLocationSharing]);
+
+  const startLiveLocationUpdates = useCallback(async (durationMinutes: number) => {
+    if (liveLocationIntervalRef.current) {
+      clearInterval(liveLocationIntervalRef.current);
+      liveLocationIntervalRef.current = null;
+    }
+    
+    const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
+    liveLocationExpiresRef.current = expiresAt;
+    
+    const updateLocation = async () => {
+      if (liveLocationExpiresRef.current && Date.now() >= liveLocationExpiresRef.current) {
+        console.log('[ChatRoom] Live location sharing expired');
+        await stopLiveLocationSharing();
+        return;
+      }
+      
+      try {
+        let { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (canAskAgain) {
+            const permResult = await Location.requestForegroundPermissionsAsync();
+            status = permResult.status;
+          }
+          
+          if (status !== 'granted') {
+            console.warn('[ChatRoom] Location permission denied, stopping updates');
+            await stopLiveLocationSharing();
+            
+            if (Platform.OS !== 'web') {
+              Alert.alert(
+                'Location Permission Required',
+                'Live location sharing requires location access. Please enable it in Settings to continue sharing your location.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Open Settings', 
+                    onPress: async () => {
+                      try {
+                        await Linking.openSettings();
+                      } catch (error) {
+                        console.warn('[ChatRoom] Could not open settings:', error);
+                      }
+                    }
+                  }
+                ]
+              );
+            }
+            return;
+          }
+        }
+        
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High
+        });
+        
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+        const token = await AsyncStorage.getItem('@session_token');
+        if (token) {
+          await fetch(`${API_URL}/api/location/live/update`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              chat_id: channelId,
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude
+            })
+          });
+          console.log('[ChatRoom] Live location updated:', location.coords.latitude, location.coords.longitude);
+        }
+      } catch (error) {
+        console.warn('[ChatRoom] Failed to update live location:', error);
+      }
+    };
+    
+    liveLocationIntervalRef.current = setInterval(updateLocation, 30000);
+    console.log('[ChatRoom] Started live location updates, expires in', durationMinutes, 'minutes');
+  }, [channelId, stopLiveLocationSharing]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -517,6 +638,8 @@ export default function ChatRoomScreen() {
                 })
               });
               console.log('[ChatRoom] Live location registered with backend');
+              
+              startLiveLocationUpdates(data.durationMinutes);
             }
           } catch (backendError) {
             console.warn('[ChatRoom] Failed to register live location with backend:', backendError);
@@ -576,7 +699,7 @@ export default function ChatRoomScreen() {
         Alert.alert('Error', 'Failed to send attachment. Please try again.');
       }
     }
-  }, [channelId, receiverType, transformMessage]);
+  }, [channelId, receiverType, transformMessage, startLiveLocationUpdates]);
 
   const navigateToLiveLocationMap = useCallback((attachment: Attachment, senderName: string, senderId: string) => {
     console.log('[ChatRoom] Navigating to LiveLocationMap with:', {
