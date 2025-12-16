@@ -4,7 +4,18 @@ import { getCommonScreenOptions } from "./screenOptions";
 import GroupListScreen from "@/screens/GroupListScreen";
 import ChatRoomScreen from "@/screens/ChatRoomScreen";
 import CreateGroupScreen from "@/screens/CreateGroupScreen";
-import LiveLocationMapScreen from "@/screens/LiveLocationMapScreen";
+import { lazy, Suspense } from "react";
+import { View, ActivityIndicator } from "react-native";
+
+const LiveLocationMapScreen = lazy(() => import("@/screens/LiveLocationMapScreen"));
+
+function LiveLocationMapWrapper(props: any) {
+  return (
+    <Suspense fallback={<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" /></View>}>
+      <LiveLocationMapScreen {...props} />
+    </Suspense>
+  );
+}
 
 export type ChatsStackParamList = {
   GroupList: undefined;
@@ -52,7 +63,7 @@ export default function ChatsStackNavigator() {
       />
       <Stack.Screen
         name="LiveLocationMap"
-        component={LiveLocationMapScreen}
+        component={LiveLocationMapWrapper}
         options={{ 
           headerShown: false
         }}
