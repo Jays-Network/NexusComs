@@ -32,6 +32,7 @@ interface LiveLocationMapProps {
 export interface LiveLocationMapRef {
   fitToAllMarkers: () => void;
   animateToRegion: (region: MapRegion, duration?: number) => void;
+  animateToUser: () => void;
 }
 
 declare const LiveLocationMap: ForwardRefExoticComponent<LiveLocationMapProps & RefAttributes<LiveLocationMapRef>>;

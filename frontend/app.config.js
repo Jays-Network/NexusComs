@@ -27,6 +27,11 @@ export default ({ config }) => ({
       backgroundColor: "#000000",
       foregroundImage: "./assets/images/nexus-coms-logo.jpg"
     },
+    config: {
+      googleMaps: {
+        apiKey: process.env.GOOGLE_MAPS_API_KEY || "YOUR_GOOGLE_MAPS_API_KEY"
+      }
+    },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     permissions: [

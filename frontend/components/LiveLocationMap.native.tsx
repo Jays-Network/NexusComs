@@ -1,6 +1,6 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import { View, StyleSheet, Text, Pressable, Platform } from 'react-native';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { Spacing, BorderRadius } from '@/constants/theme';
@@ -37,38 +37,13 @@ interface LiveLocationMapProps {
 export interface LiveLocationMapRef {
   fitToAllMarkers: () => void;
   animateToRegion: (region: MapRegion, duration?: number) => void;
+  animateToUser: () => void;
 }
 
 const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapProps>(
   ({ liveLocations, initialRegion, currentLocation, onRefresh, getMarkerColor, bottomInset, topInset }, ref) => {
     const mapRef = useRef<MapView>(null);
     const { theme } = useTheme();
-
-    useImperativeHandle(ref, () => ({
-      fitToAllMarkers: () => {
-        if (mapRef.current && liveLocations.length > 0) {
-          const coordinates = liveLocations.map(loc => ({
-            latitude: loc.latitude,
-            longitude: loc.longitude
-          }));
-          
-          if (currentLocation) {
-            coordinates.push({
-              latitude: currentLocation.coords.latitude,
-              longitude: currentLocation.coords.longitude
-            });
-          }
-          
-          mapRef.current.fitToCoordinates(coordinates, {
-            edgePadding: { top: 100, right: 50, bottom: 100, left: 50 },
-            animated: true
-          });
-        }
-      },
-      animateToRegion: (region: MapRegion, duration = 500) => {
-        mapRef.current?.animateToRegion(region, duration);
-      }
-    }));
 
     function fitToAllMarkers() {
       if (mapRef.current && liveLocations.length > 0) {
@@ -91,16 +66,45 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
       }
     }
 
+    function animateToUser() {
+      if (currentLocation && mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005
+        }, 500);
+      } else if (liveLocations.length > 0 && mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude: liveLocations[0].latitude,
+          longitude: liveLocations[0].longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005
+        }, 500);
+      }
+    }
+
+    useImperativeHandle(ref, () => ({
+      fitToAllMarkers,
+      animateToRegion: (region: MapRegion, duration = 500) => {
+        mapRef.current?.animateToRegion(region, duration);
+      },
+      animateToUser
+    }));
+
     return (
       <>
         <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
+          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
           style={styles.map}
           initialRegion={initialRegion}
           showsUserLocation={true}
           showsMyLocationButton={false}
+          showsCompass={true}
+          showsScale={true}
           onMapReady={fitToAllMarkers}
+          mapType="standard"
         >
           {liveLocations.map((location, index) => (
             <Marker
@@ -110,6 +114,7 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
                 longitude: location.longitude
               }}
               pinColor={getMarkerColor(index)}
+              tracksViewChanges={false}
             >
               <View style={styles.customMarker}>
                 <View style={[styles.markerPin, { backgroundColor: getMarkerColor(index) }]}>
@@ -138,8 +143,17 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
 
         <View style={[styles.buttonContainer, { bottom: bottomInset + Spacing.lg }]}>
           <Pressable
+            onPress={animateToUser}
+            style={[styles.actionButton, { backgroundColor: theme.backgroundSecondary }]}
+            accessibilityLabel="Re-center map on my location"
+          >
+            <Feather name="crosshair" size={20} color={theme.primary} />
+          </Pressable>
+          
+          <Pressable
             onPress={onRefresh}
             style={[styles.actionButton, { backgroundColor: theme.backgroundSecondary }]}
+            accessibilityLabel="Refresh locations"
           >
             <Feather name="refresh-cw" size={20} color={theme.primary} />
           </Pressable>
@@ -148,6 +162,7 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
             <Pressable
               onPress={fitToAllMarkers}
               style={[styles.actionButton, { backgroundColor: theme.primary }]}
+              accessibilityLabel="Fit all markers in view"
             >
               <Feather name="maximize-2" size={20} color="#FFFFFF" />
             </Pressable>
