@@ -4,6 +4,7 @@ export default ({ config }) => ({
   ...config,
   name: "Nexus Coms",
   slug: "worldrisk",
+  owner: "jay_666",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/nexus-coms-logo.jpg",
