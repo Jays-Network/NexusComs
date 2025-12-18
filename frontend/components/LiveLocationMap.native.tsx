@@ -93,17 +93,21 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
     }));
 
     return (
-      <>
+      <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
           provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
-          style={styles.map}
+          style={StyleSheet.absoluteFillObject}
           initialRegion={initialRegion}
           showsUserLocation={true}
           showsMyLocationButton={false}
           showsCompass={true}
           showsScale={true}
-          onMapReady={fitToAllMarkers}
+          onMapReady={() => {
+            setTimeout(() => {
+              fitToAllMarkers();
+            }, 500);
+          }}
           mapType="standard"
         >
           {liveLocations.map((location, index) => (
@@ -196,7 +200,7 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
             ))}
           </View>
         ) : null}
-      </>
+      </View>
     );
   }
 );
@@ -206,8 +210,9 @@ LiveLocationMapComponent.displayName = 'LiveLocationMap';
 export default LiveLocationMapComponent;
 
 const styles = StyleSheet.create({
-  map: {
-    flex: 1
+  mapContainer: {
+    flex: 1,
+    position: 'relative'
   },
   customMarker: {
     alignItems: 'center'
