@@ -174,7 +174,7 @@ const LiveLocationMapComponent = forwardRef<LiveLocationMapRef, LiveLocationMapP
         </View>
 
         {liveLocations.length > 0 ? (
-          <View style={[styles.legend, { backgroundColor: theme.backgroundSecondary, top: topInset + 80 }]}>
+          <View style={[styles.legend, { backgroundColor: theme.backgroundSecondary }]}>
             {liveLocations.map((loc, index) => (
               <Pressable 
                 key={loc.id}
@@ -280,6 +280,7 @@ const styles = StyleSheet.create({
   },
   legend: {
     position: 'absolute',
+    top: Spacing.md,
     left: Spacing.md,
     right: Spacing.md,
     padding: Spacing.sm,
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    maxHeight: 150
+    maxHeight: 120
   },
   legendItem: {
     flexDirection: 'row',
