@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { Colors, Spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/ThemedText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import LiveLocationMap, { LiveLocationMapRef } from '@/components/LiveLocationMap';
 
 type LiveLocationMapParams = {
@@ -46,6 +47,7 @@ export default function LiveLocationMapScreen() {
   const mapRef = useRef<LiveLocationMapRef>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => {
     loadLiveLocations();
@@ -222,7 +224,7 @@ export default function LiveLocationMapScreen() {
         currentLocation={currentLocation}
         onRefresh={loadLiveLocations}
         getMarkerColor={getMarkerColor}
-        bottomInset={insets.bottom}
+        bottomInset={tabBarHeight > 0 ? tabBarHeight : insets.bottom}
         topInset={insets.top}
       />
 
