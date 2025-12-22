@@ -13,6 +13,10 @@ localPort = 3003
 externalPort = 6800
 
 [[ports]]
+localPort = 5000
+externalPort = 5000
+
+[[ports]]
 localPort = 8081
 externalPort = 80
 
@@ -122,6 +126,7 @@ COMETCHAT_APP_ID = "16723866734b9d81b"
 COMETCHAT_REGION = "eu"
 COMETCHAT_AUTH_KEY = "cefc57f3a9505c02da5ba48636c534ee53d1ab5f"
 SUPABASE_URL = "https://pyqjpymkckmhtnacqqtd.supabase.co"
+PORT = "5000"
 
 [userenv.development]
 EXPO_PUBLIC_API_URL = "https://NexusComs.replit.app"
