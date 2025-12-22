@@ -36,24 +36,31 @@ async function sendLocationToServer(userId: string, location: LocationUpdate): P
 
     const deviceInfo = `${Platform.OS} ${Platform.Version}`;
 
+    const endpoint = `${API_URL}/api/users/${userId}/location`;
+    
     console.log('[LocationTracker] Sending location update for user:', userId);
+    console.log('[LocationTracker] Endpoint:', endpoint);
     console.log('[LocationTracker] Coordinates:', location.latitude, location.longitude);
     console.log('[LocationTracker] Device:', deviceInfo);
 
-    const response = await fetch(`${API_URL}/api/location/update`, {
+    const requestBody = {
+      user_id: userId,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy,
+      timestamp: location.timestamp,
+      device_info: deviceInfo
+    };
+
+    console.log('[LocationTracker] Request body:', JSON.stringify(requestBody));
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        user_id: userId,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        timestamp: location.timestamp,
-        device_info: deviceInfo
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (response.ok) {
@@ -61,7 +68,12 @@ async function sendLocationToServer(userId: string, location: LocationUpdate): P
       return true;
     } else {
       const errorText = await response.text();
-      console.warn(`[LocationTracker] Failed to update location: ${response.status}`, errorText);
+      console.error('[LocationTracker] Location update FAILED');
+      console.error('[LocationTracker] User ID:', userId);
+      console.error('[LocationTracker] API URL:', API_URL);
+      console.error('[LocationTracker] Full endpoint:', endpoint);
+      console.error('[LocationTracker] Status:', response.status);
+      console.error('[LocationTracker] Error:', errorText);
       return false;
     }
   } catch (error) {
