@@ -12,7 +12,7 @@ const createUserController = (supabase, addLog) => {
       if (error) {
         return res.status(500).json({ error: error.message });
       }
-      res.json(data || []);
+      res.json({ users: data || [], total: (data || []).length });
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
@@ -264,6 +264,23 @@ const createUserController = (supabase, addLog) => {
     }
   };
 
+  const getAvailableUsers = async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, email, username")
+        .order("username", { ascending: true });
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+      res.json(data || []);
+    } catch (error) {
+      console.error("Error fetching available users:", error);
+      res.status(500).json({ error: "Failed to fetch available users" });
+    }
+  };
+
   return {
     getAllUsers,
     getTrackedUsers,
@@ -271,7 +288,8 @@ const createUserController = (supabase, addLog) => {
     getUserById,
     createUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    getAvailableUsers
   };
 };
 
