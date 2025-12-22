@@ -568,6 +568,10 @@
         .ping-disconnected { background: #FF6B6B !important; animation: none !important; }
         .ping-checking { background: #FFB84D !important; }
     </style>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
     <!-- LOGIN PAGE -->
@@ -1155,14 +1159,12 @@
                             <h2 style="font-size: 24px; color: #D4AF37; margin: 0;">User Tracking</h2>
                             <button onclick="loadTrackedUsers()" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer;">Refresh</button>
                         </div>
-                        <div style="background: #2a2a2a; border-radius: 8px; padding: 40px; text-align: center; border: 1px solid #404040; margin-bottom: 20px;">
-                            <p style="color: #808080; margin-bottom: 20px;">Map will display users with location tracking enabled</p>
-                            <div id="mapContainer" style="width: 100%; height: 400px; background: #1a1a1a; border-radius: 4px; border: 1px solid #404040; position: relative; overflow: hidden;">
-                                <div id="mapPlaceholder" style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column;">
-                                    <p style="color: #666; margin-bottom: 10px;">Location data will appear here</p>
-                                    <p style="color: #808080; font-size: 12px;">Enable location tracking for users to see their positions</p>
-                                </div>
-                                <div id="mapMarkers" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+                        <div style="background: #2a2a2a; border-radius: 8px; padding: 20px; border: 1px solid #404040; margin-bottom: 20px;">
+                            <p style="color: #808080; margin-bottom: 15px; text-align: center;">Map displays users with location tracking enabled</p>
+                            <div id="trackingMap" style="width: 100%; height: 500px; background: #1a1a1a; border-radius: 4px; border: 1px solid #404040;"></div>
+                            <div id="mapPlaceholder" style="display: none; align-items: center; justify-content: center; height: 500px; flex-direction: column; background: #1a1a1a; border-radius: 4px; border: 1px solid #404040;">
+                                <p style="color: #666; margin-bottom: 10px;">Location data will appear here</p>
+                                <p style="color: #808080; font-size: 12px;">Enable location tracking for users to see their positions</p>
                             </div>
                         </div>
                         <div class="table-container">
@@ -2722,10 +2724,58 @@
         }
 
         // ============= USER TRACKING FUNCTIONS =============
+        let trackingMap = null;
+        let trackingMarkers = [];
+        
+        // Custom marker colors for users
+        const markerColors = ['#D4AF37', '#4CAF50', '#FF6B6B', '#8B5CF6', '#00BCD4', '#FF9800', '#E91E63', '#3F51B5'];
+        
+        function createColoredMarker(color) {
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="
+                    width: 24px;
+                    height: 24px;
+                    background: ${color};
+                    border-radius: 50%;
+                    border: 3px solid #fff;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                "></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            });
+        }
+        
+        function initTrackingMap() {
+            const mapContainer = document.getElementById('trackingMap');
+            if (!mapContainer) return null;
+            
+            // Remove existing map if any
+            if (trackingMap) {
+                trackingMap.remove();
+                trackingMap = null;
+            }
+            
+            // Initialize Leaflet map with OpenStreetMap
+            const map = L.map('trackingMap', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView([51.505, -0.09], 3);
+            
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            return map;
+        }
+        
         async function loadTrackedUsers() {
             const tbody = document.getElementById('trackedUsersTableBody');
             const mapPlaceholder = document.getElementById('mapPlaceholder');
-            const mapMarkers = document.getElementById('mapMarkers');
+            const mapElement = document.getElementById('trackingMap');
             
             try {
                 tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading tracked users...</td></tr>';
@@ -2740,8 +2790,8 @@
                 
                 if (!users || users.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #808080;">No users with location tracking enabled. Enable location tracking in user settings.</td></tr>';
+                    mapElement.style.display = 'none';
                     mapPlaceholder.style.display = 'flex';
-                    mapMarkers.style.display = 'none';
                     return;
                 }
                 
@@ -2750,10 +2800,6 @@
                     const lastUpdate = user.last_location_update ? new Date(user.last_location_update).toLocaleString() : 'Never';
                     const lat = user.last_latitude ? parseFloat(user.last_latitude).toFixed(6) : '-';
                     const lng = user.last_longitude ? parseFloat(user.last_longitude).toFixed(6) : '-';
-                    const hasLocation = user.last_latitude && user.last_longitude;
-                    const locationStatus = hasLocation ? 
-                        '<span style="color: #4CAF50;">Active</span>' : 
-                        '<span style="color: #808080;">No location</span>';
                     
                     return `
                         <tr style="border-bottom: 1px solid #333;">
@@ -2767,33 +2813,65 @@
                     `;
                 }).join('');
                 
-                // Show simple map visualization with user positions
+                // Filter users with valid location data
                 const usersWithLocation = users.filter(u => u.last_latitude && u.last_longitude);
+                
                 if (usersWithLocation.length > 0) {
                     mapPlaceholder.style.display = 'none';
-                    mapMarkers.style.display = 'block';
+                    mapElement.style.display = 'block';
                     
-                    // Create simple visualization with markers
-                    let markersHtml = '<div style="position: absolute; top: 10px; left: 10px; color: #D4AF37; font-size: 12px;">Tracked Users: ' + usersWithLocation.length + '</div>';
+                    // Initialize map if not already done
+                    if (!trackingMap) {
+                        trackingMap = initTrackingMap();
+                    }
+                    
+                    // Clear existing markers
+                    trackingMarkers.forEach(marker => trackingMap.removeLayer(marker));
+                    trackingMarkers = [];
+                    
+                    // Add markers for each user
+                    const bounds = L.latLngBounds();
                     
                     usersWithLocation.forEach((user, index) => {
-                        // Simple positioning based on coordinates (normalized for display)
-                        const x = ((parseFloat(user.last_longitude) + 180) / 360) * 100;
-                        const y = ((90 - parseFloat(user.last_latitude)) / 180) * 100;
+                        const lat = parseFloat(user.last_latitude);
+                        const lng = parseFloat(user.last_longitude);
+                        const color = markerColors[index % markerColors.length];
                         
-                        markersHtml += `
-                            <div style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%);" title="${user.username}: ${user.last_latitude}, ${user.last_longitude}">
-                                <div style="width: 12px; height: 12px; background: #D4AF37; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>
-                                <div style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 10px; color: #fff; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 3px;">${user.username}</div>
+                        const marker = L.marker([lat, lng], {
+                            icon: createColoredMarker(color)
+                        }).addTo(trackingMap);
+                        
+                        // Create popup with user info
+                        const lastUpdate = user.last_location_update ? 
+                            new Date(user.last_location_update).toLocaleString() : 'Unknown';
+                        
+                        marker.bindPopup(`
+                            <div style="min-width: 150px;">
+                                <strong style="color: #333;">${user.username || 'Unknown'}</strong><br>
+                                <span style="color: #666; font-size: 12px;">${user.email || ''}</span><br>
+                                <hr style="margin: 6px 0; border: none; border-top: 1px solid #ddd;">
+                                <span style="font-size: 11px; color: #888;">
+                                    Lat: ${lat.toFixed(6)}<br>
+                                    Lng: ${lng.toFixed(6)}<br>
+                                    Updated: ${lastUpdate}
+                                </span>
                             </div>
-                        `;
+                        `);
+                        
+                        trackingMarkers.push(marker);
+                        bounds.extend([lat, lng]);
                     });
                     
-                    mapMarkers.innerHTML = markersHtml;
+                    // Fit map to show all markers with padding
+                    if (usersWithLocation.length === 1) {
+                        trackingMap.setView([usersWithLocation[0].last_latitude, usersWithLocation[0].last_longitude], 15);
+                    } else {
+                        trackingMap.fitBounds(bounds, { padding: [50, 50] });
+                    }
                 } else {
+                    mapElement.style.display = 'none';
                     mapPlaceholder.innerHTML = '<p style="color: #666; margin-bottom: 10px;">Users found but no location data yet</p><p style="color: #808080; font-size: 12px;">Location data will appear once users share their position</p>';
                     mapPlaceholder.style.display = 'flex';
-                    mapMarkers.style.display = 'none';
                 }
             } catch (error) {
                 console.error('Error loading tracked users:', error);

@@ -49,17 +49,23 @@ const createLocationController = (supabase, addLog) => {
         return res.status(500).json({ error: error.message });
       }
 
+      // Always update user's last known location
+      const userUpdateData = {
+        last_latitude: latitude,
+        last_longitude: longitude,
+        last_location_update: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Only include device_info if provided
       if (device_info) {
-        await supabase
-          .from("users")
-          .update({ 
-            device_info,
-            last_latitude: latitude,
-            last_longitude: longitude,
-            last_location_update: new Date().toISOString()
-          })
-          .eq("id", user_id);
+        userUpdateData.device_info = device_info;
       }
+      
+      await supabase
+        .from("users")
+        .update(userUpdateData)
+        .eq("id", user_id);
 
       console.log(`[Location] Successfully updated location for user ${user_id}`);
       res.json({ message: "Location updated", location: data });
