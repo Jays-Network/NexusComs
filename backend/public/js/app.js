@@ -1084,7 +1084,7 @@ async function loadTrackedUsers() {
         
         // Render table
         tbody.innerHTML = users.map(user => {
-            const lastUpdate = user.last_location_update ? new Date(user.last_location_update).toLocaleString() : 'Never';
+            const lastUpdate = user.last_location_update ? new Date(user.last_location_update).toLocaleString() : 'Offline';
             const lat = user.last_latitude ? parseFloat(user.last_latitude).toFixed(6) : '-';
             const lng = user.last_longitude ? parseFloat(user.last_longitude).toFixed(6) : '-';
             
@@ -1130,7 +1130,7 @@ async function loadTrackedUsers() {
                 
                 // Create popup with user info
                 const lastUpdate = user.last_location_update ? 
-                    new Date(user.last_location_update).toLocaleString() : 'Unknown';
+                    new Date(user.last_location_update).toLocaleString() : 'Offline';
                 
                 marker.bindPopup(`
                     <div style="min-width: 150px;">
@@ -1164,6 +1164,9 @@ async function loadTrackedUsers() {
         console.error('Error loading tracked users:', error);
         tbody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #FF6B6B;">Failed to load tracked users: ' + error.message + '</td></tr>';
     }
+    
+    // Auto-refresh every 60 seconds
+    setTimeout(loadTrackedUsers, 60000);
 }
 
 // ============= LOGS FUNCTIONS =============
