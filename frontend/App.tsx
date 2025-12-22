@@ -31,6 +31,7 @@ import { startLocationTracking, stopLocationTracking } from "@/utils/locationTra
 import { addCallListener, removeCallListener, rejectCall } from "@/utils/cometChatClient";
 import { registerPushToken } from "@/utils/cometChatApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CometChatNotifications } from "@cometchat/chat-sdk-react-native";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -199,47 +200,59 @@ function AppContent() {
 
   async function registerPushNotificationToken() {
     try {
-      // Skip on web - push tokens are mobile only
       if (Platform.OS === 'web') {
         console.log('[App.tsx] Skipping push token registration on web');
         return;
       }
 
       console.log('[App.tsx] Registering push notification token...');
-      
-      // Request notification permissions
+
+      // 1. Request Permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
-      
       if (existingStatus !== 'granted') {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
-      
       if (finalStatus !== 'granted') {
         console.log('[App.tsx] Push notification permission denied');
         return;
       }
-      
-      // Get push token
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId,
-      });
-      const pushToken = tokenData.data;
-      
-      console.log('[App.tsx] Got push token:', pushToken);
-      
-      // Get auth token and register with backend (uses @session_token key)
-      const authToken = await AsyncStorage.getItem('@session_token');
-      if (authToken && pushToken) {
-        try {
-          await registerPushToken(authToken, pushToken);
-          console.log('[App.tsx] Push token registered with backend');
-        } catch (err) {
-          console.warn('[App.tsx] Failed to register push token with backend:', err);
-        }
+
+      // 2. Get Native Device Token (Required for CometChat)
+      const tokenData = await Notifications.getDevicePushTokenAsync();
+      const deviceToken = tokenData.data;
+      console.log('[App.tsx] Got Device Token:', deviceToken);
+
+      // 3. Register with CometChat SDK
+      // Provider IDs 'fcm' and 'apns' must match the Provider IDs configured in CometChat Dashboard
+      if (Platform.OS === 'android') {
+        await CometChatNotifications.registerPushToken(
+          deviceToken,
+          CometChatNotifications.PushPlatforms.FCM_REACT_NATIVE_ANDROID,
+          'fcm'
+        )
+          .then(() => console.log('[App.tsx] CometChat FCM Token Registered'))
+          .catch((e: any) => console.log('[App.tsx] CometChat FCM Registration Failed:', e));
       } else {
-        console.log('[App.tsx] No auth token available for push token registration');
+        await CometChatNotifications.registerPushToken(
+          deviceToken,
+          CometChatNotifications.PushPlatforms.APNS_REACT_NATIVE_DEVICE,
+          'apns'
+        )
+          .then(() => console.log('[App.tsx] CometChat APNs Token Registered'))
+          .catch((e: any) => console.log('[App.tsx] CometChat APNs Registration Failed:', e));
+      }
+
+      // 4. Register with Backend (optional sync)
+      const authToken = await AsyncStorage.getItem('@session_token');
+      if (authToken && deviceToken) {
+        try {
+          await registerPushToken(authToken, deviceToken);
+          console.log('[App.tsx] Device token registered with backend');
+        } catch (err) {
+          console.warn('[App.tsx] Failed to register device token with backend:', err);
+        }
       }
     } catch (error) {
       console.error('[App.tsx] Error registering push token:', error);

@@ -1,0 +1,60 @@
+Prompt for Replit AI:
+
+"I need to update App.tsx to fix push notifications for CometChat.
+
+Add this import at the top: import { CometChatNotifications } from '@cometchat/chat-sdk-react-native';
+
+Replace the entire registerPushNotificationToken function with the following code. This code switches from getExpoPushTokenAsync to getDevicePushTokenAsync and registers the token directly with the CometChat SDK using the correct provider IDs ('fcm' for Android and 'apns' for iOS):
+
+JavaScript
+
+  async function registerPushNotificationToken() {
+    try {
+      if (Platform.OS === 'web') {
+        console.log('[App.tsx] Skipping push token registration on web');
+        return;
+      }
+  console.log('[App.tsx] Registering push notification token...');
+  // 1. Request Permissions
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== 'granted') {
+    console.log('[App.tsx] Push notification permission denied');
+    return;
+  }
+  // 2. Get Native Device Token (Required for CometChat)
+  const tokenData = await Notifications.getDevicePushTokenAsync();
+  const deviceToken = tokenData.data;
+  console.log('[App.tsx] Got Device Token:', deviceToken);
+  // 3. Register with CometChat SDK
+  // 'fcm' and 'apns' must match the Provider IDs in CometChat Dashboard
+  if (Platform.OS === 'android') {
+    await CometChatNotifications.registerPushToken(deviceToken, 'fcm')
+      .then(() => console.log('CometChat FCM Token Registered'))
+      .catch((e: any) => console.log('CometChat FCM Registration Failed:', e));
+  } else {
+    await CometChatNotifications.registerPushToken(deviceToken, 'apns')
+      .then(() => console.log('CometChat APNs Token Registered'))
+      .catch((e: any) => console.log('CometChat APNs Registration Failed:', e));
+  }
+  // 4. Register with Backend (optional sync)
+  const authToken = await AsyncStorage.getItem('@session_token');
+  if (authToken && deviceToken) {
+    try {
+      await registerPushToken(authToken, deviceToken);
+      console.log('[App.tsx] Device token registered with backend');
+    } catch (err) {
+      console.warn('[App.tsx] Failed to register device token with backend:', err);
+    }
+  }
+} catch (error) {
+  console.error('[App.tsx] Error registering push token:', error);
+}
+}
+
+
+Do not remove any other functions."
