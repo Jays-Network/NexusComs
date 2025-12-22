@@ -1,0 +1,141 @@
+    <!-- EDIT USER MODAL -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Edit User</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('general')">General</button>
+                    <button class="tab" onclick="switchTab('access')">Access</button>
+                    <button class="tab" onclick="switchTab('location')">Location tracking</button>
+                    <button class="tab" onclick="switchTab('advanced')">Advanced</button>
+                </div>
+
+                <!-- GENERAL TAB -->
+                <div id="general" class="tab-content active">
+                    <div class="form-group">
+                        <label for="userName">Name</label>
+                        <input type="text" id="userName" placeholder="User's full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="userEmail">Email</label>
+                        <input type="email" id="userEmail" placeholder="user@example.com" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="userAccount">Account</label>
+                        <select id="userAccount" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                            <option value="">Select an account...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="userBillingPlan">Billing Plan</label>
+                        <select id="userBillingPlan" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;" onchange="applyBillingPlanRestrictions()">
+                            <option value="basic">Basic</option>
+                            <option value="admin">Admin</option>
+                            <option value="executive">Executive</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="isEnabled">
+                        <label for="isEnabled">Enabled</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canChangePassword">
+                        <label for="canChangePassword">Can change password</label>
+                    </div>
+
+                    <!-- PASSWORD SECTION -->
+                    <div style="border-top: 1px solid #404040; padding-top: 20px; margin-top: 20px;">
+                        <h3 style="color: #D4AF37; font-size: 14px; margin-bottom: 16px;">Login Password</h3>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Leave blank to keep current password">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Re-enter new password">
+                        </div>
+                        <p style="color: #b0b0b0; font-size: 12px; margin-top: 8px;">
+                            Leave both fields blank to keep the current password unchanged.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ACCESS TAB -->
+                <div id="access" class="tab-content">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canCreateGroups">
+                        <label for="canCreateGroups">Can create groups and subgroups on front end</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canAccessCms">
+                        <label for="canAccessCms">Can access CMS backend</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="canEditProfile">
+                        <label for="canEditProfile">Can edit profile on front end</label>
+                    </div>
+                    
+                    <!-- CONTACT RESTRICTIONS -->
+                    <div style="border-top: 1px solid #404040; padding-top: 20px; margin-top: 20px;">
+                        <h3 style="color: #D4AF37; font-size: 14px; margin-bottom: 16px;">Contact Restrictions</h3>
+                        <div class="form-group">
+                            <label for="contactVisibility">Contact Visibility</label>
+                            <select id="contactVisibility" onchange="handleContactVisibilityChange()" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+                                <option value="all">Can see all contacts</option>
+                                <option value="same_account">Can only see contacts in same account</option>
+                                <option value="allowed_only">Can only see allowed contacts</option>
+                                <option value="none">Cannot see any contacts</option>
+                            </select>
+                        </div>
+                        <div id="allowedContactsSection" style="display: none;">
+                            <label>Allowed Contacts</label>
+                            <div id="allowedContactsContainer" style="max-height: 200px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px; margin-top: 8px;">
+                                <p style="color: #808080; text-align: center; padding: 10px;">Loading contacts...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOCATION TRACKING TAB -->
+                <div id="location" class="tab-content">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="locationTracking">
+                        <label for="locationTracking">Enable location tracking</label>
+                    </div>
+                    <p style="color: #b0b0b0; font-size: 12px; margin-top: 12px;">When enabled, this user can be tracked via the location tracking feature on the front end.</p>
+                </div>
+
+                <!-- ADVANCED TAB -->
+                <div id="advanced" class="tab-content">
+                    <div class="form-group">
+                        <label>Creator</label>
+                        <input type="text" id="creatorName" disabled placeholder="System">
+                    </div>
+                    <div class="form-group">
+                        <label>Created</label>
+                        <input type="text" id="createdDate" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Visit</label>
+                        <input type="text" id="lastVisit" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Last Device</label>
+                        <input type="text" id="lastDevice" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-save" onclick="saveUser()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCOUNT MODAL -->
+    <div class="modal" id="accountModal">

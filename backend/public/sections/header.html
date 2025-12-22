@@ -1,0 +1,31 @@
+    <!-- DASHBOARD PAGE -->
+    <div class="dashboard" id="dashboard">
+        <div class="header">
+            <div class="header-logo">
+                <img src="/world-risk-logo.png" alt="World Risk Logo">
+                <h1>World Risk Admin</h1>
+            </div>
+            <div class="user-info">
+                <span id="currentUser"></span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="dashboard-wrapper">
+            <!-- SIDEBAR NAVIGATION -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h3>Management</h3>
+                </div>
+                <div class="sidebar-nav">
+                    <div class="nav-item active" onclick="switchSection('dashboard-section')">Dashboard</div>
+                    <div class="nav-item" onclick="switchSection('logs-section')">Logs</div>
+                    <div class="nav-item" onclick="switchSection('users')">Users</div>
+                    <div class="nav-item" onclick="switchSection('billing-plans')">Billing Plans</div>
+                    <div class="nav-item" onclick="switchSection('accounts')">Accounts</div>
+                    <div class="nav-item" onclick="switchSection('groups')">Groups & Subgroups</div>
+                    <div class="nav-item" onclick="switchSection('emergency-groups')">Emergency Groups</div>
+                    <div class="nav-item" onclick="switchSection('tracking')">Tracking</div>
+                    <div class="nav-item" onclick="switchSection('security'); loadSecurityDashboard();">Security</div>
+                </div>
+            </div>

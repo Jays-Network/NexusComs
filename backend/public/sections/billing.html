@@ -1,0 +1,153 @@
+                <!-- BILLING PLANS SECTION -->
+                <div id="billing-plans" class="section">
+                    <div class="section-content">
+                        <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">Billing Plans</h2>
+                        <p style="color: #b0b0b0; margin-bottom: 30px;">Configure and manage user access levels based on billing tiers. Each plan dynamically controls what features and permissions users have access to.</p>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                            <!-- BASIC PLAN -->
+                            <div style="background: #2a2a2a; border: 2px solid #404040; border-radius: 12px; padding: 24px; position: relative;">
+                                <div style="position: absolute; top: -12px; left: 20px; background: #1a1a1a; padding: 4px 12px; border-radius: 4px;">
+                                    <span style="color: #b0b0b0; font-size: 12px; font-weight: 600;">TIER 1</span>
+                                </div>
+                                <h3 style="color: #D4AF37; font-size: 20px; margin: 12px 0 8px 0;">Basic</h3>
+                                <p style="color: #808080; font-size: 13px; margin-bottom: 20px;">Restricted access for standard users</p>
+                                
+                                <div style="border-top: 1px solid #404040; padding-top: 16px;">
+                                    <h4 style="color: #FFFFFF; font-size: 13px; margin-bottom: 12px;">Restrictions:</h4>
+                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> Tracking restricted to active only
+                                        </li>
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> Groups controlled by backend only
+                                        </li>
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> Contact list restricted to allowed list
+                                        </li>
+                                        <li style="color: #FF6B6B; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10005;</span> No access to CMS backend
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0;">Users: <span id="basicUsersCount" style="color: #D4AF37;">0</span></p>
+                                </div>
+                            </div>
+                            
+                            <!-- ADMIN PLAN -->
+                            <div style="background: #2a2a2a; border: 2px solid #D4AF37; border-radius: 12px; padding: 24px; position: relative;">
+                                <div style="position: absolute; top: -12px; left: 20px; background: #D4AF37; padding: 4px 12px; border-radius: 4px;">
+                                    <span style="color: #1a1a1a; font-size: 12px; font-weight: 600;">TIER 2</span>
+                                </div>
+                                <h3 style="color: #D4AF37; font-size: 20px; margin: 12px 0 8px 0;">Admin</h3>
+                                <p style="color: #808080; font-size: 13px; margin-bottom: 20px;">Enhanced access for group administrators</p>
+                                
+                                <div style="border-top: 1px solid #404040; padding-top: 16px;">
+                                    <h4 style="color: #FFFFFF; font-size: 13px; margin-bottom: 12px;">Permissions:</h4>
+                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Group admin on frontend
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Full contact list access (Admin & below)
+                                        </li>
+                                        <li style="color: #FFB84D; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#9679;</span> Limited CMS access (allocated by Executive)
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Standard tracking access
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0;">Users: <span id="adminUsersCount" style="color: #D4AF37;">0</span></p>
+                                </div>
+                            </div>
+                            
+                            <!-- EXECUTIVE PLAN -->
+                            <div style="background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%); border: 2px solid #4CAF50; border-radius: 12px; padding: 24px; position: relative;">
+                                <div style="position: absolute; top: -12px; left: 20px; background: #4CAF50; padding: 4px 12px; border-radius: 4px;">
+                                    <span style="color: #1a1a1a; font-size: 12px; font-weight: 600;">TIER 3</span>
+                                </div>
+                                <h3 style="color: #4CAF50; font-size: 20px; margin: 12px 0 8px 0;">Executive</h3>
+                                <p style="color: #808080; font-size: 13px; margin-bottom: 20px;">Full unrestricted access</p>
+                                
+                                <div style="border-top: 1px solid #404040; padding-top: 16px;">
+                                    <h4 style="color: #FFFFFF; font-size: 13px; margin-bottom: 12px;">Full Access:</h4>
+                                    <ul style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> No restrictions
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Full CMS backend access
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Allocate CMS access to Admins
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Full tracking & group control
+                                        </li>
+                                        <li style="color: #4CAF50; font-size: 13px; padding: 6px 0; display: flex; align-items: center;">
+                                            <span style="margin-right: 8px;">&#10003;</span> Manage all user permissions
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div style="margin-top: 16px; padding: 12px; background: #1a1a1a; border-radius: 6px;">
+                                    <p style="color: #b0b0b0; font-size: 12px; margin: 0;">Users: <span id="executiveUsersCount" style="color: #D4AF37;">0</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Permissions Matrix -->
+                        <div style="margin-top: 40px; background: #2a2a2a; border: 1px solid #404040; border-radius: 12px; padding: 24px;">
+                            <h3 style="color: #FFFFFF; margin-bottom: 20px; font-size: 18px;">Permission Matrix</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid #404040;">
+                                        <th style="text-align: left; padding: 12px; color: #b0b0b0; font-size: 13px;">Feature</th>
+                                        <th style="text-align: center; padding: 12px; color: #b0b0b0; font-size: 13px;">Basic</th>
+                                        <th style="text-align: center; padding: 12px; color: #D4AF37; font-size: 13px;">Admin</th>
+                                        <th style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Executive</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Location Tracking</td>
+                                        <td style="text-align: center; padding: 12px; color: #FFB84D; font-size: 13px;">Active Only</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Group Management</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">Backend Only</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Frontend Admin</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full Control</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Contact List Access</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">Allowed Only</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Admin & Below</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">All Users</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">CMS Backend Access</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">None</td>
+                                        <td style="text-align: center; padding: 12px; color: #FFB84D; font-size: 13px;">Limited</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; color: #FFFFFF; font-size: 13px;">Allocate Permissions</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">None</td>
+                                        <td style="text-align: center; padding: 12px; color: #FF6B6B; font-size: 13px;">None</td>
+                                        <td style="text-align: center; padding: 12px; color: #4CAF50; font-size: 13px;">Full</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+

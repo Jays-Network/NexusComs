@@ -1,0 +1,53 @@
+                <!-- ACCOUNTS SECTION -->
+                <div id="accounts" class="section">
+                    <div class="section-content">
+                        <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">Accounts</h2>
+                        <p style="color: #b0b0b0; margin-bottom: 20px;">Manage hierarchical accounts with controlled access to channels. Top-level accounts have access to all sub-accounts and their channels.</p>
+                        
+                        <div class="toolbar">
+                            <button class="add-user-btn" onclick="openAddAccountModal()">+ Add Account</button>
+                            <input type="text" class="search-box" id="accountSearchBox" placeholder="Search accounts..." onkeyup="filterAccounts()">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px; margin-top: 20px;">
+                            <!-- Account Tree Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 16px;">
+                                <h3 style="color: #D4AF37; font-size: 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                                    Account Hierarchy
+                                    <button onclick="loadAccounts()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Refresh</button>
+                                </h3>
+                                <div id="accountTreeContainer" style="max-height: 500px; overflow-y: auto;">
+                                    <p style="color: #666; font-size: 13px;">Loading accounts...</p>
+                                </div>
+                            </div>
+
+                            <!-- Account Details Panel -->
+                            <div id="accountDetailsPanel" style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 24px;">
+                                <div id="accountDetailsContent">
+                                    <p style="color: #666; text-align: center; padding: 40px 0;">Select an account from the tree to view details</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Statistics -->
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px;">
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Total Accounts</p>
+                                <h3 style="font-size: 28px; color: #D4AF37;" id="totalAccountsCount">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Top-Level Accounts</p>
+                                <h3 style="font-size: 28px; color: #4CAF50;" id="topLevelAccountsCount">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Sub-Accounts</p>
+                                <h3 style="font-size: 28px; color: #FFB84D;" id="subAccountsCount">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Assigned Users</p>
+                                <h3 style="font-size: 28px; color: #8B5CF6;" id="assignedUsersCount">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+

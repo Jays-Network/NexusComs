@@ -1,0 +1,128 @@
+                <!-- SECURITY SECTION -->
+                <div id="security" class="section">
+                    <div class="section-content">
+                        <h2 style="margin-bottom: 20px; font-size: 24px; color: #D4AF37;">Security Dashboard</h2>
+                        
+                        <!-- Security Overview Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Security Score</p>
+                                <h3 style="font-size: 32px; color: #4CAF50;" id="securityScore">--</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Active Alerts</p>
+                                <h3 style="font-size: 32px; color: #FFB84D;" id="activeAlerts">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">API Requests/min</p>
+                                <h3 style="font-size: 32px; color: #D4AF37;" id="apiRpm">0</h3>
+                            </div>
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; text-align: center;">
+                                <p style="color: #b0b0b0; font-size: 12px; margin-bottom: 8px;">Error Rate</p>
+                                <h3 style="font-size: 32px; color: #4CAF50;" id="errorRate">0%</h3>
+                            </div>
+                        </div>
+
+                        <!-- Security Panels Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                            
+                            <!-- Secrets Scanner Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">Secrets Scanner</h3>
+                                    <button onclick="runSecretScan()" id="secretScanBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                                        Run Scan
+                                    </button>
+                                </div>
+                                <div id="secretScanResults" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; max-height: 250px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                                    <p style="color: #666;">Click "Run Scan" to check for exposed secrets...</p>
+                                </div>
+                            </div>
+
+                            <!-- Dependency Audit Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">Dependency Audit</h3>
+                                    <button onclick="runNpmAudit()" id="npmAuditBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                                        Run Audit
+                                    </button>
+                                </div>
+                                <div id="npmAuditResults" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; max-height: 250px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                                    <p style="color: #666;">Click "Run Audit" to check dependencies for vulnerabilities...</p>
+                                </div>
+                            </div>
+
+                            <!-- API Traffic Monitor Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">API Traffic Monitor</h3>
+                                    <button onclick="refreshTrafficMetrics()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Refresh
+                                    </button>
+                                </div>
+                                <div id="trafficMetrics" style="font-size: 13px;">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                                        <div style="background: #1a1a1a; padding: 12px; border-radius: 4px;">
+                                            <p style="color: #888; font-size: 11px; margin-bottom: 4px;">Last 10 min</p>
+                                            <p style="color: #D4AF37; font-weight: 600;"><span id="traffic10min">0</span> requests</p>
+                                        </div>
+                                        <div style="background: #1a1a1a; padding: 12px; border-radius: 4px;">
+                                            <p style="color: #888; font-size: 11px; margin-bottom: 4px;">Last 60 min</p>
+                                            <p style="color: #D4AF37; font-weight: 600;"><span id="traffic60min">0</span> requests</p>
+                                        </div>
+                                    </div>
+                                    <div style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+                                        <p style="color: #888; font-size: 11px; margin-bottom: 8px;">Top Endpoints:</p>
+                                        <div id="topEndpoints" style="font-size: 11px; color: #b0b0b0;">
+                                            <p>No traffic data yet...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- System Integrity Panel -->
+                            <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h3 style="color: #D4AF37; margin: 0;">System Integrity</h3>
+                                    <button onclick="checkIntegrity()" id="integrityBtn" style="background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%); color: #1a1a1a; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                                        Check
+                                    </button>
+                                </div>
+                                <div id="integrityResults" style="background: #0d0d0d; border: 1px solid #404040; border-radius: 6px; padding: 16px; max-height: 200px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+                                    <p style="color: #666;">Click "Check" to verify file integrity...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations Panel -->
+                        <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="color: #D4AF37; margin: 0;">Security Recommendations</h3>
+                                <button onclick="loadRecommendations()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                    Refresh
+                                </button>
+                            </div>
+                            <div id="recommendationsPanel" style="max-height: 300px; overflow-y: auto;">
+                                <p style="color: #666;">Loading recommendations...</p>
+                            </div>
+                        </div>
+
+                        <!-- Security Alerts Panel -->
+                        <div style="background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="color: #D4AF37; margin: 0;">Security Alerts</h3>
+                                <div>
+                                    <button onclick="clearSecurityAlerts()" style="background: #FF6B6B; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-right: 8px;">
+                                        Clear All
+                                    </button>
+                                    <button onclick="loadSecurityAlerts()" style="background: transparent; border: 1px solid #404040; color: #b0b0b0; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="alertsPanel" style="max-height: 300px; overflow-y: auto;">
+                                <p style="color: #666;">No alerts...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
