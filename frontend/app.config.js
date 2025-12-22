@@ -24,6 +24,7 @@ export default ({ config }) => ({
   },
   android: {
     package: "com.worldrisk.app",
+    googleServicesFile: "./google-services.json",
     adaptiveIcon: {
       backgroundColor: "#000000",
       foregroundImage: "./assets/images/nexus-coms-logo.jpg"
