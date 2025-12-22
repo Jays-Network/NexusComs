@@ -2,7 +2,9 @@ const createLocationController = (supabase, addLog) => {
   
   const updateLocation = async (req, res) => {
     try {
-      const { user_id, latitude, longitude, accuracy, timestamp, device_info } = req.body;
+      const { latitude, longitude, accuracy, timestamp, device_info } = req.body;
+      // Support both route param (:id) and body (user_id) for flexibility
+      const user_id = req.params.id || req.body.user_id;
 
       console.log(`[Location] Received location update request from user ${user_id}`);
       console.log(`[Location] Coordinates: ${latitude}, ${longitude}`);

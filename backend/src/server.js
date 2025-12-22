@@ -443,6 +443,9 @@ app.use('/api/emergency', createEmergencyRoutes(emergencyController, sessionMidd
 app.use('/api/location', createLocationRoutes(locationController, sessionMiddleware));
 app.use('/api/accounts', createAccountRoutes(accountController, sessionMiddleware));
 
+// Location update route for mobile app - matches /api/users/:userId/location
+app.post('/api/users/:id/location', sessionMiddleware, locationController.updateLocation);
+
 app.get("/api/services/status", serviceController.getServicesStatus);
 app.get("/api/billing-plans", serviceController.getBillingPlans);
 app.get("/api/billing-plans/:plan", serviceController.getBillingPlan);
