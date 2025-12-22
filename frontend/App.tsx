@@ -12,6 +12,7 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
+import Constants from "expo-constants";
 import { Feather } from "@expo/vector-icons";
 
 import MainTabNavigator from "@/navigation/MainTabNavigator";
@@ -222,7 +223,7 @@ function AppContent() {
       
       // Get push token
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
+        projectId: Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId,
       });
       const pushToken = tokenData.data;
       
