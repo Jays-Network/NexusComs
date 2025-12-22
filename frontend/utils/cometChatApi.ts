@@ -185,20 +185,26 @@ export interface CreateGroupRequest {
 
 export async function fetchGroups(authToken: string): Promise<Group[]> {
   try {
+    console.log('[CometChatApi] Fetching groups from:', `${API_URL}/api/groups`);
     const response = await fetch(`${API_URL}/api/groups`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
       },
     });
 
+    console.log('[CometChatApi] Fetch groups response status:', response.status);
+
     if (!response.ok) {
       const error = await response.json();
+      console.error('[CometChatApi] Fetch groups error response:', error);
       throw new Error(error.error || 'Failed to fetch groups');
     }
 
-    return await response.json();
+    const groups = await response.json();
+    console.log('[CometChatApi] Fetched groups count:', groups.length);
+    return groups;
   } catch (error) {
-    console.warn('[CometChatApi] Fetch groups failed:', error);
+    console.error('[CometChatApi] Fetch groups failed:', error);
     throw error;
   }
 }
