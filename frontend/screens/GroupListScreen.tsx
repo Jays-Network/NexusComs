@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
+import { useSupabaseSync } from '@/utils/supabaseSync';
 import { GroupsStackParamList } from '@/navigation/GroupsStackNavigator';
 import { AppHeader } from '@/components/AppHeader';
 import { fetchGroups, Group } from '@/utils/cometChatApi';
@@ -39,6 +40,7 @@ export default function GroupListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
   const { user, authToken, logout } = useCometChatAuth();
+  const { syncedUser } = useSupabaseSync();
   const insets = useSafeAreaInsets();
   
   const [groups, setGroups] = useState<Group[]>([]);
@@ -47,8 +49,12 @@ export default function GroupListScreen() {
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const userBillingPlan = (syncedUser?.billing_plan || 'basic').toLowerCase().trim();
+  const isExecutive = userBillingPlan === 'executive';
+
   const loadGroups = async () => {
     console.log('[GroupListScreen] loadGroups called, authToken:', authToken ? 'exists' : 'missing');
+    console.log('[GroupListScreen] User billing plan:', userBillingPlan, 'isExecutive:', isExecutive);
     
     if (!authToken) {
       console.log('[GroupListScreen] No auth token, skipping group fetch');
@@ -57,10 +63,20 @@ export default function GroupListScreen() {
     }
     
     try {
-      console.log('[GroupListScreen] Fetching groups from API...');
+      console.log('[GroupListScreen] Fetching groups from backend API...');
       const fetchedGroups = await fetchGroups(authToken);
-      console.log('[GroupListScreen] Fetched groups:', fetchedGroups.length, fetchedGroups.map(g => g.name));
-      setGroups(fetchedGroups);
+      console.log('[GroupListScreen] API returned', fetchedGroups.length, 'groups');
+      
+      // SECURITY: For non-executives, filter out any groups with 0 members
+      // This is a client-side safeguard in addition to backend filtering
+      let filteredGroups = fetchedGroups;
+      if (!isExecutive) {
+        filteredGroups = fetchedGroups.filter(g => g.member_count > 0);
+        console.log('[GroupListScreen] After member_count filter:', filteredGroups.length, 'groups');
+      }
+      
+      console.log('[GroupListScreen] Final groups:', filteredGroups.map(g => `${g.name} (${g.member_count} members)`));
+      setGroups(filteredGroups);
     } catch (error) {
       console.error('[GroupListScreen] Failed to fetch groups:', error);
     } finally {
