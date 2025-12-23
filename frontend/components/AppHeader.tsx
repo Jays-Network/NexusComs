@@ -1,28 +1,101 @@
-import React, { useState } from "react";
-import { View, StyleSheet, Image, Pressable, Modal, FlatList, Text } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import React, { useState, useMemo } from "react";
+import { View, StyleSheet, Image, Pressable, Modal, Text, Alert, Platform } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing } from "@/constants/theme";
 import { useCometChatAuth } from "@/utils/cometChatAuth";
 
-export function AppHeader() {
+interface MenuOption {
+  id: string;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+}
+
+interface AppHeaderProps {
+  tabName?: string;
+}
+
+export function AppHeader({ tabName }: AppHeaderProps) {
   const { theme } = useTheme();
   const { user } = useCometChatAuth();
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
+  const route = useRoute();
 
-  const menuOptions = [
-    { id: "new-group", label: "New Group", icon: "plus-circle" },
-    { id: "settings", label: "Settings", icon: "settings" },
-  ];
+  const currentTabName = useMemo(() => {
+    if (tabName) return tabName;
+    const routeName = route.name || '';
+    if (routeName.includes('DirectChat') || routeName === 'ChatsTab') return 'ChatsTab';
+    if (routeName.includes('Group') || routeName === 'GroupsTab') return 'GroupsTab';
+    if (routeName.includes('Emergency') || routeName.includes('Alert') || routeName === 'AlertsTab') return 'AlertsTab';
+    if (routeName.includes('Contact') || routeName === 'ContactsTab') return 'ContactsTab';
+    if (routeName.includes('CallLog') || routeName.includes('Call') || routeName === 'CallLogTab') return 'CallLogTab';
+    if (routeName.includes('Setting') || routeName === 'SettingsTab') return 'SettingsTab';
+    return 'ChatsTab';
+  }, [tabName, route.name]);
+
+  const menuOptions = useMemo((): MenuOption[] => {
+    const baseOptions: MenuOption[] = [];
+    
+    switch (currentTabName) {
+      case 'ChatsTab':
+        baseOptions.push({ id: "new-chat", label: "New Chat", icon: "edit" });
+        break;
+      case 'GroupsTab':
+        baseOptions.push({ id: "new-group", label: "New Group", icon: "users" });
+        break;
+      case 'AlertsTab':
+        baseOptions.push({ id: "refresh-alerts", label: "Refresh", icon: "refresh-cw" });
+        break;
+      case 'ContactsTab':
+        baseOptions.push({ id: "refresh-contacts", label: "Refresh", icon: "refresh-cw" });
+        break;
+      case 'CallLogTab':
+        baseOptions.push({ id: "new-call", label: "New Call", icon: "phone-call" });
+        baseOptions.push({ id: "new-group-call", label: "New Group Call", icon: "video" });
+        break;
+    }
+    
+    baseOptions.push({ id: "settings", label: "Settings", icon: "settings" });
+    return baseOptions;
+  }, [currentTabName]);
 
   const handleMenuOption = (option: string) => {
     setMenuVisible(false);
-    if (option === "settings") {
-      navigation.navigate("SettingsTab");
-    } else if (option === "new-group") {
-      navigation.navigate("ChatsTab", { screen: "CreateGroup" });
+    
+    switch (option) {
+      case "settings":
+        navigation.navigate("SettingsTab");
+        break;
+      case "new-chat":
+        navigation.navigate("ChatsTab", { screen: "DirectChatsList", params: { openNewChat: true } });
+        break;
+      case "new-group":
+        navigation.navigate("GroupsTab", { screen: "CreateGroup" });
+        break;
+      case "refresh-alerts":
+        navigation.navigate("AlertsTab", { screen: "EmergencyList", params: { refresh: Date.now() } });
+        break;
+      case "refresh-contacts":
+        navigation.navigate("ContactsTab", { screen: "ContactList", params: { refresh: Date.now() } });
+        break;
+      case "new-call":
+        if (Platform.OS === 'web') {
+          window.alert('Voice calls require the mobile app');
+        } else {
+          Alert.alert('New Call', 'Select a contact to start a call');
+          navigation.navigate("ContactsTab", { screen: "ContactList", params: { initiateCall: true } });
+        }
+        break;
+      case "new-group-call":
+        if (Platform.OS === 'web') {
+          window.alert('Video calls require the mobile app');
+        } else {
+          Alert.alert('Group Call', 'Select a group to start a video call');
+          navigation.navigate("GroupsTab", { screen: "GroupList", params: { initiateGroupCall: true } });
+        }
+        break;
     }
   };
 
@@ -32,12 +105,12 @@ export function AppHeader() {
         {/* Left: Logo + Title */}
         <View style={styles.leftSection}>
           <Image
-            source={require("../assets/images/world-risk-logo.png")}
+            source={require("../assets/images/nexus-coms-logo.jpg")}
             style={styles.logo}
             resizeMode="contain"
           />
           <View>
-            <Text style={[styles.appName, { color: theme.text }]}>World Risk</Text>
+            <Text style={[styles.appName, { color: theme.text }]}>Nexus Coms</Text>
             {user && <Text style={[styles.userName, { color: theme.textSecondary }]}>{user.name}</Text>}
           </View>
         </View>
@@ -66,24 +139,20 @@ export function AppHeader() {
           onPress={() => setMenuVisible(false)}
         >
           <View style={[styles.menuContainer, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
-            <FlatList
-              data={menuOptions}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item, index }) => (
-                <Pressable
-                  onPress={() => handleMenuOption(item.id)}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    pressed && { opacity: 0.7 },
-                    index !== menuOptions.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 },
-                  ]}
-                >
-                  <Feather name={item.icon as any} size={18} color={theme.text} />
-                  <Text style={[styles.menuLabel, { color: theme.text }]}>{item.label}</Text>
-                </Pressable>
-              )}
-            />
+            {menuOptions.map((item, index) => (
+              <Pressable
+                key={item.id}
+                onPress={() => handleMenuOption(item.id)}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  pressed && { opacity: 0.7 },
+                  index !== menuOptions.length - 1 && { borderBottomColor: theme.border, borderBottomWidth: 1 },
+                ]}
+              >
+                <Feather name={item.icon as any} size={18} color={theme.text} />
+                <Text style={[styles.menuLabel, { color: theme.text }]}>{item.label}</Text>
+              </Pressable>
+            ))}
           </View>
         </Pressable>
       </Modal>
@@ -132,7 +201,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
-    minWidth: 150,
   },
   menuItem: {
     flexDirection: "row",

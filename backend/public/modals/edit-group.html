@@ -1,0 +1,37 @@
+    <!-- EDIT GROUP MODAL -->
+    <div class="modal" id="editGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editGroupModalTitle">Edit Group</h2>
+                <button class="close-btn" onclick="closeEditGroupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="editGroupError" class="error-message" style="display: none; color: #FF6B6B; margin-bottom: 16px;"></p>
+                <div class="form-group">
+<label for="editGroupName">Group Name *</label>
+<input type="text" id="editGroupName" placeholder="Enter group name">
+                </div>
+                <div class="form-group">
+<label for="editGroupDescription">Description</label>
+<input type="text" id="editGroupDescription" placeholder="Enter description (optional)">
+                </div>
+                <div class="form-group">
+<label for="editGroupParent">Parent Group</label>
+<select id="editGroupParent" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+    <option value="">None (Top-Level Group)</option>
+</select>
+                </div>
+                <div class="form-group">
+<label>Select Members</label>
+<div id="editGroupMembersContainer" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+    <p style="color: #808080; text-align: center; padding: 20px;">Loading users...</p>
+</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditGroupModal()">Cancel</button>
+                <button class="btn-save" onclick="saveGroupEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+

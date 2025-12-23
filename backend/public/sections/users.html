@@ -1,0 +1,25 @@
+<div class="section-content">
+    <div class="toolbar">
+        <button class="add-user-btn" onclick="openAddUserModal()">+ Add New User</button>
+        <input type="text" class="search-box" id="searchBox" placeholder="Search users...">
+    </div>
+
+    <div class="table-container">
+        <table id="usersTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Account</th>
+                    <th>Billing Plan</th>
+                    <th>Last Visit</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <tr><td colspan="7" class="loading">Loading users...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,125 @@
+Use the following prompt **verbatim** in Replit.
+
+---
+
+**ROLE**
+You are a senior Expo / React Native engineer with production experience using **Expo OTA Updates (expo-updates)**.
+
+---
+
+**OBJECTIVE**
+Implement a **simple, dynamic popup** that appears when a **new OTA update is detected or downloaded**, prompting the user to **refresh/reload the app** so the update installs correctly.
+
+---
+
+**TECH STACK (MANDATORY)**
+
+* Frontend: **Expo (React Native)**
+* OTA Updates: **expo-updates**
+* UI: Native React Native components (no heavy UI libraries)
+
+---
+
+**FUNCTIONAL REQUIREMENTS**
+
+### 1. OTA Detection
+
+* Use `expo-updates` to:
+
+  * Detect when an OTA update is **available**
+  * Detect when an OTA update is **downloaded and ready**
+* Support:
+
+  * Automatic checks on app start
+  * Background detection while the app is running
+
+---
+
+### 2. Popup Behavior
+
+* Display a **simple modal popup** when:
+
+  * An OTA update is downloaded or ready to apply
+* Popup content:
+
+  * Short message (dynamic text):
+
+    * Example:
+      **“A new update is ready. Refresh the app to apply it.”**
+* Buttons:
+
+  * **Refresh Now** (primary action)
+  * Optional: **Later** (dismisses popup)
+
+---
+
+### 3. Refresh Logic
+
+* When **Refresh Now** is pressed:
+
+  * Call `Updates.reloadAsync()`
+  * Ensure the app reloads cleanly so the OTA installs correctly
+* Prevent repeated popups once refresh is triggered
+
+---
+
+### 4. UX REQUIREMENTS
+
+* Popup must:
+
+  * Be lightweight
+  * Not block the app unless update is ready
+  * Appear only once per update session
+* Dynamic messaging depending on state:
+
+  * “Downloading update…”
+  * “Update ready to install”
+
+---
+
+### 5. Error & Edge Case Handling
+
+* Handle:
+
+  * Update download failure
+  * No internet connectivity
+* Fail silently if OTA is unavailable
+* Do not crash the app under any circumstance
+
+---
+
+### 6. Implementation DETAILS
+
+* Use:
+
+  * `checkForUpdateAsync`
+  * `fetchUpdateAsync`
+  * `reloadAsync`
+* Implement as:
+
+  * A reusable hook (`useOTAUpdate`)
+  * Or a global update listener mounted at app root
+
+---
+
+### 7. Deliverables (REQUIRED OUTPUT)
+
+* Production-ready Expo code
+* Popup/modal component
+* OTA update detection logic
+* Clean, minimal UI
+* Inline comments explaining critical logic
+* No placeholder or demo code
+
+---
+
+**IMPORTANT RULES**
+
+* Do NOT use external OTA libraries
+* Do NOT force refresh without user action
+* Keep UI simple and unobtrusive
+* Must work on both iOS and Android
+
+---
+
+**START IMPLEMENTATION IMMEDIATELY.**

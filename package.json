@@ -21,14 +21,23 @@
   },
   "homepage": "https://github.com/Jays-Network/PastedComprehensivePrompt#readme",
   "dependencies": {
+    "@cometchat/calls-sdk-react-native": "^4.0.9",
+    "@cometchat/chat-sdk-react-native": "^4.0.17",
     "@supabase/supabase-js": "^2.86.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "expo": "~54.0.28",
+    "expo-build-properties": "^1.0.10",
+    "expo-camera": "^17.0.10",
+    "expo-device": "^8.0.10",
+    "expo-image-picker": "~17.0.10",
     "expo-server-sdk": "^4.0.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "react-native-maps": "1.20.1",
+    "react-native-webrtc": "^124.0.7"
   }
 }

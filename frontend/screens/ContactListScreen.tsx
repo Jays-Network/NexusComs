@@ -238,7 +238,7 @@ export default function ContactListScreen() {
   const handleCallPress = useCallback((contact: Contact) => {
     console.log('[ContactList] Initiating call with:', contact.name);
     if (Platform.OS === 'web') {
-      window.alert(`Video calling requires the Expo Go app. Please use the mobile app to call ${contact.name}.`);
+      window.alert(`Calling requires the mobile app. Please use the mobile app to call ${contact.name}.`);
     } else {
       Alert.alert(
         'Start Call',
@@ -248,19 +248,29 @@ export default function ContactListScreen() {
           { 
             text: 'Voice Call', 
             onPress: () => {
-              Alert.alert('Coming Soon', 'Voice calling will be available in the next update.');
+              navigation.navigate('CallScreen', {
+                contactId: contact.id,
+                contactName: contact.name,
+                callType: 'audio',
+                isIncoming: false,
+              });
             }
           },
           { 
             text: 'Video Call', 
             onPress: () => {
-              Alert.alert('Coming Soon', 'Video calling will be available in the next update.');
+              navigation.navigate('CallScreen', {
+                contactId: contact.id,
+                contactName: contact.name,
+                callType: 'video',
+                isIncoming: false,
+              });
             }
           },
         ]
       );
     }
-  }, []);
+  }, [navigation]);
 
   if (!user) {
     return null;

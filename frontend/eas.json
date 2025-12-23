@@ -7,29 +7,38 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
-        "resourceClass": "medium"
+        "resourceClass": "medium",
+        "image": "latest"
       }
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
-        "resourceClass": "medium"
+        "resourceClass": "medium",
+        "image": "latest"
       }
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
-        "resourceClass": "medium"
+        "resourceClass": "medium",
+        "image": "latest"
       }
     }
   }

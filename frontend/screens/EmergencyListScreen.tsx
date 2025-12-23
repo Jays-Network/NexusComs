@@ -1,36 +1,51 @@
-import { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, StyleSheet, ActivityIndicator, RefreshControl, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, CommonActions } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { ScreenScrollView } from '@/components/ScreenScrollView';
 import { AppHeader } from '@/components/AppHeader';
 import { useTheme } from '@/hooks/useTheme';
-import { Colors, Spacing, BorderRadius } from '@/constants/theme';
+import { Spacing, BorderRadius } from '@/constants/theme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
-import { fetchGroups as fetchCometChatGroups, fetchMessages } from '@/utils/cometChatClient';
+import { getActiveEmergencies } from '@/utils/cometChatApi';
 
-interface EmergencyMessage {
-  id: string;
-  text: string;
-  senderId: string;
-  senderName: string;
-  createdAt: string;
-  groupName?: string;
+interface EmergencyAlert {
+  id: number;
+  name: string;
+  description: string;
+  cometchat_guid: string;
+  source_group_id?: string;
+  created_by: string;
+  created_at: string;
+  is_active: boolean;
+  users?: {
+    username: string;
+    email: string;
+  };
 }
 
-function EmergencyCard({ message }: { message: EmergencyMessage }) {
+interface EmergencyCardProps {
+  alert: EmergencyAlert;
+  onPress: () => void;
+}
+
+function EmergencyCard({ alert, onPress }: EmergencyCardProps) {
   const { theme } = useTheme();
+  const senderName = alert.users?.username || alert.users?.email || 'Unknown';
 
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
         styles.messageCard,
         {
           backgroundColor: theme.backgroundSecondary,
           borderColor: theme.emergency,
-          borderWidth: 2
+          borderWidth: 2,
+          opacity: pressed ? 0.8 : 1,
         }
       ]}
     >
@@ -41,77 +56,85 @@ function EmergencyCard({ message }: { message: EmergencyMessage }) {
           color={theme.emergency}
         />
         <ThemedText style={[styles.senderName, { color: theme.emergency }]}>
-          {message.senderName}
+          {senderName}
         </ThemedText>
+        <View style={{ flex: 1 }} />
+        <Feather name="chevron-right" size={20} color={theme.textSecondary} />
       </View>
 
       <ThemedText style={styles.messageContent}>
-        {message.text || 'Emergency alert'}
+        {alert.description || 'Emergency alert'}
       </ThemedText>
 
-      {message.groupName ? (
-        <ThemedText style={[styles.groupName, { color: theme.textSecondary }]}>
-          From: {message.groupName}
+      <ThemedText style={[styles.groupName, { color: theme.textSecondary }]}>
+        Group: {alert.name}
+      </ThemedText>
+
+      <View style={styles.cardFooter}>
+        <ThemedText style={styles.timestamp}>
+          {alert.created_at ? new Date(alert.created_at).toLocaleString() : ''}
         </ThemedText>
-      ) : null}
-
-      <ThemedText style={styles.timestamp}>
-        {message.createdAt ? new Date(message.createdAt).toLocaleString() : ''}
-      </ThemedText>
-    </View>
+        <ThemedText style={[styles.tapHint, { color: theme.primary }]}>
+          Tap to open chat
+        </ThemedText>
+      </View>
+    </Pressable>
   );
 }
 
 export default function EmergencyListScreen() {
-  const [messages, setMessages] = useState<EmergencyMessage[]>([]);
+  const [alerts, setAlerts] = useState<EmergencyAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { theme } = useTheme();
   const { cometChatUser, isInitialized } = useCometChatAuth();
+  const navigation = useNavigation<any>();
 
-  const loadEmergencyMessages = useCallback(async () => {
+  const handleEmergencyCardPress = useCallback((alert: EmergencyAlert) => {
+    console.log('[EmergencyList] Card pressed:', alert);
+    
+    if (alert.cometchat_guid) {
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'ChatsTab',
+          params: {
+            screen: 'ChatRoom',
+            params: {
+              channelId: alert.cometchat_guid,
+              channelName: alert.name,
+              isDirectChat: false,
+            },
+          },
+        })
+      );
+    }
+  }, [navigation]);
+
+  const loadEmergencyAlerts = useCallback(async () => {
     if (!isInitialized || !cometChatUser) {
+      console.log('[EmergencyList] Not initialized or no user');
       setIsLoading(false);
       return;
     }
 
+    console.log('[EmergencyList] Loading emergency alerts from backend...');
+    
     try {
-      const groups = await fetchCometChatGroups(50);
-      const emergencyMessages: EmergencyMessage[] = [];
+      const authToken = await AsyncStorage.getItem('@session_token');
       
-      for (const group of groups) {
-        try {
-          const guid = group.getGuid?.() || group.guid;
-          const groupName = group.getName?.() || group.name || 'Unknown Group';
-          const groupMessages = await fetchMessages(guid, 'group', 100);
-          
-          for (const msg of groupMessages) {
-            const metadata = msg.getMetadata?.() || msg.metadata || {};
-            if (metadata.emergency === true) {
-              emergencyMessages.push({
-                id: msg.getId?.() || msg.id || String(Date.now()),
-                text: msg.getText?.() || msg.text || 'Emergency!',
-                senderId: msg.getSender?.()?.getUid?.() || msg.sender?.uid || '',
-                senderName: msg.getSender?.()?.getName?.() || msg.sender?.name || 'Unknown',
-                createdAt: new Date((msg.getSentAt?.() || msg.sentAt || Date.now()) * 1000).toISOString(),
-                groupName: groupName,
-              });
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to query group:', error);
-        }
+      if (!authToken) {
+        console.log('[EmergencyList] No auth token');
+        setIsLoading(false);
+        return;
       }
 
-      emergencyMessages.sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return dateB - dateA;
-      });
-
-      setMessages(emergencyMessages);
+      const response = await getActiveEmergencies(authToken);
+      console.log('[EmergencyList] Fetched', response.emergencies?.length || 0, 'emergency alerts');
+      
+      setAlerts(response.emergencies || []);
     } catch (error) {
-      console.error('Load emergency messages error:', error);
+      console.error('[EmergencyList] Load emergency alerts error:', error);
+      setAlerts([]);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -120,13 +143,13 @@ export default function EmergencyListScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadEmergencyMessages();
-    }, [loadEmergencyMessages])
+      loadEmergencyAlerts();
+    }, [loadEmergencyAlerts])
   );
 
   function handleRefresh() {
     setRefreshing(true);
-    loadEmergencyMessages();
+    loadEmergencyAlerts();
   }
 
   const insets = useSafeAreaInsets();
@@ -138,7 +161,7 @@ export default function EmergencyListScreen() {
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={theme.primary} />
           <ThemedText style={[styles.loadingText, { color: theme.textSecondary }]}>
-            Loading emergency alerts...
+            Loading alerts...
           </ThemedText>
         </View>
       </View>
@@ -146,53 +169,54 @@ export default function EmergencyListScreen() {
   }
 
   return (
-    <View style={[styles.screenContainer, { backgroundColor: theme.backgroundRoot, paddingTop: insets.top }]}>
+    <ScreenScrollView
+      style={{ backgroundColor: theme.backgroundRoot }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={theme.primary}
+          colors={[theme.primary]}
+        />
+      }
+    >
       <AppHeader />
-      <ScreenScrollView
-        style={{ backgroundColor: theme.backgroundRoot }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.primary}
-          />
-        }
-      >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Feather name="alert-octagon" size={24} color={theme.emergency} />
-            <ThemedText style={[styles.headerTitle, { color: theme.text }]}>
-              Emergency Alerts
+
+      <View style={styles.content}>
+        <View style={styles.titleRow}>
+          <Feather name="alert-octagon" size={24} color={theme.emergency} />
+          <ThemedText style={[styles.title, { color: theme.text }]}>
+            Emergency Alerts
+          </ThemedText>
+        </View>
+
+        {alerts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Feather name="check-circle" size={48} color={theme.textSecondary} />
+            <ThemedText style={[styles.emptyText, { color: theme.textSecondary }]}>
+              No active emergency alerts
+            </ThemedText>
+            <ThemedText style={[styles.emptySubtext, { color: theme.textSecondary }]}>
+              Emergency alerts will appear here when triggered
             </ThemedText>
           </View>
-
-          {messages.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Feather name="check-circle" size={64} color={theme.success} />
-              <ThemedText style={[styles.emptyTitle, { color: theme.text }]}>
-                No Emergency Alerts
-              </ThemedText>
-              <ThemedText style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                There are no emergency alerts at this time
-              </ThemedText>
-            </View>
-          ) : (
-            <View style={styles.messagesList}>
-              {messages.map((message) => (
-                <EmergencyCard key={message.id} message={message} />
-              ))}
-            </View>
-          )}
-        </View>
-      </ScreenScrollView>
-    </View>
+        ) : (
+          <View style={styles.alertsList}>
+            {alerts.map((alert) => (
+              <EmergencyCard
+                key={alert.id}
+                alert={alert}
+                onPress={() => handleEmergencyCardPress(alert)}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    </ScreenScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-  },
   loadingContainer: {
     flex: 1,
   },
@@ -200,68 +224,82 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: Spacing.md,
   },
   loadingText: {
+    fontSize: 16,
     marginTop: Spacing.md,
-    fontSize: 14,
   },
-  container: {
-    padding: Spacing.lg,
-    gap: Spacing.lg,
+  content: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
   },
-  header: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  alertsList: {
     gap: Spacing.md,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['4xl'],
-    gap: Spacing.md,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  messagesList: {
-    gap: Spacing.md,
+    paddingBottom: Spacing['2xl'],
   },
   messageCard: {
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
-    gap: Spacing.md,
   },
   messageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   senderName: {
     fontSize: 16,
     fontWeight: '600',
   },
   messageContent: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: Spacing.sm,
   },
   groupName: {
     fontSize: 13,
+    marginBottom: Spacing.sm,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   timestamp: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  tapHint: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing['3xl'],
+    gap: Spacing.md,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
   },
 });

@@ -1,11 +1,16 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// Production Supabase credentials - fallback for EAS builds where env vars may not be configured
+const PRODUCTION_SUPABASE_URL = 'https://pyqjpymkckmhtnacqqtd.supabase.co';
+const PRODUCTION_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5cWpweW1rY2ttaHRuYWNxcXRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0ODY5MzksImV4cCI6MjA3OTA2MjkzOX0.4ZlouMFZbGBogXnbRv8q8TRZ5P1rttaVk4N-gf2T14M';
+
 let supabaseInstance: SupabaseClient | null = null;
 export let isSupabaseConfigured = false;
 
 const getSupabaseCredentials = () => {
-  const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-  const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+  // Use env vars if available, otherwise fall back to production values for EAS builds
+  const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || PRODUCTION_SUPABASE_URL;
+  const rawKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || PRODUCTION_SUPABASE_ANON_KEY;
   
   // Clean URL more aggressively - handle all bundler quirks
   // Remove all quotes, escapes, and whitespace first

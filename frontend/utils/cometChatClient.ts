@@ -2,9 +2,15 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const COMETCHAT_APP_ID = process.env.EXPO_PUBLIC_COMETCHAT_APP_ID || '';
-const COMETCHAT_REGION = process.env.EXPO_PUBLIC_COMETCHAT_REGION || 'us';
-const COMETCHAT_AUTH_KEY = process.env.EXPO_PUBLIC_COMETCHAT_AUTH_KEY || '';
+// Production CometChat credentials - fallback for EAS builds where env vars may not be configured
+const PRODUCTION_COMETCHAT_APP_ID = '16723866734b9d81b';
+const PRODUCTION_COMETCHAT_REGION = 'eu';
+const PRODUCTION_COMETCHAT_AUTH_KEY = 'cefc57f3a9505c02da5ba48636c534ee53d1ab5f';
+
+// Use env vars if available, otherwise fall back to production values for EAS builds
+const COMETCHAT_APP_ID = process.env.EXPO_PUBLIC_COMETCHAT_APP_ID || PRODUCTION_COMETCHAT_APP_ID;
+const COMETCHAT_REGION = process.env.EXPO_PUBLIC_COMETCHAT_REGION || PRODUCTION_COMETCHAT_REGION;
+const COMETCHAT_AUTH_KEY = process.env.EXPO_PUBLIC_COMETCHAT_AUTH_KEY || PRODUCTION_COMETCHAT_AUTH_KEY;
 
 const CONNECTION_TIMEOUT = 30000;
 const MAX_RETRY_ATTEMPTS = 3;
@@ -155,17 +161,29 @@ const COMETCHAT_CONFIG_VALID = isValidConfig(COMETCHAT_APP_ID, COMETCHAT_AUTH_KE
 console.log('[CometChat] Config validation result:', COMETCHAT_CONFIG_VALID);
 
 let CometChat: any = null;
+let CometChatCalls: any = null;
 let isInitialized = false;
+let isCallsInitialized = false;
 
 if (COMETCHAT_CONFIG_VALID) {
   try {
     const cometChatModule = require('@cometchat/chat-sdk-react-native');
     CometChat = cometChatModule.CometChat;
-    console.log('[CometChat] SDK module loaded');
+    console.log('[CometChat] Chat SDK module loaded');
     loadMessageQueue();
   } catch (e) {
-    console.error('[CometChat] Failed to load CometChat SDK:', e);
+    console.error('[CometChat] Failed to load CometChat Chat SDK:', e);
     CometChat = null;
+  }
+  
+  try {
+    const cometChatCallsModule = require('@cometchat/calls-sdk-react-native');
+    CometChatCalls = cometChatCallsModule.CometChatCalls;
+    console.log('[CometChat] Calls SDK module loaded');
+  } catch (e) {
+    console.error('[CometChat] Failed to load CometChat Calls SDK:', e);
+    console.error('[CometChat] Voice/video streaming will not be available');
+    CometChatCalls = null;
   }
 } else {
   console.error('[CometChat] Invalid configuration - CometChat will not be loaded');
@@ -203,7 +221,24 @@ export const initializeCometChat = async (retryAttempt: number = 0): Promise<boo
     
     isInitialized = true;
     isOnline = true;
-    console.log('[CometChat] Initialization successful');
+    console.log('[CometChat] Chat SDK initialization successful');
+    
+    // Initialize Calls SDK if available
+    if (CometChatCalls && !isCallsInitialized) {
+      try {
+        const callsAppSettings = new CometChatCalls.CallAppSettingsBuilder()
+          .setAppId(COMETCHAT_APP_ID)
+          .setRegion(COMETCHAT_REGION)
+          .build();
+        
+        await CometChatCalls.init(callsAppSettings);
+        isCallsInitialized = true;
+        console.log('[CometChat] Calls SDK initialization successful');
+      } catch (callsError: any) {
+        console.error('[CometChat] Calls SDK initialization failed:', callsError);
+        console.error('[CometChat] Voice/video streaming may not work');
+      }
+    }
     
     processMessageQueue();
     
@@ -736,11 +771,242 @@ export const sendCustomMessage = async (
   }
 };
 
+// ============= CALLING FUNCTIONS =============
+
+export const initiateCall = async (
+  receiverId: string,
+  callType: 'audio' | 'video',
+  receiverType: 'user' | 'group' = 'user'
+): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    const callTypeValue = callType === 'video' 
+      ? CometChat.CALL_TYPE.VIDEO 
+      : CometChat.CALL_TYPE.AUDIO;
+    
+    const receiverTypeValue = receiverType === 'group'
+      ? CometChat.RECEIVER_TYPE.GROUP
+      : CometChat.RECEIVER_TYPE.USER;
+
+    const call = new CometChat.Call(receiverId, callTypeValue, receiverTypeValue);
+    
+    console.log(`[CometChat] Initiating ${callType} call to ${receiverId}`);
+    const outgoingCall = await CometChat.initiateCall(call);
+    console.log('[CometChat] Call initiated successfully:', outgoingCall.getSessionId());
+    return outgoingCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to initiate call:', error);
+    throw error;
+  }
+};
+
+export const acceptCall = async (sessionId: string): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    console.log('[CometChat] Accepting call:', sessionId);
+    const acceptedCall = await CometChat.acceptCall(sessionId);
+    console.log('[CometChat] Call accepted successfully');
+    return acceptedCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to accept call:', error);
+    throw error;
+  }
+};
+
+export const rejectCall = async (sessionId: string, status: 'rejected' | 'cancelled' | 'busy' = 'rejected'): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    let statusValue;
+    switch (status) {
+      case 'cancelled':
+        statusValue = CometChat.CALL_STATUS.CANCELLED;
+        break;
+      case 'busy':
+        statusValue = CometChat.CALL_STATUS.BUSY;
+        break;
+      default:
+        statusValue = CometChat.CALL_STATUS.REJECTED;
+    }
+
+    console.log('[CometChat] Rejecting call:', sessionId, 'with status:', status);
+    const rejectedCall = await CometChat.rejectCall(sessionId, statusValue);
+    console.log('[CometChat] Call rejected successfully');
+    return rejectedCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to reject call:', error);
+    throw error;
+  }
+};
+
+export const endCall = async (sessionId: string): Promise<any> => {
+  if (!CometChat) {
+    throw new Error('CometChat SDK not loaded');
+  }
+
+  try {
+    console.log('[CometChat] Ending call:', sessionId);
+    const endedCall = await CometChat.endCall(sessionId);
+    console.log('[CometChat] Call ended successfully');
+    return endedCall;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to end call:', error);
+    throw error;
+  }
+};
+
+export const addCallListener = (
+  listenerId: string,
+  callbacks: {
+    onIncomingCallReceived?: (call: any) => void;
+    onOutgoingCallAccepted?: (call: any) => void;
+    onOutgoingCallRejected?: (call: any) => void;
+    onIncomingCallCancelled?: (call: any) => void;
+    onCallEnded?: (call: any) => void;
+  }
+): void => {
+  if (!CometChat) {
+    console.error('[CometChat] SDK not loaded, cannot add call listener');
+    return;
+  }
+
+  console.log('[CometChat] Adding call listener:', listenerId);
+  
+  CometChat.addCallListener(
+    listenerId,
+    new CometChat.CallListener({
+      onIncomingCallReceived: (call: any) => {
+        console.log('[CometChat] Incoming call received:', call.getSessionId());
+        callbacks.onIncomingCallReceived?.(call);
+      },
+      onOutgoingCallAccepted: (call: any) => {
+        console.log('[CometChat] Outgoing call accepted:', call.getSessionId());
+        callbacks.onOutgoingCallAccepted?.(call);
+      },
+      onOutgoingCallRejected: (call: any) => {
+        console.log('[CometChat] Outgoing call rejected:', call.getSessionId());
+        callbacks.onOutgoingCallRejected?.(call);
+      },
+      onIncomingCallCancelled: (call: any) => {
+        console.log('[CometChat] Incoming call cancelled:', call.getSessionId());
+        callbacks.onIncomingCallCancelled?.(call);
+      },
+      onCallEnded: (call: any) => {
+        console.log('[CometChat] Call ended:', call.getSessionId());
+        callbacks.onCallEnded?.(call);
+      },
+    })
+  );
+};
+
+export const removeCallListener = (listenerId: string): void => {
+  if (!CometChat) {
+    return;
+  }
+  console.log('[CometChat] Removing call listener:', listenerId);
+  CometChat.removeCallListener(listenerId);
+};
+
+export const getActiveCall = (): any => {
+  if (!CometChat) {
+    return null;
+  }
+  return CometChat.getActiveCall?.() || null;
+};
+
+// ============= CALLS SDK SESSION FUNCTIONS =============
+
+export const isCallsSdkAvailable = (): boolean => {
+  return CometChatCalls !== null && isCallsInitialized;
+};
+
+export const generateCallToken = async (
+  sessionId: string,
+  userUid: string
+): Promise<string | null> => {
+  if (!CometChatCalls) {
+    console.error('[CometChat] Calls SDK not available for token generation');
+    return null;
+  }
+
+  try {
+    const authToken = await CometChatCalls.generateToken(sessionId, userUid);
+    console.log('[CometChat] Call token generated successfully');
+    return authToken;
+  } catch (error: any) {
+    console.error('[CometChat] Failed to generate call token:', error);
+    return null;
+  }
+};
+
+export const startCallSession = async (
+  call: any,
+  audioOnly: boolean = false,
+  defaultLayout: boolean = true
+): Promise<any> => {
+  if (!CometChatCalls) {
+    throw new Error('CometChat Calling module not found. Please add the CometChat Calling dependency and try again.');
+  }
+
+  if (!isCallsInitialized) {
+    throw new Error('CometChat Calls SDK not initialized');
+  }
+
+  try {
+    const sessionId = call.getSessionId();
+    const user = await getLoggedInUser();
+    
+    if (!user) {
+      throw new Error('User not logged in');
+    }
+
+    const authToken = await CometChatCalls.generateToken(sessionId, user.getUid());
+    
+    const callSettings = new CometChatCalls.CallSettingsBuilder()
+      .enableDefaultLayout(defaultLayout)
+      .setIsAudioOnlyCall(audioOnly)
+      .setSessionID(sessionId)
+      .setAppID(COMETCHAT_APP_ID)
+      .setRegion(COMETCHAT_REGION)
+      .setAuthToken(authToken)
+      .build();
+
+    console.log('[CometChat] Starting call session:', sessionId);
+    return { callSettings, sessionId, authToken };
+  } catch (error: any) {
+    console.error('[CometChat] Failed to start call session:', error);
+    throw error;
+  }
+};
+
+export const endCallSession = async (): Promise<void> => {
+  if (!CometChatCalls) {
+    return;
+  }
+
+  try {
+    await CometChatCalls.endSession();
+    console.log('[CometChat] Call session ended');
+  } catch (error: any) {
+    console.error('[CometChat] Failed to end call session:', error);
+  }
+};
+
 export {
   CometChat,
+  CometChatCalls,
   COMETCHAT_APP_ID,
   COMETCHAT_REGION,
   COMETCHAT_AUTH_KEY,
   COMETCHAT_CONFIG_VALID,
   isInitialized,
+  isCallsInitialized,
 };

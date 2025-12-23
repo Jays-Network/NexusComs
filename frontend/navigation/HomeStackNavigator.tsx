@@ -26,7 +26,7 @@ export default function HomeStackNavigator() {
         name="Home"
         component={HomeScreen}
         options={{
-          headerTitle: () => <HeaderTitle title="WorldRisk Nexus Coms" />,
+          headerTitle: () => <HeaderTitle title="Nexus Coms" />,
         }}
       />
       <Stack.Screen

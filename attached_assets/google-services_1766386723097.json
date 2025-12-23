@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "79999185706",
+    "project_id": "nexus-coms",
+    "storage_bucket": "nexus-coms.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:79999185706:android:daa873a22dd1229254a453",
+        "android_client_info": {
+          "package_name": "com.worldrisk.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvXEQV7kjabe4yVFEdakaLxpv9IOdKYz4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

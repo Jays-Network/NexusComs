@@ -1,0 +1,28 @@
+    <!-- ASSIGN CHANNELS TO ACCOUNT MODAL -->
+    <div class="modal" id="assignChannelsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign Channels to Account</h2>
+                <button class="close-btn" onclick="closeAssignChannelsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: #b0b0b0; margin-bottom: 16px;">Select channels to assign to <span id="assignChannelsAccountName" style="color: #D4AF37;"></span></p>
+                <div class="form-group">
+<label for="channelAccessLevel">Access Level</label>
+<select id="channelAccessLevel" style="width: 100%; padding: 12px; border: 2px solid #404040; border-radius: 8px; background: #1a1a1a; color: #FFFFFF;">
+    <option value="read_only">Read Only</option>
+    <option value="read_write" selected>Read & Write</option>
+    <option value="admin">Admin</option>
+</select>
+                </div>
+                <div id="assignChannelsContainer" style="max-height: 350px; overflow-y: auto; background: #1a1a1a; border: 1px solid #404040; border-radius: 6px; padding: 12px;">
+<p style="color: #808080; text-align: center; padding: 20px;">Loading channels...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeAssignChannelsModal()">Cancel</button>
+                <button class="btn-save" onclick="saveAssignedChannels()">Assign Channels</button>
+            </div>
+        </div>
+    </div>
+

@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView } from 'react-native';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, Pressable, Text, Platform, TextInput, FlatList, KeyboardAvoidingView, Linking } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useCometChatAuth } from '@/utils/cometChatAuth';
@@ -19,6 +20,9 @@ import {
   markAsRead,
   CometChat
 } from '@/utils/cometChatClient';
+import { triggerEmergencyAlert as triggerEmergencyApi } from '@/utils/cometChatApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 type RouteProps = RouteProp<ChatsStackParamList, 'ChatRoom'> & {
   params: {
@@ -59,9 +63,44 @@ interface Message {
   attachment?: Attachment;
 }
 
+interface DateSeparator {
+  id: string;
+  type: 'date-separator';
+  label: string;
+  date: Date;
+}
+
+type ListItem = Message | DateSeparator;
+
+function isDateSeparator(item: ListItem): item is DateSeparator {
+  return 'type' in item && item.type === 'date-separator';
+}
+
+function getDateLabel(date: Date): string {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const isToday = date.toDateString() === today.toDateString();
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  
+  return date.toLocaleDateString('en-US', { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  });
+}
+
+function getDateKey(date: Date): string {
+  return date.toDateString();
+}
+
 export default function ChatRoomScreen() {
   const route = useRoute<RouteProps>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ChatsStackParamList>>();
   const { channelId, channelName, isDirectChat } = route.params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,9 +112,37 @@ export default function ChatRoomScreen() {
   const { user, cometChatUser, isInitialized } = useCometChatAuth();
   const flatListRef = useRef<FlatList>(null);
   const listenerIdRef = useRef<string>(`chat_${channelId}_${Date.now()}`);
+  const liveLocationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const liveLocationExpiresRef = useRef<number | null>(null);
+  const stopLiveLocationRef = useRef<(() => Promise<void>) | null>(null);
   const { paddingBottom } = useScreenInsets();
   
   const receiverType = isDirectChat ? 'user' : 'group';
+
+  const listItems: ListItem[] = useMemo(() => {
+    if (messages.length === 0) return [];
+    
+    const items: ListItem[] = [];
+    let lastDateKey = '';
+    
+    for (const message of messages) {
+      const currentDateKey = getDateKey(message.sentAt);
+      
+      if (currentDateKey !== lastDateKey) {
+        items.push({
+          id: `date-${currentDateKey}`,
+          type: 'date-separator',
+          label: getDateLabel(message.sentAt),
+          date: message.sentAt,
+        });
+        lastDateKey = currentDateKey;
+      }
+      
+      items.push(message);
+    }
+    
+    return items;
+  }, [messages]);
 
   const transformMessage = useCallback((msg: any): Message => {
     const msgType = msg.getType?.() || msg.type || 'text';
@@ -258,8 +325,125 @@ export default function ChatRoomScreen() {
 
     return () => {
       removeMessageListener(listenerIdRef.current);
+      if (liveLocationIntervalRef.current && stopLiveLocationRef.current) {
+        stopLiveLocationRef.current();
+      }
     };
   }, [isInitialized, cometChatUser, channelId, channelName, isDirectChat, receiverType, transformMessage]);
+
+  const stopLiveLocationSharing = useCallback(async () => {
+    if (liveLocationIntervalRef.current) {
+      clearInterval(liveLocationIntervalRef.current);
+      liveLocationIntervalRef.current = null;
+    }
+    liveLocationExpiresRef.current = null;
+    
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+      const token = await AsyncStorage.getItem('@session_token');
+      if (token) {
+        await fetch(`${API_URL}/api/location/live/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            chat_id: channelId,
+            chat_type: receiverType
+          })
+        });
+        console.log('[ChatRoom] Live location sharing stopped');
+      }
+    } catch (error) {
+      console.warn('[ChatRoom] Failed to stop live location:', error);
+    }
+  }, [channelId, receiverType]);
+
+  useEffect(() => {
+    stopLiveLocationRef.current = stopLiveLocationSharing;
+  }, [stopLiveLocationSharing]);
+
+  const startLiveLocationUpdates = useCallback(async (durationMinutes: number) => {
+    if (liveLocationIntervalRef.current) {
+      clearInterval(liveLocationIntervalRef.current);
+      liveLocationIntervalRef.current = null;
+    }
+    
+    const expiresAt = Date.now() + (durationMinutes * 60 * 1000);
+    liveLocationExpiresRef.current = expiresAt;
+    
+    const updateLocation = async () => {
+      if (liveLocationExpiresRef.current && Date.now() >= liveLocationExpiresRef.current) {
+        console.log('[ChatRoom] Live location sharing expired');
+        await stopLiveLocationSharing();
+        return;
+      }
+      
+      try {
+        let { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (canAskAgain) {
+            const permResult = await Location.requestForegroundPermissionsAsync();
+            status = permResult.status;
+          }
+          
+          if (status !== 'granted') {
+            console.warn('[ChatRoom] Location permission denied, stopping updates');
+            await stopLiveLocationSharing();
+            
+            if (Platform.OS !== 'web') {
+              Alert.alert(
+                'Location Permission Required',
+                'Live location sharing requires location access. Please enable it in Settings to continue sharing your location.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Open Settings', 
+                    onPress: async () => {
+                      try {
+                        await Linking.openSettings();
+                      } catch (error) {
+                        console.warn('[ChatRoom] Could not open settings:', error);
+                      }
+                    }
+                  }
+                ]
+              );
+            }
+            return;
+          }
+        }
+        
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High
+        });
+        
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+        const token = await AsyncStorage.getItem('@session_token');
+        if (token) {
+          await fetch(`${API_URL}/api/location/live/update`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              chat_id: channelId,
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude
+            })
+          });
+          console.log('[ChatRoom] Live location updated:', location.coords.latitude, location.coords.longitude);
+        }
+      } catch (error) {
+        console.warn('[ChatRoom] Failed to update live location:', error);
+      }
+    };
+    
+    liveLocationIntervalRef.current = setInterval(updateLocation, 30000);
+    console.log('[ChatRoom] Started live location updates, expires in', durationMinutes, 'minutes');
+  }, [channelId, stopLiveLocationSharing]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -277,7 +461,7 @@ export default function ChatRoomScreen() {
   const sendEmergencyAlert = useCallback(() => {
     Alert.alert(
       'Send Emergency Alert',
-      'This will send an emergency notification to all members of this channel.',
+      'This will send an emergency notification to all team members with emergency access and create a dedicated emergency response group.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -285,13 +469,45 @@ export default function ChatRoomScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const groupId = channelId.replace('group-', 'group_');
-              await sendTextMessage(
-                groupId,
+              console.log(`[ChatRoom] Triggering emergency alert from ${receiverType}: ${channelId}`);
+              
+              // Get auth token for API call (uses @session_token key)
+              const authToken = await AsyncStorage.getItem('@session_token');
+              
+              if (authToken) {
+                // Call new emergency API - creates group, sends push notifications
+                const emergencyResult = await triggerEmergencyApi(authToken, {
+                  message: 'EMERGENCY ALERT - Immediate assistance needed!',
+                  source_group_id: channelId,
+                  source_group_name: channelName,
+                });
+                
+                console.log('[ChatRoom] Emergency API result:', emergencyResult);
+                
+                // Show success with navigation option
+                Alert.alert(
+                  'Emergency Alert Sent',
+                  `Alert sent to ${emergencyResult.members_added} team members.\n\nEmergency group "${emergencyResult.emergency_group_name}" has been created.`,
+                  [
+                    { text: 'OK', style: 'default' },
+                  ]
+                );
+              }
+              
+              // Also send emergency message to current channel for visibility
+              const sentMessage = await sendTextMessage(
+                channelId,
                 'EMERGENCY ALERT - Immediate assistance needed!',
-                'group',
+                receiverType,
                 { emergency: true }
               );
+              
+              const transformed = transformMessage(sentMessage);
+              setMessages(prev => [...prev, transformed]);
+              
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }, 100);
             } catch (error: any) {
               Alert.alert('Error', 'Failed to send emergency alert');
               console.error('Emergency alert error:', error);
@@ -300,7 +516,7 @@ export default function ChatRoomScreen() {
         },
       ]
     );
-  }, [channelId]);
+  }, [channelId, channelName, receiverType, transformMessage]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || isSending) return;
@@ -401,6 +617,33 @@ export default function ChatRoomScreen() {
           };
           sentMessage = await sendCustomMessage(channelId, 'liveLocation', customData, receiverType);
           console.log('[ChatRoom] Live location message sent, will update for', data.durationMinutes, 'minutes');
+          
+          // Also register with backend for real-time map updates
+          try {
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://NexusComs.replit.app';
+            const token = await AsyncStorage.getItem('@session_token');
+            if (token) {
+              await fetch(`${API_URL}/api/location/live/start`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  chat_id: channelId,
+                  chat_type: receiverType,
+                  latitude: data.latitude,
+                  longitude: data.longitude,
+                  duration_minutes: data.durationMinutes
+                })
+              });
+              console.log('[ChatRoom] Live location registered with backend');
+              
+              startLiveLocationUpdates(data.durationMinutes);
+            }
+          } catch (backendError) {
+            console.warn('[ChatRoom] Failed to register live location with backend:', backendError);
+          }
           break;
         }
         case 'contact': {
@@ -456,9 +699,30 @@ export default function ChatRoomScreen() {
         Alert.alert('Error', 'Failed to send attachment. Please try again.');
       }
     }
-  }, [channelId, receiverType, transformMessage]);
+  }, [channelId, receiverType, transformMessage, startLiveLocationUpdates]);
 
-  const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean) => {
+  const navigateToLiveLocationMap = useCallback((attachment: Attachment, senderName: string, senderId: string) => {
+    console.log('[ChatRoom] Navigating to LiveLocationMap with:', {
+      groupId: channelId,
+      groupName: channelName,
+      latitude: attachment.latitude,
+      longitude: attachment.longitude,
+      senderName,
+      senderId
+    });
+    navigation.navigate('LiveLocationMap', {
+      groupId: channelId,
+      groupName: channelName,
+      initialLocation: {
+        latitude: attachment.latitude || 0,
+        longitude: attachment.longitude || 0,
+        senderName: senderName,
+        senderId: senderId
+      }
+    });
+  }, [navigation, channelId, channelName]);
+
+  const renderAttachmentContent = useCallback((attachment: Attachment, isOwnMessage: boolean, senderName?: string, senderId?: string) => {
     const iconColor = isOwnMessage ? '#000' : theme.primary;
     const textColor = isOwnMessage ? '#000' : theme.text;
 
@@ -488,7 +752,17 @@ export default function ChatRoomScreen() {
         );
       case 'file':
         return (
-          <View style={styles.attachmentContainer}>
+          <Pressable 
+            style={styles.attachmentContainer}
+            onPress={() => {
+              if (attachment.url) {
+                Linking.openURL(attachment.url).catch(err => {
+                  console.error('[ChatRoom] Failed to open file:', err);
+                  Alert.alert('Error', 'Could not open file');
+                });
+              }
+            }}
+          >
             <View style={[styles.fileContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
               <Feather name="file-text" size={24} color={iconColor} />
               <View style={styles.fileInfo}>
@@ -501,12 +775,33 @@ export default function ChatRoomScreen() {
                   </Text>
                 )}
               </View>
+              <Feather name="download" size={18} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
-          </View>
+          </Pressable>
         );
       case 'location':
         return (
-          <View style={styles.attachmentContainer}>
+          <Pressable 
+            style={styles.attachmentContainer}
+            onPress={() => {
+              if (attachment.latitude && attachment.longitude && senderName && senderId) {
+                navigateToLiveLocationMap(attachment, senderName, senderId);
+              }
+            }}
+            onLongPress={() => {
+              if (attachment.latitude && attachment.longitude) {
+                const url = Platform.select({
+                  ios: `maps://app?daddr=${attachment.latitude},${attachment.longitude}`,
+                  android: `geo:${attachment.latitude},${attachment.longitude}?q=${attachment.latitude},${attachment.longitude}`,
+                  default: `https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`
+                });
+                Linking.openURL(url).catch(err => {
+                  console.error('[ChatRoom] Failed to open map:', err);
+                  Linking.openURL(`https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`);
+                });
+              }
+            }}
+          >
             <View style={[styles.locationContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
               <Feather name="map-pin" size={24} color="#16A34A" />
               <View style={styles.locationInfo}>
@@ -515,13 +810,42 @@ export default function ChatRoomScreen() {
                   {attachment.latitude?.toFixed(4)}, {attachment.longitude?.toFixed(4)}
                 </Text>
               </View>
+              <Feather name="chevron-right" size={16} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
-          </View>
+          </Pressable>
         );
       case 'liveLocation':
         const isExpired = attachment.expiresAt ? new Date(attachment.expiresAt) < new Date() : false;
         return (
-          <View style={styles.attachmentContainer}>
+          <Pressable 
+            style={styles.attachmentContainer}
+            onPress={() => {
+              console.log('[ChatRoom] Live location tapped:', { 
+                hasLatitude: !!attachment.latitude, 
+                hasLongitude: !!attachment.longitude, 
+                senderName, 
+                senderId 
+              });
+              if (attachment.latitude && attachment.longitude) {
+                navigateToLiveLocationMap(attachment, senderName || 'Unknown', senderId || 'unknown');
+              } else {
+                console.warn('[ChatRoom] Missing coordinates for live location');
+              }
+            }}
+            onLongPress={() => {
+              if (attachment.latitude && attachment.longitude) {
+                const url = Platform.select({
+                  ios: `maps://app?daddr=${attachment.latitude},${attachment.longitude}`,
+                  android: `geo:${attachment.latitude},${attachment.longitude}?q=${attachment.latitude},${attachment.longitude}`,
+                  default: `https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`
+                });
+                Linking.openURL(url).catch(err => {
+                  console.error('[ChatRoom] Failed to open map:', err);
+                  Linking.openURL(`https://www.google.com/maps?q=${attachment.latitude},${attachment.longitude}`);
+                });
+              }
+            }}
+          >
             <View style={[styles.locationContainer, { backgroundColor: isOwnMessage ? 'rgba(0,0,0,0.1)' : theme.backgroundSecondary }]}>
               <View style={styles.liveLocationIcon}>
                 <Feather name="navigation" size={20} color="#FFFFFF" />
@@ -546,8 +870,9 @@ export default function ChatRoomScreen() {
                   </Text>
                 )}
               </View>
+              <Feather name="chevron-right" size={16} color={iconColor} style={{ marginLeft: 4 }} />
             </View>
-          </View>
+          </Pressable>
         );
       case 'contact':
         return (
@@ -595,9 +920,21 @@ export default function ChatRoomScreen() {
       default:
         return null;
     }
+  }, [theme, navigateToLiveLocationMap]);
+
+  const renderDateSeparator = useCallback((item: DateSeparator) => {
+    return (
+      <View style={styles.dateSeparatorContainer}>
+        <View style={[styles.dateSeparatorPill, { backgroundColor: theme.backgroundSecondary }]}>
+          <Text style={[styles.dateSeparatorText, { color: theme.textSecondary }]}>
+            {item.label}
+          </Text>
+        </View>
+      </View>
+    );
   }, [theme]);
 
-  const renderMessage = useCallback(({ item }: { item: Message }) => {
+  const renderMessageBubble = useCallback((item: Message) => {
     const isOwnMessage = item.senderId === user?.id;
     const isEmergency = item.isEmergency;
     const hasAttachment = item.attachment != null;
@@ -616,7 +953,7 @@ export default function ChatRoomScreen() {
             {item.senderName}
           </Text>
         )}
-        {hasAttachment && item.attachment && renderAttachmentContent(item.attachment, isOwnMessage)}
+        {hasAttachment && item.attachment && renderAttachmentContent(item.attachment, isOwnMessage, item.senderName, item.senderId)}
         {(!hasAttachment || item.messageType === 'text') && (
           <Text style={[
             styles.messageText,
@@ -635,6 +972,13 @@ export default function ChatRoomScreen() {
       </View>
     );
   }, [user?.id, theme, renderAttachmentContent]);
+
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
+    if (isDateSeparator(item)) {
+      return renderDateSeparator(item);
+    }
+    return renderMessageBubble(item);
+  }, [renderDateSeparator, renderMessageBubble]);
 
   if (isLoading) {
     return (
@@ -684,9 +1028,9 @@ export default function ChatRoomScreen() {
     >
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={listItems}
         keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
+        renderItem={renderItem}
         contentContainerStyle={styles.messagesList}
         style={{ backgroundColor: theme.backgroundRoot }}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
@@ -803,6 +1147,21 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     paddingBottom: Spacing.xl,
   },
+  dateSeparatorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    marginVertical: Spacing.sm,
+  },
+  dateSeparatorPill: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.lg,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   messageBubble: {
     maxWidth: '80%',
     padding: Spacing.md,
@@ -883,6 +1242,7 @@ const styles = StyleSheet.create({
   },
   attachmentContainer: {
     marginBottom: Spacing.sm,
+    minWidth: 200,
   },
   mediaPlaceholder: {
     width: 180,
@@ -908,9 +1268,11 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     gap: Spacing.sm,
+    minWidth: 180,
   },
   fileInfo: {
     flex: 1,
+    minWidth: 120,
   },
   fileName: {
     fontSize: 14,
@@ -926,9 +1288,11 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     gap: Spacing.sm,
+    minWidth: 180,
   },
   locationInfo: {
     flex: 1,
+    minWidth: 120,
   },
   locationLabel: {
     fontSize: 14,

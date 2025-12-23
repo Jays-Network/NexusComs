@@ -48,17 +48,21 @@ export default function GroupListScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadGroups = async () => {
+    console.log('[GroupListScreen] loadGroups called, authToken:', authToken ? 'exists' : 'missing');
+    
     if (!authToken) {
+      console.log('[GroupListScreen] No auth token, skipping group fetch');
       setIsLoadingGroups(false);
       return;
     }
     
     try {
+      console.log('[GroupListScreen] Fetching groups from API...');
       const fetchedGroups = await fetchGroups(authToken);
-      console.log('[GroupListScreen] Fetched groups:', fetchedGroups.length);
+      console.log('[GroupListScreen] Fetched groups:', fetchedGroups.length, fetchedGroups.map(g => g.name));
       setGroups(fetchedGroups);
     } catch (error) {
-      console.warn('Failed to fetch groups:', error);
+      console.error('[GroupListScreen] Failed to fetch groups:', error);
     } finally {
       setIsLoadingGroups(false);
       setIsRefreshing(false);
