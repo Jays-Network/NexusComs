@@ -535,7 +535,9 @@ function openServiceModal(service) {
     const data = serviceDetails[service];
     document.getElementById('serviceTitle').textContent = data.title;
     document.getElementById('serviceModalBody').innerHTML = data.html;
-    document.getElementById('serviceModal').classList.add('active');
+    const modal = document.getElementById('serviceModal');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
 }
 
 function closeServiceModal() {
@@ -765,7 +767,9 @@ async function openEditUserModal(userId) {
         applyBillingPlanRestrictions();
 
         console.log('[Step 12] Opening modal...');
-        document.getElementById('userModal').classList.add('active');
+        const modal = document.getElementById('userModal');
+        document.body.appendChild(modal);
+        modal.classList.add('active');
         console.log('[Step 13] Edit modal opened successfully!');
     } catch (error) {
         console.error('Error loading user:', error);
@@ -811,7 +815,9 @@ async function openAddUserModal() {
     // Apply billing plan restrictions dynamically for new users
     applyBillingPlanRestrictions();
 
-    document.getElementById('userModal').classList.add('active');
+    const modal = document.getElementById('userModal');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
 }
 
 function closeModal() {
@@ -969,7 +975,9 @@ function logout() {
 
 // PASSWORD RESET FUNCTIONS
 function showForgotPasswordModal() {
-    document.getElementById('forgotPasswordModal').classList.add('active');
+    const modal = document.getElementById('forgotPasswordModal');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
     document.getElementById('resetStep1').style.display = 'block';
     document.getElementById('resetStep2').style.display = 'none';
     document.getElementById('resetError').style.display = 'none';
@@ -1347,7 +1355,9 @@ async function openAddGroupModal() {
     renderMembersCheckboxes('groupMembersContainer', 'group');
     renderParentGroupDropdown();
     
-    document.getElementById('groupModal').classList.add('active');
+    const modal = document.getElementById('groupModal');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
 }
 
 function closeGroupModal() {
@@ -1690,7 +1700,9 @@ async function openAddEmergencyGroupModal() {
     await fetchAvailableUsers();
     renderMembersCheckboxes('emergencyGroupMembersContainer', 'emergency');
     
-    document.getElementById('emergencyGroupModal').classList.add('active');
+    const modal = document.getElementById('emergencyGroupModal');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
 }
 
 function closeEmergencyGroupModal() {
@@ -2113,7 +2125,9 @@ function openAddAccountModal() {
         parentSelect.innerHTML += `<option value="${account.id}">${account.name}</option>`;
     });
     
-    document.getElementById('accountModal').classList.add('active');
+    const modal = document.getElementById('accountModal');
+    document.body.appendChild(modal);
+    modal.classList.add('active');
 }
 
 // Open edit account modal
@@ -2142,7 +2156,9 @@ async function openEditAccountModal(accountId) {
             parentSelect.innerHTML += `<option value="${a.id}" ${a.id === account.parent_account_id ? 'selected' : ''}>${a.name}</option>`;
         });
         
-        document.getElementById('accountModal').classList.add('active');
+        const modal = document.getElementById('accountModal');
+        document.body.appendChild(modal);
+        modal.classList.add('active');
     } catch (error) {
         console.error('Load account error:', error);
         alert('Failed to load account');
@@ -2254,7 +2270,9 @@ async function openAssignUsersModal(accountId, accountName) {
             `).join('');
         }
         
-        document.getElementById('assignUsersModal').classList.add('active');
+        const modal = document.getElementById('assignUsersModal');
+        document.body.appendChild(modal);
+        modal.classList.add('active');
     } catch (error) {
         console.error('Load users error:', error);
         alert('Failed to load users');
@@ -2344,7 +2362,9 @@ async function openAssignChannelsModal(accountId, accountName) {
             `).join('');
         }
         
-        document.getElementById('assignChannelsModal').classList.add('active');
+        const modal = document.getElementById('assignChannelsModal');
+        document.body.appendChild(modal);
+        modal.classList.add('active');
     } catch (error) {
         console.error('Load channels error:', error);
         alert('Failed to load channels');
