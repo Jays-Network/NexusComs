@@ -1480,8 +1480,16 @@ let currentEditGroupId = null;
 let currentEditGroupData = null;
 
 async function editGroup(groupId) {
+    console.log('[EditGroup] Opening edit modal for group:', groupId);
     currentEditGroupId = groupId;
     const errorDiv = document.getElementById('editGroupError');
+    
+    if (!errorDiv) {
+        console.error('[EditGroup] editGroupError element not found - modal may not be loaded');
+        alert('Error: Edit modal not loaded. Please refresh the page.');
+        return;
+    }
+    
     errorDiv.style.display = 'none';
     
     try {
@@ -1525,9 +1533,18 @@ async function editGroup(groupId) {
         await fetchAvailableUsers();
         renderEditGroupMemberCheckboxes();
         
-        document.getElementById('editGroupModal').classList.add('active');
+        const modal = document.getElementById('editGroupModal');
+        if (!modal) {
+            console.error('[EditGroup] editGroupModal element not found');
+            alert('Error: Edit modal not found. Please refresh the page.');
+            return;
+        }
+        
+        console.log('[EditGroup] Opening modal...');
+        modal.classList.add('active');
+        console.log('[EditGroup] Modal opened successfully');
     } catch (error) {
-        console.error('Error loading group:', error);
+        console.error('[EditGroup] Error loading group:', error);
         alert('Failed to load group: ' + error.message);
     }
 }
@@ -2713,6 +2730,18 @@ async function clearSecurityAlerts() {
 // Initialize app - called after all sections are loaded
 function initializeApp() {
     console.log('Initializing World Risk Admin Dashboard...');
+    
+    // Verify modals are loaded
+    const requiredModals = ['editGroupModal', 'groupModal', 'emergencyGroupModal', 'editUserModal'];
+    requiredModals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            console.log(`[Init] Modal loaded: ${modalId}`);
+        } else {
+            console.warn(`[Init] Modal NOT loaded: ${modalId}`);
+        }
+    });
+    
     if (token) {
         showDashboard();
         loadUsers();
