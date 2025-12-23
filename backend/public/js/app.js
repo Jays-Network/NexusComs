@@ -1576,8 +1576,9 @@ window.editGroup = async function(groupId) {
         await fetchAvailableUsers();
         renderEditGroupMemberCheckboxes();
         
-        // Show the modal - force display with full inline styles
+        // Show the modal - use "Portal" technique to escape any hidden parent containers
         console.log('[EditGroup] All data loaded, showing modal...');
+        document.body.appendChild(modal);
         modal.classList.add('active');
         modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background: rgba(0, 0, 0, 0.7) !important; align-items: center !important; justify-content: center !important;';
         console.log('[EditGroup] Modal classList after add:', modal.classList.toString());
