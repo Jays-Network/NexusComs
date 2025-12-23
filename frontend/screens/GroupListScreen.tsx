@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, Pressable, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import { useSupabaseSync } from '@/utils/supabaseSync';
 import { GroupsStackParamList } from '@/navigation/GroupsStackNavigator';
 import { AppHeader } from '@/components/AppHeader';
 import { fetchGroups, Group } from '@/utils/cometChatApi';
+import { fetchConversations, addMessageListener, removeMessageListener } from '@/utils/cometChatClient';
 import { Spacing, BorderRadius } from '@/constants/theme';
 
 type NavigationProp = NativeStackNavigationProp<GroupsStackParamList>;
@@ -48,6 +49,8 @@ export default function GroupListScreen() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const messageListenerIdRef = useRef(`group_list_${Date.now()}`);
 
   const userBillingPlan = (syncedUser?.billing_plan || 'basic').toLowerCase().trim();
   const isExecutive = userBillingPlan === 'executive';
@@ -85,9 +88,65 @@ export default function GroupListScreen() {
     }
   };
 
+  const loadUnreadCounts = async () => {
+    try {
+      const conversations = await fetchConversations(50);
+      const counts: Record<string, number> = {};
+      
+      conversations.forEach((conv: any) => {
+        const convType = conv.getConversationType?.() || conv.conversationType;
+        if (convType === 'group') {
+          const group = conv.getConversationWith?.();
+          const groupId = group?.getGuid?.() || group?.guid;
+          const unreadCount = conv.getUnreadMessageCount?.() || 0;
+          if (groupId && unreadCount > 0) {
+            counts[groupId] = unreadCount;
+          }
+        }
+      });
+      
+      console.log('[GroupListScreen] Loaded unread counts:', counts);
+      setUnreadCounts(counts);
+    } catch (error) {
+      console.warn('[GroupListScreen] Could not fetch unread counts:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!authToken || !user) return;
+
+    const listenerId = messageListenerIdRef.current;
+    const currentUserId = user.id;
+    
+    addMessageListener(listenerId, (message: any) => {
+      const receiverType = message.getReceiverType?.() || message.receiverType;
+      const senderId = message.getSender?.()?.getUid?.() || message.sender?.uid;
+      
+      if (senderId === currentUserId) {
+        return;
+      }
+      
+      if (receiverType === 'group') {
+        const receiverId = message.getReceiverId?.() || message.receiverId;
+        if (receiverId) {
+          console.log('[GroupListScreen] New message in group:', receiverId, 'from:', senderId);
+          setUnreadCounts(prev => ({
+            ...prev,
+            [receiverId]: (prev[receiverId] || 0) + 1
+          }));
+        }
+      }
+    });
+
+    return () => {
+      removeMessageListener(listenerId);
+    };
+  }, [authToken, user]);
+
   useFocusEffect(
     useCallback(() => {
       loadGroups();
+      loadUnreadCounts();
     }, [authToken])
   );
 
@@ -105,6 +164,7 @@ export default function GroupListScreen() {
   const handleRefresh = () => {
     setIsRefreshing(true);
     loadGroups();
+    loadUnreadCounts();
   };
 
   const buildHierarchicalList = (): HierarchicalGroup[] => {
@@ -150,6 +210,11 @@ export default function GroupListScreen() {
     
     if (group.cometchat_group_id) {
       console.log('[GroupListScreen] Navigating to GroupChatRoom with channelId:', group.cometchat_group_id);
+      setUnreadCounts(prev => {
+        const updated = { ...prev };
+        delete updated[group.cometchat_group_id!];
+        return updated;
+      });
       navigation.navigate('GroupChatRoom', {
         channelId: group.cometchat_group_id,
         channelName: group.name,
@@ -169,6 +234,7 @@ export default function GroupListScreen() {
   const renderGroupItem = ({ item }: { item: HierarchicalGroup }) => {
     const isSelected = selectedGroup?.id === item.id;
     const hasChannel = !!item.cometchat_group_id;
+    const unreadCount = item.cometchat_group_id ? (unreadCounts[item.cometchat_group_id] || 0) : 0;
     
     return (
       <Pressable
@@ -208,10 +274,17 @@ export default function GroupListScreen() {
               size={18} 
               color={theme.primary} 
             />
+            {unreadCount > 0 ? (
+              <View style={[styles.unreadBadge, { backgroundColor: '#FF3B30' }]}>
+                <Text style={styles.unreadBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            ) : null}
           </View>
           
           <View style={styles.groupInfo}>
-            <Text style={[styles.groupName, { color: theme.text }]} numberOfLines={1}>
+            <Text style={[styles.groupName, { color: theme.text, fontWeight: unreadCount > 0 ? '700' : '500' }]} numberOfLines={1}>
               {item.name}
             </Text>
             {item.description ? (
@@ -463,5 +536,21 @@ const styles = StyleSheet.create({
   memberCount: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
