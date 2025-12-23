@@ -138,14 +138,15 @@ const createUserController = (supabase, addLog) => {
 
   const createUser = async (req, res) => {
     try {
-      const { email, username, account_name, billing_plan, permissions } = req.body;
+      const { email, username, account_name, billing_plan, permissions, password } = req.body;
 
       if (!email || !username) {
         return res.status(400).json({ error: "Email and username required" });
       }
 
-      const tempPassword = Math.random().toString(36).slice(-8);
-      const password_hash = await bcrypt.hash(tempPassword, 10);
+      // Use provided password if given, otherwise generate a temporary one
+      const userPassword = password || Math.random().toString(36).slice(-8);
+      const password_hash = await bcrypt.hash(userPassword, 10);
 
       let account_id = null;
       if (account_name) {
@@ -189,7 +190,7 @@ const createUserController = (supabase, addLog) => {
 
       res.status(201).json({
         user: data[0],
-        tempPassword,
+        tempPassword: userPassword,
       });
     } catch (error) {
       console.error("Create user error:", error);
