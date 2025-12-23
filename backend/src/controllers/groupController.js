@@ -1,72 +1,74 @@
 const createGroupController = (supabase, cometchat, addLog) => {
-  
+
   const getAllGroups = async (req, res) => {
     try {
       const userId = req.user?.id;
-      const billingPlan = req.user?.billing_plan || 'basic';
-      
-      console.log(`[Groups] Fetching for user ${userId} with plan: ${billingPlan}`);
+      const rawPlan = req.user?.billing_plan || 'basic';
+      const billingPlan = rawPlan.toLowerCase().trim();
+
+      console.log('\n--- GROUP ACCESS DEBUG ---');
+      console.log(`User ID: ${userId}`);
+      console.log(`Raw Plan from Token: '${rawPlan}'`);
+      console.log(`Normalized Plan: '${billingPlan}'`);
       
       let groups = [];
       let error = null;
-      
-      // TASK 2: Permission-based filtering
+
       if (billingPlan === 'executive') {
-        // Executive users see ALL groups
+        console.log('-> Access Level: EXECUTIVE (Allow All)');
         const result = await supabase
           .from("groups")
           .select("*")
           .order("created_at", { ascending: true });
         groups = result.data;
         error = result.error;
-        console.log(`[Groups] Executive access: returning all ${groups?.length || 0} groups`);
+
       } else {
-        // Admin/Basic users see ONLY groups they are members of
+        console.log('-> Access Level: RESTRICTED (Member Only)');
+        
         const { data: memberGroups, error: memberError } = await supabase
           .from("group_members")
           .select("group_id")
           .eq("user_id", userId);
-        
+
         if (memberError) {
-          console.error("Fetch user memberships error:", memberError);
-          return res.status(500).json({ error: "Failed to fetch user memberships" });
+          console.error("Database Error (Member Check):", memberError);
+          return res.status(500).json({ error: "Failed to verify membership" });
         }
-        
+
         const groupIds = (memberGroups || []).map(m => m.group_id);
-        console.log(`[Groups] User ${userId} is member of groups:`, groupIds);
-        
+        console.log(`-> User is member of Group IDs: [${groupIds.join(', ')}]`);
+
         if (groupIds.length === 0) {
-          // User has no group memberships
-          return res.json([]);
+          console.log('-> No memberships found. Returning empty array.');
+          return res.json([]); 
         }
-        
+
         const result = await supabase
           .from("groups")
           .select("*")
           .in("id", groupIds)
           .order("created_at", { ascending: true });
+          
         groups = result.data;
         error = result.error;
-        console.log(`[Groups] Restricted access: returning ${groups?.length || 0} groups`);
       }
 
       if (error) {
-        console.error("Fetch groups error:", error);
+        console.error("Database Error (Fetch Groups):", error);
         return res.status(500).json({ error: "Failed to fetch groups" });
       }
 
-      // TASK 3: Get member counts for each group
       const groupIds = (groups || []).map(g => g.id);
-      
       let memberCounts = {};
+      
       if (groupIds.length > 0) {
-        const { data: countData, error: countError } = await supabase
+        const { data: countData } = await supabase
           .from("group_members")
           .select("group_id")
           .in("group_id", groupIds);
         
-        if (!countError && countData) {
-          // Count occurrences of each group_id
+        if (countData) {
           countData.forEach(row => {
             memberCounts[row.group_id] = (memberCounts[row.group_id] || 0) + 1;
           });
@@ -79,28 +81,39 @@ const createGroupController = (supabase, cometchat, addLog) => {
         cometchat_group_id: g.cometchat_group_id || `group_${g.id}`
       }));
 
+      console.log(`-> Returning ${groupsWithCounts.length} groups to frontend.`);
+      console.log('--------------------------\n');
+      
       res.json(groupsWithCounts);
+
     } catch (error) {
-      console.error("Fetch groups error:", error);
-      res.status(500).json({ error: "Failed to fetch groups" });
+      console.error("Server Error (getAllGroups):", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   };
 
   const getGroupById = async (req, res) => {
     try {
       const { groupId } = req.params;
+      const userId = req.user?.id;
+      const billingPlan = (req.user?.billing_plan || 'basic').toLowerCase().trim();
 
       const { data: group, error } = await supabase
         .from("groups")
-        .select(`
-          *,
-          group_members(user_id)
-        `)
+        .select(`*, group_members(user_id)`)
         .eq("id", groupId)
         .single();
 
       if (error || !group) {
         return res.status(404).json({ error: "Group not found" });
+      }
+
+      const isMember = group.group_members?.some(m => m.user_id === userId);
+      const isExec = billingPlan === 'executive';
+
+      if (!isExec && !isMember) {
+        console.warn(`[Security Alert] User ${userId} (Plan: ${billingPlan}) tried to access Group ${groupId} without membership.`);
+        return res.status(403).json({ error: "Access denied: You are not a member of this group" });
       }
 
       const memberIds = (group.group_members || []).map(m => m.user_id);
