@@ -1576,10 +1576,13 @@ window.editGroup = async function(groupId) {
         await fetchAvailableUsers();
         renderEditGroupMemberCheckboxes();
         
-        // Show the modal
+        // Show the modal - force display with inline style as backup
         console.log('[EditGroup] All data loaded, showing modal...');
         modal.classList.add('active');
+        modal.style.display = 'flex';
+        modal.style.zIndex = '9999';
         console.log('[EditGroup] Modal classList after add:', modal.classList.toString());
+        console.log('[EditGroup] Modal computed display:', window.getComputedStyle(modal).display);
         console.log('[EditGroup] Modal opened successfully');
     } catch (error) {
         console.error('[EditGroup] Error loading group:', error);
@@ -1611,10 +1614,13 @@ function renderEditGroupMemberCheckboxes() {
 }
 
 function closeEditGroupModal() {
-    document.getElementById('editGroupModal').classList.remove('active');
+    const modal = document.getElementById('editGroupModal');
+    modal.classList.remove('active');
+    modal.style.display = 'none';
     currentEditGroupId = null;
     currentEditGroupData = null;
 }
+window.closeEditGroupModal = closeEditGroupModal;
 
 async function saveGroupEdit() {
     const name = document.getElementById('editGroupName').value.trim();
@@ -1668,6 +1674,7 @@ async function saveGroupEdit() {
         btn.textContent = 'Save Changes';
     }
 }
+window.saveGroupEdit = saveGroupEdit;
 
 async function openAddEmergencyGroupModal() {
     document.getElementById('emergencyGroupError').style.display = 'none';
