@@ -1441,8 +1441,8 @@ function renderGroupsTable() {
                 <td>${level === 0 ? 'Main Group' : 'Subgroup'}</td>
                 <td>${createdDate}</td>
                 <td>
-                    <button onclick="window.editGroup(${group.id})" style="background: #4CAF50; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Edit</button>
-                    <button onclick="window.deleteGroup(${group.id})" style="background: #FF6B6B; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
+                    <button onclick="window.editGroup('${group.id}')" style="background: #4CAF50; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Edit</button>
+                    <button onclick="window.deleteGroup('${group.id}')" style="background: #FF6B6B; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
                 </td>
             </tr>
         `;
@@ -2770,7 +2770,7 @@ function initializeApp() {
     console.log('Initializing World Risk Admin Dashboard...');
     
     // Verify modals are loaded
-    const requiredModals = ['editGroupModal', 'groupModal', 'emergencyGroupModal', 'editUserModal'];
+    const requiredModals = ['editGroupModal', 'groupModal', 'emergencyGroupModal', 'userModal'];
     requiredModals.forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
