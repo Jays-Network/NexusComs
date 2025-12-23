@@ -247,7 +247,7 @@ const createEmergencyController = (supabase, cometchat, sendExpoPushNotification
     try {
       const { data: emergencies, error } = await supabase
         .from("emergency_groups")
-        .select("*, users!created_by(username, email)")
+        .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
@@ -256,7 +256,21 @@ const createEmergencyController = (supabase, cometchat, sendExpoPushNotification
         return res.status(500).json({ error: "Failed to fetch emergencies" });
       }
 
-      res.json({ emergencies: emergencies || [] });
+      const enrichedEmergencies = await Promise.all(
+        (emergencies || []).map(async (emergency) => {
+          if (emergency.created_by) {
+            const { data: userData } = await supabase
+              .from("users")
+              .select("username, email")
+              .eq("id", emergency.created_by)
+              .single();
+            return { ...emergency, users: userData };
+          }
+          return { ...emergency, users: null };
+        })
+      );
+
+      res.json({ emergencies: enrichedEmergencies });
     } catch (error) {
       console.error('[EMERGENCY] Get active error:', error);
       res.status(500).json({ error: "Failed to fetch emergencies" });
