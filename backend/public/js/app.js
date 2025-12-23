@@ -1494,11 +1494,17 @@ async function editGroup(groupId) {
     
     try {
         // Fetch group details
+        console.log('[EditGroup] Fetching group data from:', `/api/groups/${groupId}`);
         const response = await fetch(`/api/groups/${groupId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) throw new Error('Failed to load group');
+        console.log('[EditGroup] Response status:', response.status);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('[EditGroup] API Error:', errorData);
+            throw new Error(errorData.error || 'Failed to load group');
+        }
         currentEditGroupData = await response.json();
         
         // Populate form fields
