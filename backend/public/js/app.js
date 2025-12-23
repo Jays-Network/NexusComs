@@ -1480,13 +1480,25 @@ let currentEditGroupId = null;
 let currentEditGroupData = null;
 
 async function editGroup(groupId) {
-    console.log('[EditGroup] Opening edit modal for group:', groupId);
+    // DEBUGGING: Log immediately when function is called
+    console.log('Editing group ID:', groupId);
+    console.log('[EditGroup] Function called with groupId:', groupId, 'type:', typeof groupId);
+    
+    // Check if modal exists first
+    const modal = document.getElementById('editGroupModal');
+    console.log('[EditGroup] Modal element found:', !!modal);
+    if (!modal) {
+        console.error('[EditGroup] CRITICAL: editGroupModal element not found in DOM');
+        alert('Error: Edit Group modal not found. The modal may not have loaded. Please refresh the page.');
+        return;
+    }
+    
     currentEditGroupId = groupId;
     const errorDiv = document.getElementById('editGroupError');
     
     if (!errorDiv) {
-        console.error('[EditGroup] editGroupError element not found - modal may not be loaded');
-        alert('Error: Edit modal not loaded. Please refresh the page.');
+        console.error('[EditGroup] editGroupError element not found - modal may not be fully loaded');
+        alert('Error: Edit modal not fully loaded. Please refresh the page.');
         return;
     }
     
@@ -1494,60 +1506,75 @@ async function editGroup(groupId) {
     
     try {
         // Fetch group details
-        console.log('[EditGroup] Fetching group data from:', `/api/groups/${groupId}`);
-        const response = await fetch(`/api/groups/${groupId}`, {
+        const apiUrl = `/api/groups/${groupId}`;
+        console.log('[EditGroup] Fetching group data from:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        console.log('[EditGroup] Response status:', response.status);
+        console.log('[EditGroup] Response status:', response.status, response.statusText);
+        
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('[EditGroup] API Error:', errorData);
+            const errorText = await response.text();
+            console.error('[EditGroup] API Error - Status:', response.status, 'Body:', errorText);
+            let errorData = {};
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { error: errorText || 'Unknown error' };
+            }
+            alert('Network Error: Failed to load group. Status: ' + response.status + ' - ' + (errorData.error || 'Unknown error'));
             throw new Error(errorData.error || 'Failed to load group');
         }
+        
         currentEditGroupData = await response.json();
+        console.log('[EditGroup] Group data loaded:', currentEditGroupData);
         
         // Populate form fields
-        document.getElementById('editGroupName').value = currentEditGroupData.name || '';
-        document.getElementById('editGroupDescription').value = currentEditGroupData.description || '';
+        const nameField = document.getElementById('editGroupName');
+        const descField = document.getElementById('editGroupDescription');
+        const parentSelect = document.getElementById('editGroupParent');
+        
+        console.log('[EditGroup] Form fields found - name:', !!nameField, 'desc:', !!descField, 'parent:', !!parentSelect);
+        
+        if (nameField) nameField.value = currentEditGroupData.name || '';
+        if (descField) descField.value = currentEditGroupData.description || '';
         
         // Populate parent group dropdown
-        const parentSelect = document.getElementById('editGroupParent');
-        parentSelect.innerHTML = '<option value="">None (Top-Level Group)</option>';
-        
-        // Fetch all groups for parent selection
-        const groupsResponse = await fetch('/api/groups', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (groupsResponse.ok) {
-            const allGroups = await groupsResponse.json();
-            allGroups.forEach(g => {
-                // Don't allow group to be its own parent or child's parent
-                if (g.id !== groupId) {
-                    const option = document.createElement('option');
-                    option.value = g.id;
-                    option.textContent = g.name;
-                    if (currentEditGroupData.parent_group_id == g.id) {
-                        option.selected = true;
-                    }
-                    parentSelect.appendChild(option);
-                }
+        if (parentSelect) {
+            parentSelect.innerHTML = '<option value="">None (Top-Level Group)</option>';
+            
+            // Fetch all groups for parent selection
+            const groupsResponse = await fetch('/api/groups', {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
+            if (groupsResponse.ok) {
+                const allGroups = await groupsResponse.json();
+                allGroups.forEach(g => {
+                    // Don't allow group to be its own parent or child's parent
+                    if (g.id !== groupId) {
+                        const option = document.createElement('option');
+                        option.value = g.id;
+                        option.textContent = g.name;
+                        if (currentEditGroupData.parent_group_id == g.id) {
+                            option.selected = true;
+                        }
+                        parentSelect.appendChild(option);
+                    }
+                });
+            }
         }
         
         // Load users for member selection
+        console.log('[EditGroup] Loading available users...');
         await fetchAvailableUsers();
         renderEditGroupMemberCheckboxes();
         
-        const modal = document.getElementById('editGroupModal');
-        if (!modal) {
-            console.error('[EditGroup] editGroupModal element not found');
-            alert('Error: Edit modal not found. Please refresh the page.');
-            return;
-        }
-        
-        console.log('[EditGroup] Opening modal...');
+        // Show the modal
+        console.log('[EditGroup] All data loaded, showing modal...');
         modal.classList.add('active');
+        console.log('[EditGroup] Modal classList after add:', modal.classList.toString());
         console.log('[EditGroup] Modal opened successfully');
     } catch (error) {
         console.error('[EditGroup] Error loading group:', error);
