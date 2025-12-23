@@ -347,8 +347,9 @@ function updateServiceCard(serviceName, serviceData, checkTime) {
     }
 }
 
-// SEND VERIFICATION CODE
-async function sendVerificationCode() {
+// SEND VERIFICATION CODE - Global binding for HTML onclick
+window.sendVerificationCode = async function() {
+    console.log('--- Send Verification Code Triggered ---');
     const email = document.getElementById('email').value;
     const sendBtn = document.getElementById('sendCodeBtn');
     const errorDiv = document.getElementById('loginError');
@@ -389,8 +390,9 @@ async function sendVerificationCode() {
     }
 }
 
-// VERIFY CODE
-async function verifyCode() {
+// VERIFY CODE - Global binding for HTML onclick
+window.verifyCode = async function() {
+    console.log('--- Verify Code Triggered ---');
     const code = document.getElementById('code').value;
     const verifyBtn = document.getElementById('verifyCodeBtn');
     const errorDiv = document.getElementById('loginError');
@@ -433,8 +435,9 @@ async function verifyCode() {
     }
 }
 
-// GO BACK TO EMAIL
-function goBackToEmail() {
+// GO BACK TO EMAIL - Global binding for HTML onclick
+window.goBackToEmail = function() {
+    console.log('--- Go Back To Email Triggered ---');
     document.getElementById('step2').style.display = 'none';
     document.getElementById('step1').style.display = 'block';
     document.getElementById('code').value = '';
@@ -1453,7 +1456,7 @@ function renderGroupsTable() {
     tbody.innerHTML = html;
 }
 
-// Global function binding for Delete Group
+// DELETE GROUP - Global binding for HTML onclick
 window.deleteGroup = async function(groupId) {
     console.log('--- Delete Group Triggered --- ID:', groupId);
     if (!confirm('Are you sure you want to delete this group? This will also delete all subgroups.')) {
@@ -1481,7 +1484,7 @@ window.deleteGroup = async function(groupId) {
 let currentEditGroupId = null;
 let currentEditGroupData = null;
 
-// Global function binding for Edit Group - ensures HTML onclick can access it
+// EDIT GROUP - Global binding for HTML onclick
 window.editGroup = async function(groupId) {
     console.log('--- Edit Group Triggered --- ID:', groupId);
     console.log('[EditGroup] Function called with groupId:', groupId, 'type:', typeof groupId);
