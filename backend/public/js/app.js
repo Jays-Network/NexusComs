@@ -1576,13 +1576,16 @@ window.editGroup = async function(groupId) {
         await fetchAvailableUsers();
         renderEditGroupMemberCheckboxes();
         
-        // Show the modal - force display with inline style as backup
+        // Show the modal - force display with full inline styles
         console.log('[EditGroup] All data loaded, showing modal...');
         modal.classList.add('active');
-        modal.style.display = 'flex';
-        modal.style.zIndex = '9999';
+        modal.style.cssText = 'display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 99999 !important; background: rgba(0, 0, 0, 0.7) !important; align-items: center !important; justify-content: center !important;';
         console.log('[EditGroup] Modal classList after add:', modal.classList.toString());
         console.log('[EditGroup] Modal computed display:', window.getComputedStyle(modal).display);
+        console.log('[EditGroup] Modal visibility:', window.getComputedStyle(modal).visibility);
+        console.log('[EditGroup] Modal opacity:', window.getComputedStyle(modal).opacity);
+        console.log('[EditGroup] Modal position:', window.getComputedStyle(modal).position);
+        console.log('[EditGroup] Modal innerHTML length:', modal.innerHTML.length);
         console.log('[EditGroup] Modal opened successfully');
     } catch (error) {
         console.error('[EditGroup] Error loading group:', error);
