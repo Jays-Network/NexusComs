@@ -1438,8 +1438,8 @@ function renderGroupsTable() {
                 <td>${level === 0 ? 'Main Group' : 'Subgroup'}</td>
                 <td>${createdDate}</td>
                 <td>
-                    <button onclick="editGroup(${group.id})" style="background: #4CAF50; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Edit</button>
-                    <button onclick="deleteGroup(${group.id})" style="background: #FF6B6B; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
+                    <button onclick="window.editGroup(${group.id})" style="background: #4CAF50; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Edit</button>
+                    <button onclick="window.deleteGroup(${group.id})" style="background: #FF6B6B; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Delete</button>
                 </td>
             </tr>
         `;
@@ -1453,7 +1453,9 @@ function renderGroupsTable() {
     tbody.innerHTML = html;
 }
 
-async function deleteGroup(groupId) {
+// Global function binding for Delete Group
+window.deleteGroup = async function(groupId) {
+    console.log('--- Delete Group Triggered --- ID:', groupId);
     if (!confirm('Are you sure you want to delete this group? This will also delete all subgroups.')) {
         return;
     }
@@ -1479,9 +1481,9 @@ async function deleteGroup(groupId) {
 let currentEditGroupId = null;
 let currentEditGroupData = null;
 
-async function editGroup(groupId) {
-    // DEBUGGING: Log immediately when function is called
-    console.log('Editing group ID:', groupId);
+// Global function binding for Edit Group - ensures HTML onclick can access it
+window.editGroup = async function(groupId) {
+    console.log('--- Edit Group Triggered --- ID:', groupId);
     console.log('[EditGroup] Function called with groupId:', groupId, 'type:', typeof groupId);
     
     // Check if modal exists first

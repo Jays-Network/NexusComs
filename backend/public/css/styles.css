@@ -314,7 +314,8 @@ tr:hover {
 }
 
 .modal.active {
-    display: flex;
+    display: flex !important;
+    z-index: 9999 !important;
 }
 
 .modal-content {
