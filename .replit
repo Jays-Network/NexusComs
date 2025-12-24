@@ -95,6 +95,7 @@ stack = "EXPO"
 
 [deployment]
 deploymentTarget = "gce"
+build = ["sh", "-c", "npm install"]
 run = ["sh", "-c", "node backend/src/server.js"]
 
 # Expo manifest headers
