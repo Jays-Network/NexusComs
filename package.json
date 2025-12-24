@@ -23,7 +23,7 @@
   "dependencies": {
     "@cometchat/calls-sdk-react-native": "^4.0.9",
     "@cometchat/chat-sdk-react-native": "^4.0.17",
-    "@supabase/supabase-js": "^2.86.2",
+    "@supabase/supabase-js": "^2.89.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
