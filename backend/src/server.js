@@ -459,6 +459,18 @@ app.get("/", serviceController.getRoot);
 app.get("/api/emergency-groups", sessionMiddleware, emergencyController.getAllEmergencyGroups);
 app.post("/api/emergency-groups", sessionMiddleware, emergencyController.createEmergencyGroup);
 
+// Global error handler - ensures all errors return JSON
+app.use((err, req, res, next) => {
+  console.error('[SERVER ERROR]', err.message || err);
+  addLog("ERROR", "Server", "Unhandled server error", err.message || String(err));
+  res.status(500).json({ error: "Internal server error" });
+});
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Hybrid API & CMS server running on port ${PORT}`);
   console.log(`Supabase: ${process.env.SUPABASE_URL ? "Configured" : "Missing"}`);
